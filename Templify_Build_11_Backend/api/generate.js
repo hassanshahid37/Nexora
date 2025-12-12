@@ -42,5 +42,3 @@ Return ONLY a valid JSON array.
     });
   }
 }
-
-force deploy
