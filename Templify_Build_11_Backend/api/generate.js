@@ -5,25 +5,32 @@ export default async function handler(req, res) {
 
   const { category, style, count, prompt, notes } = req.body;
 
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "gpt-5",
-      input: `
+  const response = await fetch("https://api.openai.com/v1/chat/completions", {
+  method: "POST",
+  headers: {
+    "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    model: "gpt-4o-mini",
+    messages: [
+      {
+        role: "user",
+        content: `
 Generate ${count} premium template ideas.
 Category: ${category}
 Style: ${style}
 Prompt: ${prompt}
 Notes: ${notes || ""}
-Return ONLY valid JSON array.
-`
-    })
-  });
+Return ONLY a valid JSON array.
+        `
+      }
+    ]
+  })
+});
+
 
   const data = await response.json();
   return res.status(200).json(data);
 }
+
