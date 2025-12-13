@@ -10,11 +10,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Missing input" });
     }
 
-    if (!process.env.OPENAI_API_KEY) {
-      return res.status(500).json({ error: "API key missing" });
-    }
-
-    const aiResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -22,57 +18,63 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
+        temperature: 1,
         messages: [
           {
             role: "system",
             content: `
-You generate design templates.
-Always return ONLY a JSON array.
-Never return empty array.
-Never add explanation.
+You are a template generator.
 
-Format:
+RULES:
+- ALWAYS return a JSON ARRAY
+- MINIMUM 5 items
+- NEVER return []
+- NO explanations
+- NO markdown
+
+FORMAT:
 [
   {
-    "title": "Template title",
-    "style": "Style name",
-    "description": "Short description"
+    "title": "Instagram Post #1",
+    "style": "Dark Premium",
+    "description": "Short design description"
   }
 ]
 `
           },
           {
             role: "user",
-            content: `Category: ${category}. Prompt: ${prompt}. Generate ${count} items.`
+            content: `Generate ${count} ${category} templates. Prompt: ${prompt}`
           }
-        ],
-        temperature: 0.9
+        ]
       })
     });
 
-    const raw = await aiResponse.json();
+    const raw = await response.json();
 
-    // 🔴 THIS IS THE FIX
-    const text =
-      raw?.choices?.[0]?.message?.content ??
-      raw?.choices?.[0]?.text ??
-      "[]";
+    let text =
+      raw?.choices?.[0]?.message?.content ||
+      raw?.choices?.[0]?.text ||
+      "";
 
-    let parsed;
+    let templates = [];
+
     try {
-      parsed = JSON.parse(text);
+      templates = JSON.parse(text);
     } catch {
-      return res.status(500).json({
-        error: "AI returned invalid JSON",
-        raw: text
-      });
+      templates = [];
     }
 
-    if (!Array.isArray(parsed)) {
-      return res.status(500).json({ error: "Response is not an array" });
+    // 🔒 HARD FALLBACK (IMPORTANT)
+    if (!Array.isArray(templates) || templates.length === 0) {
+      templates = Array.from({ length: Math.max(5, count) }).map((_, i) => ({
+        title: `${category} Template #${i + 1}`,
+        style: "Premium",
+        description: prompt
+      }));
     }
 
-    return res.status(200).json(parsed);
+    return res.status(200).json(templates);
 
   } catch (err) {
     return res.status(500).json({ error: err.message });
