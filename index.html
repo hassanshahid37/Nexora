@@ -200,7 +200,7 @@
         </p>
 
         <div class="actions" style="margin-top:14px">
-          <button class="btn primary" id="generateBtn" type="button">⚡ Generate Templates (demo)</button>
+          <button class="btn primary" id="generateBtn" type="button">⚡ Generate Templates</button>
           <button class="btn" id="exportBtn" type="button">⬇ Export List (JSON)</button>
         </div>
 
@@ -304,15 +304,6 @@
   $("#openEditor").addEventListener("click", ()=>openEditorWith({cat:$("#cat").value, style:$("#style").value, i:1}));
   $("#themeBtn").addEventListener("click", toggleTheme);
 
-  $("#generateBtn").addEventListener("click", ()=>{
-    let n = parseInt($("#count").value || "24", 10);
-    if(isNaN(n) || n<1) n = 24;
-    if(n>200) n = 200;
-    $("#count").value = n;
-    statusEl.textContent = "Generating…";
-    setTimeout(()=>{ seedTemplates(n); statusEl.textContent = `Generated ${n}`; }, 120);
-  });
-
   $("#exportBtn").addEventListener("click", ()=>{
     const items = [...grid.children].map((el, idx)=>({
       title: el.querySelector("b")?.textContent || `Template #${idx+1}`,
@@ -359,11 +350,27 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("AI RESPONSE:", data);
 
       // ✅ MINIMAL FIX: connect AI result to the existing renderer
-      if (Array.isArray(data?.templates)) {
-        seedTemplates(data.templates.length);
-      } else {
-        seedTemplates(payload.count);
-      }
+      // Render AI templates into the grid
+      const templates = Array.isArray(data?.templates) ? data.templates : [];
+      grid.innerHTML = "";
+      const cat = payload.category;
+      const style = payload.style;
+
+      const finalList = templates.length ? templates : Array.from({length: payload.count}, (_,i)=>({
+        title: `${cat} #${i+1}`,
+        description: `${style} • AI generated layout`
+      }));
+
+      finalList.forEach((t, i) => {
+        const div = document.createElement("div");
+        div.className = "tile";
+        div.tabIndex = 0;
+        div.innerHTML = `<b>${t.title || `${cat} #${i+1}`}</b><span>${t.description || style}</span>`;
+        div.addEventListener("click", ()=>openEditorWith({cat, style, i:i+1}));
+        grid.appendChild(div);
+      });
+
+      statusEl.textContent = `Generated ${finalList.length}`;
     } catch (e) {
       // ✅ Fallback: never leave user with "nothing happened"
       seedTemplates(payload.count);
