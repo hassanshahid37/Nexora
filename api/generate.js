@@ -1,28 +1,44 @@
+import OpenAI from "openai";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
   try {
-    const { category, style, count, prompt, notes } = req.body || {};
+    const { category, style, count, prompt } = req.body;
 
-    const items = [];
-    const total = Math.min(Number(count) || 10, 200);
-
-    for (let i = 1; i <= total; i++) {
-      items.push({
-        title: `${category || "Template"} #${i}`,
-        description: `${style || "Premium"} • AI generated layout`
-      });
-    }
-
-    return res.status(200).json({
-      templates: items
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
     });
+
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You generate design template titles.",
+        },
+        {
+          role: "user",
+          content: `Generate ${count} ${category} templates in ${style} style. ${prompt || ""}`,
+        },
+      ],
+    });
+
+    const text = completion.choices[0].message.content;
+
+    const templates = text
+      .split("\n")
+      .filter(Boolean)
+      .map((t, i) => ({
+        title: `${category} #${i + 1}`,
+        description: t.replace(/^\d+[\).\s]*/, ""),
+      }));
+
+    return res.status(200).json({ templates });
   } catch (err) {
-    return res.status(500).json({
-      error: "Server error",
-      details: err.message
-    });
+    console.error(err);
+    return res.status(500).json({ error: "AI generation failed" });
   }
 }
