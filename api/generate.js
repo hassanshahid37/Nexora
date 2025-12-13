@@ -22,44 +22,33 @@ export default async function handler(req, res) {
         {
           role: "system",
           content:
-            "You are a professional design assistant. Generate clean, structured template ideas.",
+            "You generate clean, short design template descriptions for Canva-style social media templates.",
         },
         {
           role: "user",
-          content: `Generate ${count} design templates for: ${prompt}. 
-Return ONLY valid JSON in this format:
-{
-  "templates": [
-    { "title": "...", "description": "..." }
-  ]
-}`,
+          content: `Generate ${count} unique design templates for: ${prompt}. Return each as a short title.`,
         },
       ],
       temperature: 0.7,
-      max_tokens: 1200,
     });
 
     const text = completion.choices[0].message.content;
 
-    let parsed;
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      return res.status(500).json({
-        error: "AI returned invalid JSON",
-        raw: text,
-      });
-    }
+    const templates = text
+      .split("\n")
+      .map(t => t.replace(/^[0-9\-\.\)]*/, "").trim())
+      .filter(Boolean)
+      .slice(0, count);
 
     return res.status(200).json({
       success: true,
-      templates: parsed.templates || [],
+      templates,
     });
   } catch (err) {
-    console.error("API ERROR:", err);
+    console.error("AI ERROR:", err);
     return res.status(500).json({
-      error: "Internal Server Error",
-      details: err.message,
+      success: false,
+      error: "AI generation failed",
     });
   }
 }
