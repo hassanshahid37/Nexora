@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 export default async function handler(req, res) {
@@ -10,31 +10,41 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { category, style, count, prompt } = req.body;
+    const { category, style, count, prompt, notes } = req.body;
 
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini",
-      input: `Generate ${count} ${category} template ideas.
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: "You generate design template ideas as JSON."
+        },
+        {
+          role: "user",
+          content: `
+Generate ${count} ${category} templates.
 Style: ${style}
 Prompt: ${prompt}
+Notes: ${notes}
 
-Return JSON array like:
-[{ "title": "...", "description": "..." }]`,
+Return ONLY valid JSON like this:
+{
+  "templates": [
+    { "title": "Template 1", "description": "Short description" }
+  ]
+}
+`
+        }
+      ],
+      temperature: 0.7
     });
 
-    // ✅ CORRECT way to read response
-    const text = response.output_text;
+    const text = completion.choices[0].message.content;
+    const data = JSON.parse(text);
 
-    let templates;
-    try {
-      templates = JSON.parse(text);
-    } catch {
-      templates = [];
-    }
-
-    return res.status(200).json({ templates });
-  } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "AI generation failed" });
+    return res.status(200).json(data);
+  } catch (error) {
+    console.error("API ERROR:", error);
+    return res.status(500).json({ error: "Internal Server Error" });
   }
 }
