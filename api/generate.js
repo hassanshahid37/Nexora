@@ -1,12 +1,12 @@
-import OpenAI from "openai";
-
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  const apiKey = process.env.OPENAI_API_KEY;
+
+  if (!apiKey) {
+    return res.status(500).json({ error: "OPENAI_API_KEY missing" });
   }
 
   try {
@@ -16,18 +16,24 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Prompt missing" });
     }
 
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.6,
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a design generator. Respond ONLY with valid JSON. No text outside JSON.",
-        },
-        {
-          role: "user",
-          content: `
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0.6,
+        messages: [
+          {
+            role: "system",
+            content:
+              "You are a design generator. Respond ONLY with valid JSON. No text outside JSON.",
+          },
+          {
+            role: "user",
+            content: `
 Generate ${count} premium design templates.
 Return STRICT JSON ONLY in this format:
 
@@ -40,16 +46,18 @@ Return STRICT JSON ONLY in this format:
     }
   ]
 }
-          `,
-        },
-      ],
+            `,
+          },
+        ],
+      }),
     });
 
-    let raw = completion.choices[0]?.message?.content || "";
+    const raw = await response.json();
+    const content = raw.choices?.[0]?.message?.content || "";
 
     let data;
     try {
-      data = JSON.parse(raw);
+      data = JSON.parse(content);
     } catch {
       throw new Error("Invalid JSON from OpenAI");
     }
@@ -65,7 +73,7 @@ Return STRICT JSON ONLY in this format:
   } catch (err) {
     console.error("API ERROR:", err.message);
 
-    // 🔒 GUARANTEED SAFE RESPONSE (NO 500 LOOP)
+    // SAFE FALLBACK (NO CRASH, NO 500 LOOP)
     return res.status(200).json({
       success: true,
       warning: "AI failed, returned safe fallback templates",
