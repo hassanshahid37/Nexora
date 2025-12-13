@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 
-const client = new OpenAI({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
@@ -10,44 +10,44 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { prompt, count = 12 } = req.body || {};
+    const { category, style, count } = req.body;
 
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt missing" });
-    }
+    const prompt = `
+Generate ${count} ${category} design templates.
+Style: ${style}.
+Return a JSON array.
+Each item must have:
+- title
+- description
+`;
 
-    const completion = await client.chat.completions.create({
+    const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
-        {
-          role: "system",
-          content:
-            "You generate short design template titles only. Return JSON array."
-        },
-        {
-          role: "user",
-          content: `Generate ${count} premium design templates for: ${prompt}`
-        }
+        { role: "system", content: "You are a professional design template generator." },
+        { role: "user", content: prompt }
       ],
-      temperature: 0.8
+      temperature: 0.7
     });
 
-    let text = completion.choices[0].message.content;
+    const text = response.choices[0].message.content;
 
-    // SAFETY: extract JSON array even if AI adds text
-    const match = text.match(/\[.*\]/s);
-    const templates = match ? JSON.parse(match[0]) : [];
+    let templates;
+    try {
+      templates = JSON.parse(text);
+    } catch {
+      templates = Array.from({ length: count }, (_, i) => ({
+        title: `${category} Template ${i + 1}`,
+        description: style
+      }));
+    }
 
-    return res.status(200).json({ templates });
-  } catch (err) {
-    console.error("AI ERROR:", err.message);
-
-    // 🔒 SAFE FALLBACK (APP NEVER BREAKS)
-    return res.status(200).json({
-      templates: Array.from({ length: 12 }).map(
-        (_, i) => `Premium Template ${i + 1}`
-      ),
-      source: "fallback"
+    res.status(200).json({ templates });
+  } catch (error) {
+    console.error("API ERROR:", error);
+    res.status(500).json({
+      error: "Generation failed",
+      details: error.message
     });
   }
 }
