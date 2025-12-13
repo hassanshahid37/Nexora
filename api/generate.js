@@ -10,42 +10,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { category, style, count, prompt, notes } = req.body || {};
+    const { category, style, count, prompt } = req.body;
 
-    const total = Math.min(Number(count) || 10, 200);
-
-    const aiPrompt = `
-Generate ${total} ${category} design templates.
+    const response = await client.responses.create({
+      model: "gpt-4.1-mini",
+      input: `Generate ${count} ${category} template ideas.
 Style: ${style}
-Details: ${prompt || "None"}
-Notes: ${notes || "None"}
+Prompt: ${prompt}
 
-Return JSON array only.
-Each item must have:
-- title
-- description
-`;
-
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [{ role: "user", content: aiPrompt }],
-      temperature: 0.7,
+Return JSON array like:
+[{ "title": "...", "description": "..." }]`,
     });
 
-    let templates = [];
+    // ✅ CORRECT way to read response
+    const text = response.output_text;
 
+    let templates;
     try {
-      templates = JSON.parse(completion.choices[0].message.content);
+      templates = JSON.parse(text);
     } catch {
-      templates = Array.from({ length: total }, (_, i) => ({
-        title: `${category} #${i + 1}`,
-        description: `${style} AI generated layout`,
-      }));
+      templates = [];
     }
 
     return res.status(200).json({ templates });
   } catch (err) {
-    console.error("API ERROR:", err);
+    console.error(err);
     return res.status(500).json({ error: "AI generation failed" });
   }
 }
