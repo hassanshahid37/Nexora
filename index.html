@@ -398,13 +398,289 @@ currentStyle = "Dark Premium";
     alert("Animate – coming soon");
   });
 
-
-</script>
 <script type="module">
-  import { layouts, styles } from "./design.js";
-  // Expose for any existing inline logic that wants to use them without rewriting your UI.
-  window.TEMPLIFY_LAYOUTS = layouts;
-  window.TEMPLIFY_STYLES = styles;
+  import { layouts, styles, buildTemplates } from "./design.js";
+
+  const $ = (s)=>document.querySelector(s);
+  const grid = $("#previewGrid");
+  const statusEl = $("#status");
+  // --- Mini Preview Renderer (Canva-style) ---
+  // Draws a tiny representation of template.elements inside each tile.
+  const PREVIEW_W = 240;
+  const PREVIEW_H = 140;
+  const CANVAS_W = 980;
+  const CANVAS_H = 620;
+
+  function el(tag, cls){
+    const n = document.createElement(tag);
+    if(cls) n.className = cls;
+    return n;
+  }
+
+  function renderMiniPreview(t){
+    const wrap = el("div","miniPreview");
+    wrap.style.width = PREVIEW_W + "px";
+    wrap.style.height = PREVIEW_H + "px";
+    wrap.style.borderRadius = "14px";
+    wrap.style.overflow = "hidden";
+    wrap.style.position = "relative";
+    wrap.style.border = "1px solid rgba(255,255,255,.10)";
+    wrap.style.background = "rgba(0,0,0,.14)";
+    wrap.style.marginBottom = "10px";
+
+    // light theme safety (no CSS changes globally)
+    if(document.body.getAttribute("data-theme")==="light"){
+      wrap.style.border = "1px solid rgba(10,20,60,.14)";
+      wrap.style.background = "rgba(255,255,255,.60)";
+    }
+
+    const sx = PREVIEW_W / CANVAS_W;
+    const sy = PREVIEW_H / CANVAS_H;
+
+    const elements = Array.isArray(t?.elements) ? t.elements : [];
+    elements.slice(0, 8).forEach((e, idx)=>{
+      const box = el("div","miniEl");
+      const x = Number(e.x ?? 0), y = Number(e.y ?? 0), w = Number(e.w ?? 120), h = Number(e.h ?? 80);
+      box.style.position = "absolute";
+      box.style.left = Math.max(0, Math.min(PREVIEW_W-2, x*sx)) + "px";
+      box.style.top  = Math.max(0, Math.min(PREVIEW_H-2, y*sy)) + "px";
+      box.style.width  = Math.max(6, Math.min(PREVIEW_W, w*sx)) + "px";
+      box.style.height = Math.max(6, Math.min(PREVIEW_H, h*sy)) + "px";
+      box.style.borderRadius = "10px";
+
+      // Visual language:
+      // - "Image" blocks appear as outlined placeholders
+      // - Text blocks appear as filled glass blocks with faux lines
+      const title = String(e.title || "").toLowerCase();
+      const sub = String(e.sub || "").toLowerCase();
+      const looksImage = title.includes("image") || sub.includes("image") || title.includes("photo") || sub.includes("photo");
+
+      if(looksImage){
+        box.style.background = "rgba(255,255,255,.06)";
+        box.style.border = "1px dashed rgba(255,255,255,.22)";
+      }else{
+        box.style.background = "rgba(11,95,255,.10)";
+        box.style.border = "1px solid rgba(11,95,255,.18)";
+      }
+
+      if(document.body.getAttribute("data-theme")==="light"){
+        if(looksImage){
+          box.style.background = "rgba(10,20,60,.06)";
+          box.style.border = "1px dashed rgba(10,20,60,.18)";
+        }else{
+          box.style.background = "rgba(11,95,255,.08)";
+          box.style.border = "1px solid rgba(11,95,255,.16)";
+        }
+      }
+
+      // Add tiny "text lines" for headline/body feel
+      if(!looksImage){
+        const line1 = el("div","miniLine");
+        line1.style.position = "absolute";
+        line1.style.left = "10px";
+        line1.style.top = "10px";
+        line1.style.height = "6px";
+        line1.style.width = "70%";
+        line1.style.borderRadius = "999px";
+        line1.style.background = "rgba(255,255,255,.45)";
+
+        const line2 = el("div","miniLine");
+        line2.style.position = "absolute";
+        line2.style.left = "10px";
+        line2.style.top = "24px";
+        line2.style.height = "5px";
+        line2.style.width = "55%";
+        line2.style.borderRadius = "999px";
+        line2.style.background = "rgba(255,255,255,.22)";
+
+        if(document.body.getAttribute("data-theme")==="light"){
+          line1.style.background = "rgba(10,20,60,.45)";
+          line2.style.background = "rgba(10,20,60,.20)";
+        }
+
+        box.appendChild(line1);
+        box.appendChild(line2);
+      }
+
+      wrap.appendChild(box);
+    });
+
+    // Subtle corner glow
+    const glow = el("div","miniGlow");
+    glow.style.position="absolute";
+    glow.style.inset="-40px";
+    glow.style.background="radial-gradient(180px 120px at 30% 20%, rgba(11,95,255,.22), transparent 60%)";
+    glow.style.pointerEvents="none";
+    wrap.appendChild(glow);
+
+    return wrap;
+  }
+
+
+  let currentLayout = layouts.find(l=>l.name==="Modern") || layouts[0];
+  let currentStyle = styles.find(s=>s.name==="Dark Premium") || styles[0];
+
+  let lastGenerated = [];
+
+  function openEditorWith(template, meta){
+    localStorage.setItem("templify_draft", JSON.stringify({
+      meta,
+      template,
+      createdAt: Date.now()
+    }));
+    window.location.href = "editor.html";
+  }
+
+  function renderTiles(list, meta){
+    grid.innerHTML = "";
+    list.forEach((t, i)=>{
+      const div = document.createElement("div");
+      div.className = "tile";
+      div.tabIndex = 0;
+
+      const title = t.title || t.name || `${meta.category} #${i+1}`;
+      const desc  = t.description || `${meta.style} • ${meta.layout} • Click to edit`;
+
+      div.innerHTML = "";
+
+      // Mini preview
+      div.appendChild(renderMiniPreview(t));
+
+      // Title + description
+      const b = document.createElement("b");
+      b.textContent = title;
+      const s = document.createElement("span");
+      s.textContent = desc;
+      div.appendChild(b);
+      div.appendChild(s);
+
+
+      // Apply subtle preview styling (doesn't change your UI)
+      try{ currentStyle.applyTile(div); }catch(e){}
+      try{ currentLayout.applyTile(div); }catch(e){}
+
+      div.addEventListener("click", ()=>openEditorWith(t, meta));
+      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") div.click(); });
+
+      grid.appendChild(div);
+    });
+  }
+
+  function getMeta(){
+    return {
+      category: $("#cat")?.value || "Instagram Post",
+      style: $("#style")?.value || currentStyle.name,
+      layout: currentLayout.name,
+      count: Math.min(200, Math.max(1, parseInt($("#count")?.value || "24", 10))),
+      prompt: $("#prompt")?.value || "",
+      notes: $("#notes")?.value || ""
+    };
+  }
+
+  // Theme
+  $("#themeBtn")?.addEventListener("click", ()=>{
+    const body = document.body;
+    const cur = body.getAttribute("data-theme") || "dark";
+    const next = cur === "dark" ? "light" : "dark";
+    body.setAttribute("data-theme", next);
+    localStorage.setItem("templify_theme", next);
+  });
+
+  $("#openEditor")?.addEventListener("click", ()=>{
+    const meta = getMeta();
+    openEditorWith(null, meta);
+  });
+
+  // Library/Animate placeholders (keep your behavior)
+  $("#btnTemplates")?.addEventListener("click", ()=>alert("Templates Library– coming soon"));
+  $("#btnAnimate")?.addEventListener("click", ()=>alert("Animate – coming soon"));
+
+  // New Layout
+  $("#newLayoutBtn")?.addEventListener("click", ()=>{
+    currentLayout = layouts[Math.floor(Math.random()*layouts.length)];
+    statusEl.textContent = `Layout: ${currentLayout.name}`;
+    // Update preview copy
+    document.querySelectorAll(".tile span").forEach(span=>{
+      span.textContent = `${$("#style")?.value || currentStyle.name} • ${currentLayout.name} • Click to edit`;
+    });
+  });
+
+  // New Style
+  $("#newStyleBtn")?.addEventListener("click", ()=>{
+    currentStyle = styles[Math.floor(Math.random()*styles.length)];
+    if($("#style")) $("#style").value = currentStyle.name;
+    statusEl.textContent = `Style: ${currentStyle.name}`;
+    document.querySelectorAll(".tile").forEach(tile=>{
+      try{ currentStyle.applyTile(tile); }catch(e){}
+    });
+    document.querySelectorAll(".tile span").forEach(span=>{
+      span.textContent = `${currentStyle.name} • ${currentLayout.name} • Click to edit`;
+    });
+  });
+
+  // Export JSON
+  $("#exportBtn")?.addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify({ templates: lastGenerated }, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "templify_templates.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // Generate (AI first, local engine fallback)
+  $("#generateBtn")?.addEventListener("click", async ()=>{
+    const meta = getMeta();
+    statusEl.textContent = "Generating…";
+
+    try{
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(meta)
+      });
+
+      if(!res.ok) throw new Error("API failed");
+      const data = await res.json();
+
+      const templates = Array.isArray(data?.templates) ? data.templates : [];
+      if(!templates.length) throw new Error("Empty templates");
+
+      // Ensure editor-friendly fields exist
+      const normalized = templates.map((t, i)=>({
+        title: t.title || `${meta.category} #${i+1}`,
+        description: t.description || `${meta.style} • ${meta.layout}`,
+        canvas: t.canvas || { w: 980, h: 620 },
+        elements: Array.isArray(t.elements) ? t.elements.map(e=>({
+          x: Number(e.x ?? 80),
+          y: Number(e.y ?? 80),
+          w: Number(e.w ?? 260),
+          h: Number(e.h ?? 130),
+          title: String(e.title ?? ""),
+          sub: String(e.sub ?? "")
+        })) : []
+      }));
+
+      lastGenerated = normalized;
+      renderTiles(lastGenerated, meta);
+      statusEl.textContent = `Generated ${lastGenerated.length}`;
+    }catch(err){
+      const built = buildTemplates(meta);
+      lastGenerated = built.templates;
+      renderTiles(lastGenerated, { ...meta, layout: built.layout, style: built.style });
+      statusEl.textContent = `Generated ${lastGenerated.length} (engine)`;
+    }
+  });
+
+  // Initial preview (engine)
+  const initial = buildTemplates({ count: 12, category: $("#cat")?.value || "Instagram Post", styleName: $("#style")?.value || "Dark Premium", layoutName: "Modern" });
+  lastGenerated = initial.templates;
+  renderTiles(lastGenerated, { ...getMeta(), layout: initial.layout, style: initial.style });
+
+  // Restore theme on load
+  const saved = localStorage.getItem("templify_theme");
+  if(saved==="light"||saved==="dark") document.body.setAttribute("data-theme", saved);
 </script>
+
 </body>
 </html>
