@@ -448,16 +448,28 @@ currentStyle = "Dark Premium";
     return n;
   }
 
-  function renderMiniPreview(t){
+  
+function renderMiniPreview(t){
+    const styleName = (t?.description || "").toLowerCase();
+
     const UNSPLASH = 'https://images.unsplash.com/';
     const wrap = el("div","miniPreview");
     wrap.style.width = PREVIEW_W + "px";
     wrap.style.height = PREVIEW_H + "px";
-    wrap.style.borderRadius = "14px";
+    wrap.style.borderRadius = "16px"; wrap.style.boxShadow = "0 20px 50px rgba(0,0,0,.45)";
     wrap.style.overflow = "hidden";
     wrap.style.position = "relative";
     wrap.style.border = "1px solid rgba(255,255,255,.10)";
-    wrap.style.background = "rgba(0,0,0,.14)";
+    
+    // Style personality backgrounds
+    if(styleName.includes("neon")){
+      wrap.style.background = "linear-gradient(135deg, #7c3aed, #0b5fff)";
+    }else if(styleName.includes("minimal")){
+      wrap.style.background = "rgba(255,255,255,.85)";
+    }else{
+      wrap.style.background = "linear-gradient(135deg, rgba(11,95,255,.35), rgba(0,0,0,.45))";
+    }
+
     wrap.style.marginBottom = "10px";
 
     // light theme safety (no CSS changes globally)
@@ -493,7 +505,7 @@ currentStyle = "Dark Premium";
       
       if(looksImage){
         // Unsplash placeholder thumbnail
-        box.style.backgroundImage = `url(${UNSPLASH}random/300x200?sig=${idx})`;
+        box.style.backgroundImage = `url(${UNSPLASH}random/600x400?sig=${idx})`; box.style.opacity = '0.95';
         box.style.backgroundSize = "cover";
         box.style.backgroundPosition = "center";
 
@@ -508,7 +520,7 @@ currentStyle = "Dark Premium";
         
       if(looksImage){
         // Unsplash placeholder thumbnail
-        box.style.backgroundImage = `url(${UNSPLASH}random/300x200?sig=${idx})`;
+        box.style.backgroundImage = `url(${UNSPLASH}random/600x400?sig=${idx})`; box.style.opacity = '0.95';
         box.style.backgroundSize = "cover";
         box.style.backgroundPosition = "center";
 
@@ -527,7 +539,7 @@ currentStyle = "Dark Premium";
         line1.style.left = "10px";
         line1.style.top = "10px";
         line1.style.height = "6px";
-        line1.style.width = "70%";
+        line1.style.width = "85%"; line1.style.height = "10px";
         line1.style.borderRadius = "999px";
         line1.style.background = "rgba(255,255,255,.45)";
 
