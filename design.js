@@ -1,119 +1,120 @@
-/* Nexora / Templify Design Engine (Canva-level blocks)
-   Outputs editor-compatible elements: {id?, x,y,w,h,title,sub}
-*/
-const CANVAS_W = 980;
-const CANVAS_H = 620;
+export const CANVAS = { w: 980, h: 620 };
 
-function clamp(n,a,b){ return Math.max(a, Math.min(b,n)); }
-function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
-function safeText(s,max=60){
-  const t = String(s ?? "").trim().replace(/\s+/g," ");
-  if(!t) return "";
-  return t.length>max ? t.slice(0,max-1)+"…" : t;
-}
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+const pick=(a)=>a[Math.floor(Math.random()*a.length)];
 
-function headlineFrom(meta){
-  if(meta.prompt) return safeText(meta.prompt, 52);
-  if(meta.notes) return safeText(meta.notes, 52);
-  return pick([
-    "Elevate Your Brand Presence",
-    "Premium Offer Inside",
-    "Bold Visuals That Convert",
-    "New Collection Drop",
-    "Limited Time Deal"
-  ]);
-}
-
-function subFrom(){
-  return pick([
-    "Clean layout • Strong hierarchy • Ready to edit",
-    "Modern spacing with premium typography",
-    "Designed for engagement and clarity",
-    "High-contrast visuals that convert"
-  ]);
-}
-
-const layoutBuilders = {
-  Modern(meta){
-    const m=38;
-    return [
-      {x:m,y:m,w:904,h:140,title:headlineFrom(meta),sub:subFrom()},
-      {x:m,y:195,w:440,h:310,title:"Main Card",sub:"Describe the value in 1–2 lines."},
-      {x:500,y:195,w:442,h:150,title:"Benefit #1",sub:"Short benefit line"},
-      {x:500,y:355,w:442,h:150,title:"Benefit #2",sub:"Short benefit line"},
-      {x:m,y:520,w:904,h:80,title:meta.brand||"Brand Name",sub:"tagline • contact • @handle"}
-    ];
-  },
-  Bold(meta){
-    const m=36;
-    return [
-      {x:m,y:m,w:620,h:160,title:headlineFrom(meta),sub:subFrom()},
-      {x:m,y:220,w:520,h:140,title:"Key Feature",sub:"Add a short benefit line here."},
-      {x:m,y:390,w:520,h:120,title:"Call To Action",sub:"Tap to learn more • Edit CTA"},
-      {x:690,y:m,w:254,h:474,title:"Image",sub:"Drop image here"},
-      {x:0,y:540,w:CANVAS_W,h:80,title:meta.brand||"Brand Name",sub:"website.com • @handle"}
-    ];
-  },
-  Clean(meta){
-    const m=44;
-    return [
-      {x:m,y:80,w:560,h:150,title:headlineFrom(meta),sub:subFrom()},
-      {x:m,y:260,w:560,h:140,title:"Subheading",sub:"Add supporting information here."},
-      {x:640,y:80,w:296,h:360,title:"Image",sub:"Drop image here"},
-      {x:m,y:450,w:892,h:120,title:"Offer / CTA",sub:"Limited offer • Add details"}
-    ];
-  },
-  Editorial(meta){
-    const m=40;
-    return [
-      {x:m,y:70,w:420,h:260,title:headlineFrom(meta),sub:"Editorial layout • Premium spacing"},
-      {x:480,y:70,w:460,h:330,title:"Image",sub:"Drop image here"},
-      {x:m,y:350,w:420,h:210,title:"Details",sub:"Add 2–3 lines of supporting text."},
-      {x:480,y:420,w:460,h:140,title:"CTA",sub:"Swipe • Shop • Learn more"}
-    ];
-  }
-};
-
-export const layouts = Object.keys(layoutBuilders).map(name=>({
-  name,
-  applyTile(tile){ /* no-op */ },
-  build(meta){
-    const els = layoutBuilders[name](meta);
-    return els.map(e=>({
-      x: clamp(Number(e.x||0), 0, CANVAS_W-1),
-      y: clamp(Number(e.y||0), 0, CANVAS_H-1),
-      w: clamp(Number(e.w||220), 60, CANVAS_W),
-      h: clamp(Number(e.h||120), 50, CANVAS_H),
-      title: safeText(e.title, 60),
-      sub: safeText(e.sub, 90)
-    }));
-  }
-}));
-
-export const styles = [
-  { name:"Dark Premium", applyTile(tile){ tile.style.borderColor="rgba(255,255,255,.12)"; } },
-  { name:"Light Minimal", applyTile(tile){ tile.style.borderColor="rgba(10,20,60,.16)"; } },
-  { name:"Neon", applyTile(tile){ tile.style.borderColor="rgba(124,58,237,.32)"; } },
-  { name:"Luxury Mono", applyTile(tile){ tile.style.borderColor="rgba(212,175,55,.28)"; } }
+const HEADLINES=[
+  "Elevate Your Brand",
+  "Limited Offer",
+  "New Collection Drop",
+  "Bold Ideas. Real Impact.",
+  "Premium Look, Fast",
+  "Make It Stand Out",
+  "Designed To Convert"
 ];
 
-export function buildTemplates({count=24, category="Instagram Post", styleName="Dark Premium", layoutName="Modern", prompt="", notes="", brand=""}={}){
-  const n = Math.min(200, Math.max(1, parseInt(count||24,10)));
-  const layoutObj = layouts.find(l=>l.name===layoutName) || layouts[0];
-  const meta = { category, prompt, notes, brand };
+const CTAS=["Shop Now","Learn More","Get Started","Join Today","Download","Book Now"];
 
-  const templates = Array.from({length:n}).map((_, i)=>({
-    title: `${category} #${i+1}`,
-    description: `${styleName} • ${layoutObj.name} • Click to edit`,
-    canvas: { w: CANVAS_W, h: CANVAS_H },
-    elements: layoutObj.build(meta)
+export const styles = [
+  { name:"Dark Premium", bg:"#050712", accent:"#0b5fff", text:"#f6f7fb", muted:"#aab0bd" },
+  { name:"Light Minimal", bg:"#f7f8ff", accent:"#0b5fff", text:"#0b1020", muted:"#5b6270" },
+  { name:"Neon", bg:"#050712", accent:"#7c3aed", text:"#f6f7fb", muted:"#aab0bd" },
+  { name:"Luxury Mono", bg:"#07060a", accent:"#d4af37", text:"#f6f7fb", muted:"#b9b2a8" }
+];
+
+export const layouts = [
+  { name:"Modern", build },
+  { name:"Bold", buildBold },
+  { name:"Editorial", buildEditorial },
+  { name:"Split", buildSplit }
+];
+
+function baseMeta(meta){
+  return {
+    cat: meta?.cat || meta?.category || "Instagram Post",
+    style: meta?.style || "Dark Premium",
+    prompt: meta?.prompt || "",
+    notes: meta?.notes || ""
+  };
+}
+
+function headline(meta){
+  const p=(meta.prompt||"").trim();
+  return p ? (p.length>46? p.slice(0,45)+"…" : p) : pick(HEADLINES);
+}
+function subline(meta){
+  const n=(meta.notes||"").trim();
+  return n ? (n.length>70? n.slice(0,69)+"…" : n) : "Clean layout • Strong hierarchy • Ready to edit";
+}
+
+function element(x,y,w,h,title,sub,type="text"){
+  return {
+    id: Math.random().toString(16).slice(2)+Date.now().toString(16),
+    type,
+    x: clamp(Math.round(x),0,CANVAS.w-1),
+    y: clamp(Math.round(y),0,CANVAS.h-1),
+    w: clamp(Math.round(w),40,CANVAS.w),
+    h: clamp(Math.round(h),40,CANVAS.h),
+    title: String(title||""),
+    sub: String(sub||"")
+  };
+}
+
+function build(metaIn){
+  const meta=baseMeta(metaIn);
+  const m=36;
+  return [
+    element(m,m,640,150, headline(meta), subline(meta),"text"),
+    element(m,210,520,150,"Key Benefit","Short benefit line here","text"),
+    element(m,380,520,120,pick(CTAS),"Add a supporting CTA line","text"),
+    element(700,m,244,470,"Image","Drop image here","image"),
+    element(0,540,CANVAS.w,80,"Brand Name","website.com • @handle","text")
+  ];
+}
+
+function buildBold(metaIn){
+  const meta=baseMeta(metaIn);
+  const m=34;
+  return [
+    element(m,70,560,190, headline(meta), subline(meta),"text"),
+    element(620,70,326,360,"Image","Drop image here","image"),
+    element(m,290,560,140,"Offer","Describe the offer in one line","text"),
+    element(m,450,912,130,pick(CTAS),"Limited time • Add details","text")
+  ];
+}
+
+function buildEditorial(metaIn){
+  const meta=baseMeta(metaIn);
+  const m=40;
+  return [
+    element(m,70,420,250, headline(meta), "Editorial spacing • Premium look","text"),
+    element(480,70,460,330,"Image","Drop image here","image"),
+    element(m,340,420,220,"Details","2–3 lines of supporting text","text"),
+    element(480,420,460,140,pick(CTAS),"Swipe • Shop • Learn more","text")
+  ];
+}
+
+function buildSplit(metaIn){
+  const meta=baseMeta(metaIn);
+  return [
+    element(0,0,490,620, headline(meta), subline(meta),"text"),
+    element(490,0,490,620,"Image","Right panel image","image"),
+    element(40,470,410,110,pick(CTAS),"Add short CTA","text")
+  ];
+}
+
+export function buildTemplates(metaIn={}, opts={}){
+  const meta=baseMeta(metaIn);
+  const count = Math.min(200, Math.max(1, parseInt(metaIn.count||opts.count||24,10)));
+  const layoutName = metaIn.layout || opts.layout || "Modern";
+  const layout = layouts.find(l=>l.name===layoutName) || layouts[0];
+
+  const templates = Array.from({length:count}).map((_,i)=>({
+    title: `${meta.cat} #${i+1}`,
+    description: `${meta.style} • ${layout.name}`,
+    canvas: { ...CANVAS },
+    elements: layout.build(meta)
   }));
 
   return { templates };
 }
-
-export const RESIZE_PRESETS = {
-  "Instagram Post": { w: 1080, h: 1080 },
-  "Instagram Story": { w: 1080, h: 1920 },
-  "Poster": { w: 2480, h: 3508 }
-};
