@@ -398,47 +398,13 @@ currentStyle = "Dark Premium";
     alert("Animate – coming soon");
   });
 
-<script type="module">
-import { layouts, styles } from "./design.js";
-let currentLayout = "Modern";
-let currentStyle = "Dark Premium";
 
-
-// all your existing JS stays exactly the same below
-
-  const layouts = ["Bold", "Clean", "Modern", "Minimal", "Vibrant"];
-  const styles = ["Dark Premium", "Light Minimal", "Neon", "Glassmorphism", "Corporate"];
-
-  // NEW LAYOUT = reshuffle layout text only
-  document.getElementById("newStyleBtn")?.addEventListener("click", () => {
-  const layout = layouts[Math.floor(Math.random() * layouts.length)];
-layout.apply(tile);
-
-    const span = tile.querySelector("span");
-    if (span) {
-      span.textContent = `${style.name} style • Click to edit`;
-    }
-  });
-
-  statusEl.textContent = "New style applied";
-});
-
-  // NEW STYLE = reshuffle style only
-  document.getElementById("newStyleBtn")?.addEventListener("click", () => {
-  const style = styles[Math.floor(Math.random() * styles.length)];
-
-  document.querySelectorAll(".tile").forEach(tile => {
-    style.apply(tile);
-
-    const span = tile.querySelector("span");
-    if (span) {
-      span.textContent = `${style.name} style • Click to edit`;
-    }
-  });
-
-  statusEl.textContent = "New style applied";
-});
 </script>
-
+<script type="module">
+  import { layouts, styles } from "./design.js";
+  // Expose for any existing inline logic that wants to use them without rewriting your UI.
+  window.TEMPLIFY_LAYOUTS = layouts;
+  window.TEMPLIFY_STYLES = styles;
+</script>
 </body>
 </html>
