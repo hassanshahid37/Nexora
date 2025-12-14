@@ -288,3 +288,35 @@ export function buildTemplates({count=24, category="Instagram Post", styleName="
 
   return { templates, layout: layoutObj.name, style: styleObj.name };
 }
+
+
+
+/* ===== Nexora Additions v5 ===== */
+
+export const RESIZE_PRESETS = {
+  "Instagram Post": { w: 1080, h: 1080 },
+  "Instagram Story": { w: 1080, h: 1920 },
+  "Poster": { w: 2480, h: 3508 }
+};
+
+export function applyBrandKit(elements, brandKit={}){
+  const { primary="#0b5fff", text="#f6f7fb", muted="#aab0bd", font="Poppins" } = brandKit;
+  return elements.map(e => ({
+    ...e,
+    title: e.title,
+    sub: e.sub,
+    brand: { primary, text, muted, font }
+  }));
+}
+
+export function smartResize(elements, from={w:980,h:620}, to={w:1080,h:1080}){
+  const sx = to.w / from.w;
+  const sy = to.h / from.h;
+  return elements.map(e => ({
+    ...e,
+    x: Math.round(e.x * sx),
+    y: Math.round(e.y * sy),
+    w: Math.round(e.w * sx),
+    h: Math.round(e.h * sy)
+  }));
+}
