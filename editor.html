@@ -569,21 +569,6 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   }
 
   function loadAutosaveOrSeed(){
-    // 1) If opened from index with a generated template, load it FIRST
-    if(draft?.template?.elements?.length){
-      state.elements = draft.template.elements.map(e=>({
-        id: e.id || uid(),
-        x: Number(e.x||80), y: Number(e.y||80), w: Number(e.w||260), h: Number(e.h||130),
-        title: String(e.title||""), sub: String(e.sub||""), type: e.type || "text"
-      }));
-      snapshot();
-      renderAll();
-      state.selectedIds.clear();
-      updateUI();
-      $("#autosavePill").textContent = "Autosave ON";
-      return;
-    }
-
     let saved = null;
     try{ saved = JSON.parse(localStorage.getItem("templify_autosave")||"null"); }catch(e){}
     if(saved?.elements?.length){
@@ -997,5 +982,23 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   updateUI();
 })();
 </script>
+
+<script>
+// Nexora Style Renderer v1
+setTimeout(() => {
+  document.querySelectorAll('.el').forEach(el => {
+    const h = el.querySelector('h4');
+    const p = el.querySelector('p');
+    if(h){
+      h.style.fontSize = (el.dataset.fontSize || 36) + 'px';
+      h.style.fontWeight = el.dataset.fontWeight || 700;
+    }
+    if(p){
+      p.style.fontSize = (el.dataset.fontSize || 18) + 'px';
+    }
+  });
+}, 50);
+</script>
+
 </body>
 </html>
