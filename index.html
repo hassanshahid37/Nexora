@@ -410,33 +410,34 @@ let currentStyle = "Dark Premium";
   const styles = ["Dark Premium", "Light Minimal", "Neon", "Glassmorphism", "Corporate"];
 
   // NEW LAYOUT = reshuffle layout text only
-  document.getElementById("newLayoutBtn")?.addEventListener("click", () => {
-    [...grid.children].forEach((tile, i) => {
-      const span = tile.querySelector("span");
-      if (span) {
-        currentLayout = layouts[Math.floor(Math.random() * layouts.length)];
-      span.textContent = `${currentStyle} • ${currentLayout} layout • Click to edit`;
+  document.getElementById("newStyleBtn")?.addEventListener("click", () => {
+  const layout = layouts[Math.floor(Math.random() * layouts.length)];
+layout.apply(tile);
 
-
-      }
-    });
-    statusEl.textContent = "New layout applied";
+    const span = tile.querySelector("span");
+    if (span) {
+      span.textContent = `${style.name} style • Click to edit`;
+    }
   });
+
+  statusEl.textContent = "New style applied";
+});
 
   // NEW STYLE = reshuffle style only
   document.getElementById("newStyleBtn")?.addEventListener("click", () => {
-    [...grid.children].forEach((tile, i) => {
-      const span = tile.querySelector("span");
-      if (span) {
-        
-      currentStyle = styles[Math.floor(Math.random() * styles.length)];
-     span.textContent = `${currentStyle} • ${currentLayout} layout • Click to edit`;
+  const style = styles[Math.floor(Math.random() * styles.length)];
 
+  document.querySelectorAll(".tile").forEach(tile => {
+    style.apply(tile);
 
-      }
-    });
-    statusEl.textContent = "New style applied";
+    const span = tile.querySelector("span");
+    if (span) {
+      span.textContent = `${style.name} style • Click to edit`;
+    }
   });
+
+  statusEl.textContent = "New style applied";
+});
 </script>
 
 </body>
