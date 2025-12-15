@@ -336,7 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  btn.addEventListener("click", async () => {
+  btn.addEventListener("click", async (event) => {
 if (event?.target?.id !== "generateBtn") return;
 
 currentLayout = "Modern";
@@ -397,6 +397,7 @@ currentStyle = "Dark Premium";
   document.getElementById("btnAnimate")?.addEventListener("click", () => {
     alert("Animate – coming soon");
   });
+</script>
 
 <script type="module">
 import { layouts, styles } from "./design.js";
@@ -406,13 +407,10 @@ let currentStyle = "Dark Premium";
 
 // all your existing JS stays exactly the same below
 
-  const layouts = ["Bold", "Clean", "Modern", "Minimal", "Vibrant"];
-  const styles = ["Dark Premium", "Light Minimal", "Neon", "Glassmorphism", "Corporate"];
-
   // NEW LAYOUT = reshuffle layout text only
   document.getElementById("newStyleBtn")?.addEventListener("click", () => {
   const layout = layouts[Math.floor(Math.random() * layouts.length)];
-layout.apply(tile);
+
 
     const span = tile.querySelector("span");
     if (span) {
@@ -428,7 +426,7 @@ layout.apply(tile);
   const style = styles[Math.floor(Math.random() * styles.length)];
 
   document.querySelectorAll(".tile").forEach(tile => {
-    style.apply(tile);
+    
 
     const span = tile.querySelector("span");
     if (span) {
