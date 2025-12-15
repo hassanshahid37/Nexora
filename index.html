@@ -336,7 +336,7 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  btn.addEventListener("click", async (event) => {
+  btn.addEventListener("click", async () => {
 if (event?.target?.id !== "generateBtn") return;
 
 currentLayout = "Modern";
@@ -398,7 +398,6 @@ currentStyle = "Dark Premium";
     alert("Animate – coming soon");
   });
 
-</script>
 <script type="module">
 import { layouts, styles } from "./design.js";
 let currentLayout = "Modern";
@@ -412,8 +411,8 @@ let currentStyle = "Dark Premium";
 
   // NEW LAYOUT = reshuffle layout text only
   document.getElementById("newStyleBtn")?.addEventListener("click", () => {
-  const layout = layouts[Math.floor(Math.random() * layouts.length)];
-if(typeof tile!=="undefined") layout.apply(tile);
+  const layout = layoutPresets[Math.floor(Math.random() * layoutPresets.length)];
+layout.apply(tile);
 
     const span = tile.querySelector("span");
     if (span) {
