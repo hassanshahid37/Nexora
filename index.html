@@ -267,10 +267,6 @@
   </div>
 
 <script>
-
-const __IS_GITHUB_PAGES__ = location.hostname.includes("github.io");
-const __API_GENERATE_URL__ = __IS_GITHUB_PAGES__ ? null : "/api/generate";
-
   const $ = (s)=>document.querySelector(s);
   const grid = $("#previewGrid");
   const statusEl = $("#status");
@@ -355,8 +351,7 @@ currentStyle = "Dark Premium";
     };
 
     try {
-      if(!__API_GENERATE_URL__) throw new Error("Static host");
-    const res = await fetch(__API_GENERATE_URL__, {
+      const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
