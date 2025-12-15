@@ -982,23 +982,5 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   updateUI();
 })();
 </script>
-
-<script>
-// Nexora Style Renderer v1
-setTimeout(() => {
-  document.querySelectorAll('.el').forEach(el => {
-    const h = el.querySelector('h4');
-    const p = el.querySelector('p');
-    if(h){
-      h.style.fontSize = (el.dataset.fontSize || 36) + 'px';
-      h.style.fontWeight = el.dataset.fontWeight || 700;
-    }
-    if(p){
-      p.style.fontSize = (el.dataset.fontSize || 18) + 'px';
-    }
-  });
-}, 50);
-</script>
-
 </body>
 </html>
