@@ -297,8 +297,6 @@
   const grid = $("#previewGrid");
   const statusEl = $("#status");
 
-  var __lastTemplates = [];
-
   function setTheme(next){
     document.body.setAttribute("data-theme", next);
     localStorage.setItem("templify_theme", next);
@@ -383,8 +381,10 @@
       div.innerHTML = `<b>${t.title}</b><span>${t.description}</span>`;
       div.addEventListener("click", ()=>openEditorWith(t));
       div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
-      grid.appendChild(div);
+      applyPhase2Style(div, typeof i!=='undefined'?i:(typeof index!=='undefined'?index:0));
+grid.appendChild(div);
     }
+  }
   }
 
   function openEditorWith(payload){
@@ -407,6 +407,9 @@
     }));
     window.location.href = "editor.html";
   }
+
+  let __lastTemplates = [];
+
   $("#openEditor").addEventListener("click", ()=>openEditorWith({cat:$("#cat").value, style:$("#style").value, i:1}));
   $("#themeBtn").addEventListener("click", toggleTheme);
 
@@ -437,8 +440,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.addEventListener("click", async (event) => {
-    let currentLayout = "Modern";
-    let currentStyle = "Dark Premium";
+currentLayout = "Modern";
+currentStyle = "Dark Premium";
 
     const payload = {
       category: document.getElementById("cat")?.value || "Instagram Post",
@@ -480,7 +483,8 @@ document.addEventListener("DOMContentLoaded", () => {
         div.innerHTML = `<b>${t.title}</b><span>${t.description}</span>`;
         div.addEventListener("click", ()=>openEditorWith(t));
         div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
-        grid.appendChild(div);
+        applyPhase2Style(div, typeof i!=='undefined'?i:(typeof index!=='undefined'?index:0));
+grid.appendChild(div);
       });
       statusEl.textContent = `Generated ${__lastTemplates.length}`;
     } catch (e) {
@@ -542,6 +546,14 @@ document.getElementById("newStyleBtn")?.addEventListener("click", () => {
   setStatus("New style applied");
 });
 
+</script>
+
+  <script src="design.js"></script>
+
+<script>
+if (typeof applyPhase2Style !== "function") {
+  window.applyPhase2Style = function(){ /* no-op */ };
+}
 </script>
 
 </body>
