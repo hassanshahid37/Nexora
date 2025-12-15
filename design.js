@@ -34,16 +34,4 @@ export function generateTemplates(count = 24) {
         {
           type: "text",
           text: "Premium social media design with strong hierarchy and clear focus.",
-          x: 80,
-          y: 800,
-          width: 920,
-          fontSize: 36,
-          fontWeight: 400,
-          color: "#cfd3ff",
-          align: "left"
-        }
-      ]
-    });
-  }
-  return templates;
-}
+
