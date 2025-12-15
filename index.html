@@ -337,8 +337,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.addEventListener("click", async (event) => {
-if (event?.target?.id !== "generateBtn") return;
-
 currentLayout = "Modern";
 currentStyle = "Dark Premium";
 
@@ -400,42 +398,47 @@ currentStyle = "Dark Premium";
 </script>
 
 <script type="module">
-import { layouts, styles } from "./design.js";
-let currentLayout = "Modern";
-let currentStyle = "Dark Premium";
+// Nexora: New Layout + New Style (SAFE)
+// UI unchanged. Only updates the preview tile TEXT.
 
+const layouts = ["Bold","Clean","Modern","Minimal","Vibrant"];
+const styles  = ["Dark Premium","Light Minimal","Neon","Glassmorphism","Corporate"];
 
-// all your existing JS stays exactly the same below
+const grid = document.getElementById("previewGrid");
+const statusEl = document.getElementById("status");
 
-  // NEW LAYOUT = reshuffle layout text only
-  document.getElementById("newStyleBtn")?.addEventListener("click", () => {
-  const layout = layouts[Math.floor(Math.random() * layouts.length)];
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function setStatus(msg){ if(statusEl) statusEl.textContent = msg; }
 
-
+function updateTilesText({layout=null, style=null}={}){
+  if(!grid) return;
+  const tiles = Array.from(grid.querySelectorAll(".tile"));
+  tiles.forEach((tile, i) => {
     const span = tile.querySelector("span");
-    if (span) {
-      span.textContent = `${style.name} style • Click to edit`;
-    }
+    if(!span) return;
+    const curStyle = style || (document.getElementById("style")?.value) || "Dark Premium";
+    const curLayout = layout || span.textContent.match(/\b(Bold|Clean|Modern|Minimal|Vibrant)\b/)?.[0] || "Modern";
+    span.textContent = `${curStyle} • ${curLayout} layout • Click to edit`;
   });
+}
 
-  statusEl.textContent = "New style applied";
+document.getElementById("newLayoutBtn")?.addEventListener("click", () => {
+  updateTilesText({ layout: pick(layouts) });
+  setStatus("New layout applied");
 });
 
-  // NEW STYLE = reshuffle style only
-  document.getElementById("newStyleBtn")?.addEventListener("click", () => {
-  const style = styles[Math.floor(Math.random() * styles.length)];
-
-  document.querySelectorAll(".tile").forEach(tile => {
-    
-
-    const span = tile.querySelector("span");
-    if (span) {
-      span.textContent = `${style.name} style • Click to edit`;
-    }
-  });
-
-  statusEl.textContent = "New style applied";
+document.getElementById("newStyleBtn")?.addEventListener("click", () => {
+  const s = pick(styles);
+  // keep dropdown in sync if it exists
+  const sel = document.getElementById("style");
+  if(sel){
+    const opt = Array.from(sel.options).find(o => o.textContent.trim() === s);
+    if(opt) sel.value = opt.textContent.trim();
+  }
+  updateTilesText({ style: s });
+  setStatus("New style applied");
 });
+
 </script>
 
 </body>
