@@ -297,6 +297,8 @@
   const grid = $("#previewGrid");
   const statusEl = $("#status");
 
+  var __lastTemplates = [];
+
   function setTheme(next){
     document.body.setAttribute("data-theme", next);
     localStorage.setItem("templify_theme", next);
@@ -384,7 +386,6 @@
       grid.appendChild(div);
     }
   }
-  }
 
   function openEditorWith(payload){
     // payload can be {cat,style,i} OR a full template object
@@ -406,9 +407,6 @@
     }));
     window.location.href = "editor.html";
   }
-
-  let __lastTemplates = [];
-
   $("#openEditor").addEventListener("click", ()=>openEditorWith({cat:$("#cat").value, style:$("#style").value, i:1}));
   $("#themeBtn").addEventListener("click", toggleTheme);
 
@@ -439,8 +437,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.addEventListener("click", async (event) => {
-currentLayout = "Modern";
-currentStyle = "Dark Premium";
+    let currentLayout = "Modern";
+    let currentStyle = "Dark Premium";
 
     const payload = {
       category: document.getElementById("cat")?.value || "Instagram Post",
