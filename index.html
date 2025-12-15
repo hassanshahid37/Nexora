@@ -267,6 +267,10 @@
   </div>
 
 <script>
+
+const __IS_GITHUB_PAGES__ = location.hostname.includes("github.io");
+const __API_GENERATE_URL__ = __IS_GITHUB_PAGES__ ? null : "/api/generate";
+
   const $ = (s)=>document.querySelector(s);
   const grid = $("#previewGrid");
   const statusEl = $("#status");
@@ -351,7 +355,8 @@ currentStyle = "Dark Premium";
     };
 
     try {
-      const res = await fetch("/api/generate", {
+      if(!__API_GENERATE_URL__) throw new Error("Static host");
+    const res = await fetch(__API_GENERATE_URL__, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -411,7 +416,7 @@ let currentStyle = "Dark Premium";
 
   // NEW LAYOUT = reshuffle layout text only
   document.getElementById("newStyleBtn")?.addEventListener("click", () => {
-  const layout = layoutPresets[Math.floor(Math.random() * layoutPresets.length)];
+  const layout = layouts[Math.floor(Math.random() * layouts.length)];
 layout.apply(tile);
 
     const span = tile.querySelector("span");
