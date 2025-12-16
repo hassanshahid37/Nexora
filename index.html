@@ -220,6 +220,78 @@
   text-overflow:ellipsis;
 }
 
+
+/* === Canva-style DOM thumbnail renderer === */
+.thumb{ overflow:hidden; }
+.thumb .pv-overlay{
+  position:absolute; inset:0;
+  background:
+    radial-gradient(180px 120px at 20% 15%, rgba(255,255,255,.16), transparent 60%),
+    radial-gradient(240px 160px at 85% 30%, rgba(0,0,0,.18), transparent 65%),
+    linear-gradient(180deg, rgba(0,0,0,.14), rgba(0,0,0,.02));
+  pointer-events:none;
+}
+[data-theme="light"] .thumb .pv-overlay{
+  background:
+    radial-gradient(180px 120px at 20% 15%, rgba(255,255,255,.72), transparent 60%),
+    radial-gradient(240px 160px at 85% 30%, rgba(10,20,60,.10), transparent 65%),
+    linear-gradient(180deg, rgba(10,20,60,.06), rgba(10,20,60,.00));
+}
+
+.thumb .pv-el{
+  position:absolute;
+  box-sizing:border-box;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.10);
+  backdrop-filter: blur(8px);
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+  padding: 0;
+}
+[data-theme="light"] .thumb .pv-el{
+  border:1px solid rgba(10,20,60,.10);
+  background: rgba(255,255,255,.70);
+}
+
+.thumb .pv-img{
+  background:
+    radial-gradient(160px 120px at 30% 20%, rgba(255,255,255,.18), transparent 60%),
+    linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.06));
+  border:1px solid rgba(255,255,255,.16);
+}
+[data-theme="light"] .thumb .pv-img{
+  background:
+    radial-gradient(160px 120px at 30% 20%, rgba(11,95,255,.10), transparent 60%),
+    linear-gradient(135deg, rgba(10,20,60,.06), rgba(10,20,60,.02));
+  border:1px solid rgba(10,20,60,.12);
+}
+
+.thumb .pv-shape{
+  backdrop-filter: blur(10px);
+}
+
+.thumb .pv-title, .thumb .pv-sub{
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+
+.thumb .pv-shine{
+  position:absolute;
+  width:140px; height:140px;
+  right:-40px; top:-40px;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.18), transparent 60%);
+  transform: rotate(12deg);
+  pointer-events:none;
+  mix-blend-mode: overlay;
+}
+[data-theme="light"] .thumb .pv-shine{
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.60), transparent 60%);
+  mix-blend-mode: normal;
+}
+
 </style>
     
 </head>
@@ -334,14 +406,15 @@
   function drawThumb(thumb, elements, bg){
     if(!thumb) return;
     thumb.innerHTML = "";
-    // Background (Canva-style thumbnail)
+
+    // --- Canva-style thumbnail renderer (safe, DOM-based) ---
+    // Background
     let bgCss = bg || null;
     if(!bgCss && Array.isArray(elements)){
       const bgEl = elements.find(e => String(e.type||"").toLowerCase()==="background");
       bgCss = bgEl?.fill || bgEl?.background || null;
     }
     if(bgCss){
-      // If it looks like a gradient, use as background-image; otherwise background-color
       if(String(bgCss).includes("gradient")){
         thumb.style.backgroundImage = String(bgCss);
         thumb.style.backgroundColor = "";
@@ -349,27 +422,164 @@
         thumb.style.backgroundImage = "";
         thumb.style.backgroundColor = String(bgCss);
       }
-    }else{
-      thumb.style.backgroundImage = "";
-      thumb.style.backgroundColor = "";
     }
-    const w0 = 980, h0 = 620;
-    const sx = thumb.clientWidth / w0;
-    const sy = thumb.clientHeight / h0;
-    (elements||[]).slice(0,6).forEach((e, idx)=>{
-      const m = document.createElement("div");
-      m.className = "mini";
-      const type = String(e.type || "card").toLowerCase();
-      m.style.left = (Number(e.x||0)*sx) + "px";
-      m.style.top = (Number(e.y||0)*sy) + "px";
-      m.style.width = (Number(e.w||e.width||120)*sx) + "px";
-      m.style.height = (Number(e.h||e.height||40)*sy) + "px";
-      if(type === "heading"){ m.style.borderRadius = "999px"; m.style.height = (Math.max(10, Number(e.h||36))*sy) + "px"; }
-      if(type === "badge"){ m.style.borderRadius = "999px"; }
-      if(type === "image"){ m.style.background = "rgba(255,255,255,.14)"; }
-      if(type === "shape"){ m.style.border = "none"; m.style.background = "rgba(11,95,255,.22)"; m.style.borderRadius = "18px"; }
-      thumb.appendChild(m);
+
+    // Overlay for depth
+    const overlay = document.createElement("div");
+    overlay.className = "pv-overlay";
+    thumb.appendChild(overlay);
+
+    const W0 = 980, H0 = 620;
+    const sx = thumb.clientWidth / W0;
+    const sy = thumb.clientHeight / H0;
+
+    const clamp = (n, a, b)=> Math.max(a, Math.min(b, n));
+    const pickFirst = (types)=> (Array.isArray(elements) ? elements.find(e => types.includes(String(e.type||"").toLowerCase())) : null);
+
+    const isLightTheme = (document.body.getAttribute("data-theme") === "light");
+    const ink = isLightTheme ? "rgba(10,20,60,.92)" : "rgba(255,255,255,.92)";
+    const inkSoft = isLightTheme ? "rgba(10,20,60,.70)" : "rgba(255,255,255,.74)";
+    const shadow = isLightTheme ? "0 10px 24px rgba(10,20,60,.12)" : "0 14px 32px rgba(0,0,0,.35)";
+
+    function addBlock({x,y,w,h,cls,style={},text=null}){
+      const d = document.createElement("div");
+      d.className = "pv-el " + (cls||"");
+      d.style.left = (clamp(Number(x||0)*sx, 0, thumb.clientWidth-2)) + "px";
+      d.style.top  = (clamp(Number(y||0)*sy, 0, thumb.clientHeight-2)) + "px";
+      d.style.width  = (clamp(Number(w||80)*sx, 10, thumb.clientWidth)) + "px";
+      d.style.height = (clamp(Number(h||22)*sy, 8, thumb.clientHeight)) + "px";
+      d.style.boxShadow = shadow;
+
+      for(const [k,v] of Object.entries(style||{})){
+        d.style[k] = v;
+      }
+
+      if(text){
+        d.textContent = text;
+      }
+      thumb.appendChild(d);
+      return d;
+    }
+
+    // Image / hero block
+    const img = pickFirst(["image"]);
+    if(img){
+      addBlock({
+        x: img.x, y: img.y, w: img.w || img.width, h: img.h || img.height,
+        cls: "pv-img",
+      });
+    }
+
+    // Shapes / cards (1–2 max for cleanliness)
+    const shapes = (Array.isArray(elements) ? elements.filter(e => ["shape","card"].includes(String(e.type||"").toLowerCase())) : []).slice(0,2);
+    shapes.forEach((s, idx)=>{
+      addBlock({
+        x: s.x, y: s.y, w: s.w || s.width, h: s.h || s.height,
+        cls: "pv-shape",
+        style: {
+          opacity: String(s.opacity ?? 1),
+          borderRadius: ((Number(s.radius)||18) * Math.min(sx,sy)) + "px",
+          background: String(s.background || s.fill || (idx===0 ? "rgba(255,255,255,.12)" : "rgba(255,255,255,.08)")),
+          border: isLightTheme ? "1px solid rgba(10,20,60,.10)" : "1px solid rgba(255,255,255,.16)"
+        }
+      });
     });
+
+    // Badge
+    const badge = pickFirst(["badge"]);
+    if(badge){
+      addBlock({
+        x: badge.x, y: badge.y, w: badge.w || badge.width || 220, h: badge.h || badge.height || 54,
+        cls: "pv-badge",
+        text: (badge.title || "FEATURED").toString().slice(0,18),
+        style: {
+          borderRadius: "999px",
+          background: String(badge.background || "rgba(255,255,255,.16)"),
+          color: String(badge.color || ink),
+          fontWeight: "800",
+          fontSize: clamp((Number(badge.fontSize||14) * Math.min(sx,sy)), 10, 14) + "px",
+          letterSpacing: ".4px",
+          display:"flex",
+          alignItems:"center",
+          justifyContent:"center",
+          padding:"0 10px",
+          textTransform:"uppercase"
+        }
+      });
+    }
+
+    // Heading + supporting text
+    const heading = pickFirst(["heading"]);
+    if(heading){
+      addBlock({
+        x: heading.x, y: heading.y, w: heading.w || hookup(heading,"width",740), h: heading.h || hookup(heading,"height",120),
+        cls: "pv-title",
+        text: (heading.title || heading.text || "Headline").toString(),
+        style: {
+          background: "transparent",
+          border: "none",
+          boxShadow: "none",
+          color: String(heading.color || ink),
+          fontWeight: String(heading.fontWeight || 800),
+          fontSize: clamp((Number(heading.fontSize||34) * Math.min(sx,sy)), 13, 18) + "px",
+          lineHeight: "1.05",
+          textShadow: isLightTheme ? "none" : "0 10px 26px rgba(0,0,0,.35)",
+          padding: "0"
+        }
+      });
+    }
+
+    const sub = pickFirst(["subhead","text"]);
+    if(sub){
+      addBlock({
+        x: sub.x, y: sub.y, w: sub.w || sub.width || 520, h: sub.h || sub.height || 70,
+        cls: "pv-sub",
+        text: (sub.title || sub.sub || sub.text || "").toString().replace(/
+/g," • ").slice(0,60),
+        style: {
+          background: "transparent",
+          border: "none",
+          boxShadow: "none",
+          color: String(sub.color || inkSoft),
+          fontWeight: String(sub.fontWeight || 600),
+          fontSize: clamp((Number(sub.fontSize||16) * Math.min(sx,sy)), 10, 12) + "px",
+          lineHeight: "1.25",
+          padding: "0"
+        }
+      });
+    }
+
+    // CTA
+    const cta = pickFirst(["cta"]);
+    if(cta){
+      addBlock({
+        x: cta.x, y: cta.y, w: cta.w || cta.width || 240, h: cta.h || cta.height || 64,
+        cls: "pv-cta",
+        text: (cta.title || "Get Started").toString().slice(0,18),
+        style: {
+          borderRadius: ((Number(cta.radius)||18) * Math.min(sx,sy)) + "px",
+          background: String(cta.background || "linear-gradient(135deg, rgba(11,95,255,.95), rgba(136,71,255,.85))"),
+          color: String(cta.color || "#fff"),
+          fontWeight: "800",
+          fontSize: clamp((Number(cta.fontSize||14) * Math.min(sx,sy)), 10, 12) + "px",
+          display:"flex",
+          alignItems:"center",
+          justifyContent:"center",
+          border: "1px solid rgba(255,255,255,.14)"
+        }
+      });
+    }
+
+    // small highlight corner
+    const shine = document.createElement("div");
+    shine.className = "pv-shine";
+    thumb.appendChild(shine);
+
+    function hookup(obj, key, d){
+      // helper to avoid NaN if missing
+      const v = obj?.[key];
+      return (typeof v === "number" && Number.isFinite(v)) ? v : d;
+    }
   }
 
 
