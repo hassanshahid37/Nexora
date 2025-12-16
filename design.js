@@ -1,102 +1,172 @@
-// design.js — Premium Static Templates (AI-layout compatible)
-// This file is safe to keep for future client-side generation.
-// Current index uses /api/generate, but editor can also use this schema.
+// Nexora / design.js
+// PHASE A — Canva-style Static Template Archetype Engine (v1)
+// Layout-first. Premium. Deterministic.
+// Editor + index compatible. NO UI logic here.
 
-export function generateTemplates(count = 24, opts = {}) {
-  const category = opts.category || "Instagram Post";
-  const style = opts.style || "Dark Premium";
-  const W = 980, H = 620;
-
-  const palettes = [
-    { name:"Blue Violet", bg:"linear-gradient(135deg,#0b5fff,#7b5cff)", ink:"#ffffff", accent:"#7b5cff" },
-    { name:"Midnight Cyan", bg:"linear-gradient(135deg,#0b1020,#00d1ff)", ink:"#ffffff", accent:"#00d1ff" },
-    { name:"Emerald Noir", bg:"linear-gradient(135deg,#07130f,#00c389)", ink:"#ffffff", accent:"#00c389" },
-    { name:"Sunset Premium", bg:"linear-gradient(135deg,#ff4d6d,#ffcc66)", ink:"#fff7ed", accent:"#ffcc66" },
+export function generateTemplates(count = 24) {
+  const archetypes = [
+    heroPromotion,
+    quoteStatement,
+    saleOffer,
+    eventAnnouncement,
+    brandMessage
   ];
 
-  const forms = [heroType, imageLed, promoBadge, editorial];
+  const palettes = [
+    { bg: "linear-gradient(135deg,#0b5fff,#7b5cff)", ink:"#ffffff", accent:"#7b5cff" },
+    { bg: "linear-gradient(135deg,#07130f,#00c389)", ink:"#ffffff", accent:"#00c389" },
+    { bg: "linear-gradient(135deg,#1f1409,#ffcc66)", ink:"#fff7ed", accent:"#ffcc66" },
+    { bg: "linear-gradient(135deg,#0b1020,#00d1ff)", ink:"#ffffff", accent:"#00d1ff" },
+    { bg: "linear-gradient(135deg,#1a0b14,#ff4d6d)", ink:"#ffffff", accent:"#ff4d6d" }
+  ];
 
   const out = [];
-  for(let i=0;i<count;i++){
-    const p = palettes[i % palettes.length];
-    const f = forms[i % forms.length];
-    const tpl = f(i, { W, H, p, category, style });
-    out.push(tpl);
+  for (let i = 0; i < count; i++) {
+    const archetype = archetypes[i % archetypes.length];
+    const palette = palettes[i % palettes.length];
+    out.push(archetype(i, palette));
   }
   return out;
 }
 
-function heroType(i, {W,H,p,category,style}){
+/* =====================
+   ARCHETYPES (LOCKED)
+   ===================== */
+
+function heroPromotion(i, p) {
   return {
-    id: `d_${Date.now()}_${i}`,
-    title: `${category} #${i+1}`,
-    description: `${style} • Hero Typography`,
-    category, style,
-    bg: p.bg,
-    canvas: { w: W, h: H },
+    title: `Hero Promotion #${i+1}`,
+    canvas: { width:1080, height:1080, background:p.bg },
     elements: [
-      el("heading", 70, 110, 740, 120, "Create Your Future", { fontSize: 70, fontWeight: 900, color: p.ink }),
-      el("text", 70, 235, 560, 70, "Premium spacing • bold hierarchy • clean layout", { fontSize: 22, fontWeight: 600, color: "rgba(255,255,255,.86)" }),
-      el("button", 70, 330, 240, 56, "Get Started", { fill: "rgba(255,255,255,.14)", color: p.ink, radius: 999 }),
+      heading("Create Your Future", 100, 220, 780, 110, p.ink),
+      text("Premium Canva-style hero layout", 100, 360, 520, 30, "rgba(255,255,255,.85)"),
+      button("Get Started", 100, 430, p.accent),
+      imageBlock(640, 180, 300, 520)
     ]
   };
 }
 
-function imageLed(i, {W,H,p,category,style}){
+function quoteStatement(i, p) {
   return {
-    id: `d_${Date.now()}_${i}`,
-    title: `${category} #${i+1}`,
-    description: `${style} • Image-led Poster`,
-    category, style,
-    bg: p.bg,
-    canvas: { w: W, h: H },
+    title: `Quote Statement #${i+1}`,
+    canvas: { width:1080, height:1080, background:p.bg },
     elements: [
-      el("image", 560, 90, 340, 440, "IMAGE", { background: "rgba(255,255,255,.10)", radius: 24 }),
-      el("heading", 70, 120, 460, 150, "Experience Luxury", { fontSize: 62, fontWeight: 900, color: p.ink }),
-      el("text", 70, 255, 420, 60, "Minimal copy • strong visual anchor", { fontSize: 20, fontWeight: 600, color: "rgba(255,255,255,.86)" }),
-      el("badge", 70, 90, 160, 44, "NEW", { background:"rgba(255,255,255,.14)", radius: 999, color: p.ink, fontSize: 14, fontWeight: 800 }),
+      heading("Design is intelligence made visible.", 120, 360, 840, 120, p.ink, "center"),
+      text("— Premium Quote Layout", 120, 520, 840, 28, "rgba(255,255,255,.8)", "center")
     ]
   };
 }
 
-function promoBadge(i, {W,H,p,category,style}){
+function saleOffer(i, p) {
   return {
-    id: `d_${Date.now()}_${i}`,
-    title: `${category} #${i+1}`,
-    description: `${style} • Promo / Offer`,
-    category, style,
-    bg: p.bg,
-    canvas: { w: W, h: H },
+    title: `Sale Offer #${i+1}`,
+    canvas: { width:1080, height:1080, background:p.bg },
     elements: [
-      el("badge", 70, 100, 210, 48, "LIMITED", { background:"rgba(255,255,255,.14)", radius: 999, color: p.ink, fontSize: 14, fontWeight: 900 }),
-      el("heading", 70, 175, 720, 170, "30% OFF", { fontSize: 92, fontWeight: 950, color: p.ink }),
-      el("text", 70, 320, 520, 64, "Premium collection • today only", { fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,.86)" }),
-      el("button", 70, 410, 260, 56, "Shop Now", { fill: "rgba(255,255,255,.14)", color: p.ink, radius: 999 }),
+      badge("LIMITED", 100, 200, p.accent),
+      heading("30% OFF", 100, 300, 780, 140, p.ink),
+      button("Shop Now", 100, 470, p.accent)
     ]
   };
 }
 
-function editorial(i, {W,H,p,category,style}){
+function eventAnnouncement(i, p) {
   return {
-    id: `d_${Date.now()}_${i}`,
-    title: `${category} #${i+1}`,
-    description: `${style} • Editorial`,
-    category, style,
-    bg: p.bg,
-    canvas: { w: W, h: H },
+    title: `Event Announcement #${i+1}`,
+    canvas: { width:1080, height:1080, background:p.bg },
     elements: [
-      el("heading", 90, 165, 800, 120, "Design Conference", { fontSize: 64, fontWeight: 900, color: p.ink, align:"center" }),
-      el("shape", 300, 285, 380, 2, "", { fill:"rgba(255,255,255,.30)" }),
-      el("text", 160, 310, 660, 80, "A calm, centered layout with intentional spacing.", { fontSize: 20, fontWeight: 600, color: "rgba(255,255,255,.86)", align:"center" }),
-      el("button", 370, 420, 240, 56, "Reserve Spot", { fill: "rgba(255,255,255,.14)", color: p.ink, radius: 999 }),
+      heading("Design Conference 2025", 120, 320, 840, 90, p.ink, "center"),
+      divider(340, 430, 400),
+      text("Join the future of creativity", 120, 470, 840, 28, "rgba(255,255,255,.85)", "center"),
+      button("Reserve Spot", 400, 530, p.accent)
     ]
   };
 }
 
-function el(type, x, y, w, h, title, extra={}){
+function brandMessage(i, p) {
   return {
-    id: `${type}_${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`,
-    type, x, y, w, h, title, sub: "",
-    ...extra
+    title: `Brand Message #${i+1}`,
+    canvas: { width:1080, height:1080, background:p.bg },
+    elements: [
+      imageBlock(100, 180, 360, 360),
+      heading("Build a Brand That Matters", 520, 260, 440, 90, p.ink),
+      text("Minimal brand-focused layout", 520, 380, 420, 28, "rgba(255,255,255,.85)")
+    ]
+  };
+}
+
+/* =====================
+   ELEMENT HELPERS
+   ===================== */
+
+function heading(text, x, y, w, size, color, align="left") {
+  return {
+    type:"heading",
+    text,
+    x, y, width:w,
+    fontSize:size,
+    fontWeight:800,
+    color,
+    align
+  };
+}
+
+function text(text, x, y, w, size, color, align="left") {
+  return {
+    type:"text",
+    text,
+    x, y, width:w,
+    fontSize:size,
+    fontWeight:500,
+    color,
+    align
+  };
+}
+
+function button(text, x, y, color) {
+  return {
+    type:"button",
+    text,
+    x, y,
+    width:260,
+    height:64,
+    background:color,
+    color:"#fff",
+    radius:999,
+    fontSize:18,
+    fontWeight:700
+  };
+}
+
+function badge(text, x, y, color) {
+  return {
+    type:"badge",
+    text,
+    x, y,
+    width:200,
+    height:54,
+    background:color,
+    color:"#fff",
+    radius:999,
+    fontSize:16,
+    fontWeight:800
+  };
+}
+
+function imageBlock(x, y, w, h) {
+  return {
+    type:"image",
+    x, y,
+    width:w,
+    height:h
+  };
+}
+
+function divider(x, y, w) {
+  return {
+    type:"divider",
+    x, y,
+    width:w,
+    height:2,
+    color:"rgba(255,255,255,.35)"
   };
 }
