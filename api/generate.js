@@ -44,11 +44,18 @@ Notes: ${notes}
 
 Rules:
 - Return ONLY valid JSON (no markdown, no comments).
+- Make it look Canva-level: use strong hierarchy, spacing, and premium color palettes.
+- Prefer using background gradients (template.bg or a full-canvas shape element).
+- Use typography sizes (heading 48-84, subhead 20-34, text 14-20), and include color.
 - Make templates DISTINCT (different layouts and element placements).
 - Elements must fit within canvas 980x620.
 - Use 3 to 7 elements per template.
 - element fields must be: type,x,y,w,h,title,sub (all required).
 - Allowed types: heading, subhead, text, badge, cta, image, shape, card.
+- For better Canva-style results, you MAY add optional style fields per element:
+  fontSize, fontWeight, color, align, radius, fill, background, opacity.
+- You MAY also add template-level field: bg (CSS color/gradient) to represent the background.
+- If you include any optional fields, keep them JSON-serializable and consistent.
 
 ${schemaHint}`;
 
