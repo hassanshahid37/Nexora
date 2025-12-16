@@ -311,41 +311,6 @@
 
     .selected{outline:2px solid rgba(11,95,255,.95); outline-offset:2px}
 
-
-    /* Element type styling (Canva-like) */
-    .el.type-heading{background:transparent;border-color:transparent;box-shadow:none;padding:6px 4px}
-    .el.type-heading h4{font-size:34px;letter-spacing:.2px}
-    .el.type-heading p{display:none}
-
-    .el.type-subhead{background:transparent;border-color:transparent;box-shadow:none;padding:4px}
-    .el.type-subhead h4{font-size:18px;font-weight:600;opacity:.92}
-    .el.type-subhead p{display:none}
-
-    .el.type-text{background:transparent;border-color:transparent;box-shadow:none;padding:4px 2px}
-    .el.type-text h4{display:none}
-    .el.type-text p{margin:0;font-size:13.5px;line-height:1.45;color:rgba(255,255,255,.88)}
-    [data-theme="light"] .el.type-text p{color:rgba(10,20,60,.82)}
-
-    .el.type-badge{border-radius:999px;padding:10px 14px;backdrop-filter: blur(16px)}
-    .el.type-badge h4{font-size:12px;letter-spacing:.8px;text-transform:uppercase}
-    .el.type-badge p{display:none}
-
-    .el.type-cta{border-radius:16px;padding:12px 14px}
-    .el.type-cta h4{font-size:13px}
-    .el.type-cta p{display:none}
-    .el.type-cta::after{content:"";position:absolute;right:12px;top:50%;width:8px;height:8px;border-radius:999px;transform:translateY(-50%);background:rgba(255,255,255,.85);box-shadow:0 0 0 4px rgba(255,255,255,.12);}
-    [data-theme="light"] .el.type-cta::after{background:rgba(10,20,60,.75);box-shadow:0 0 0 4px rgba(10,20,60,.10)}
-
-    .el.type-image{padding:0;border-radius:18px;overflow:hidden;background:radial-gradient(420px 220px at 20% 25%, rgba(11,95,255,.32), transparent 60%),radial-gradient(320px 260px at 85% 30%, rgba(136,71,255,.28), transparent 60%),linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.04));border:1px solid rgba(255,255,255,.18);}
-    [data-theme="light"] .el.type-image{background:radial-gradient(420px 220px at 20% 25%, rgba(11,95,255,.16), transparent 60%),radial-gradient(320px 260px at 85% 30%, rgba(136,71,255,.14), transparent 60%),linear-gradient(135deg, rgba(10,20,60,.06), rgba(10,20,60,.02));border:1px solid rgba(10,20,60,.14);}
-    .el.type-image h4,.el.type-image p{display:none}
-    .el.type-image::before{content:"";position:absolute;inset:0;background-image:linear-gradient(to right, rgba(255,255,255,.10) 1px, transparent 1px),linear-gradient(to bottom, rgba(255,255,255,.10) 1px, transparent 1px);background-size: 22px 22px;opacity:.55;mix-blend-mode: overlay;pointer-events:none;}
-    [data-theme="light"] .el.type-image::before{background-image:linear-gradient(to right, rgba(10,20,60,.10) 1px, transparent 1px),linear-gradient(to bottom, rgba(10,20,60,.10) 1px, transparent 1px);opacity:.35;mix-blend-mode: multiply;}
-
-    .el.type-shape{padding:0;border:none;background:linear-gradient(135deg, rgba(11,95,255,.40), rgba(136,71,255,.30));filter:saturate(1.05);opacity:.85;}
-    [data-theme="light"] .el.type-shape{opacity:.65}
-    .el.type-shape h4,.el.type-shape p{display:none}
-
     /* Properties */
     .propGrid{display:grid;gap:10px}
     .field label{display:block;font-size:11.5px;color:var(--muted);margin:0 0 6px}
@@ -556,11 +521,10 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     if(draft?.template?.elements && Array.isArray(draft.template.elements)){
       state.elements = draft.template.elements.map(e => ({
         id: e.id || uid(),
-        type: String(e.type || 'card'),
         x: Number(e.x ?? 80), y: Number(e.y ?? 80),
-        w: Number(e.w ?? e.width ?? 420), h: Number(e.h ?? e.height ?? 120),
-        title: String((e.title ?? e.text) ?? 'TEXT'),
-        sub: String((e.sub ?? e.caption) ?? '')
+        w: Number(e.w ?? 420), h: Number(e.h ?? 120),
+        title: String(e.title ?? "TEXT"),
+        sub: String(e.sub ?? "")
       }));
     }
   }catch(e){}
@@ -611,7 +575,7 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   // Init content
   function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add your text here…"){
     const id = uid();
-    state.elements.push({ id, type:'card', x, y, w, h, title, sub });
+    state.elements.push({ id, x, y, w, h, title, sub });
     snapshot();
     renderAll();
     selectOnly(id);
@@ -647,21 +611,13 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
 
     for(const el of state.elements){
       const div = document.createElement("div");
+      div.className = "el";
       div.dataset.id = el.id;
-      div.style.left = el.x + 'px';
-      div.style.top = el.y + 'px';
-      div.style.width = el.w + 'px';
-      div.style.height = el.h + 'px';
-      const t = (el.type || 'card').toLowerCase();
-      div.className = 'el type-' + t;
-      div.dataset.type = t;
-      if(t === 'text'){
-        div.innerHTML = `<p>${escapeHtml(el.sub || el.title)}</p>`;
-      }else if(t === 'image' || t === 'shape'){
-        div.innerHTML = ``;
-      }else{
-        div.innerHTML = `<h4>${escapeHtml(el.title)}</h4>${(t==='cta'||t==='badge'||t==='heading'||t==='subhead') ? '' : `<p>${escapeHtml(el.sub)}</p>`}`;
-      }
+      div.style.left = el.x + "px";
+      div.style.top = el.y + "px";
+      div.style.width = el.w + "px";
+      div.style.height = el.h + "px";
+      div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
       if(state.selectedIds.has(el.id)) div.classList.add("selected");
       canvas.appendChild(div);
       wireElement(div);
@@ -834,21 +790,13 @@ function escapeHtml(str){
 
     for(const el of state.elements){
       const div = document.createElement("div");
+      div.className = "el";
       div.dataset.id = el.id;
-      div.style.left = el.x + 'px';
-      div.style.top = el.y + 'px';
-      div.style.width = el.w + 'px';
-      div.style.height = el.h + 'px';
-      const t = (el.type || 'card').toLowerCase();
-      div.className = 'el type-' + t;
-      div.dataset.type = t;
-      if(t === 'text'){
-        div.innerHTML = `<p>${escapeHtml(el.sub || el.title)}</p>`;
-      }else if(t === 'image' || t === 'shape'){
-        div.innerHTML = ``;
-      }else{
-        div.innerHTML = `<h4>${escapeHtml(el.title)}</h4>${(t==='cta'||t==='badge'||t==='heading'||t==='subhead') ? '' : `<p>${escapeHtml(el.sub)}</p>`}`;
-      }
+      div.style.left = el.x + "px";
+      div.style.top = el.y + "px";
+      div.style.width = el.w + "px";
+      div.style.height = el.h + "px";
+      div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
       if(state.selectedIds.has(el.id)) div.classList.add("selected");
       canvas.appendChild(div);
       wireElement(div);
@@ -1055,4 +1003,3 @@ function escapeHtml(str){
 </script>
 </body>
 </html>
-
