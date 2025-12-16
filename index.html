@@ -331,9 +331,28 @@
     setTheme(cur === "dark" ? "light" : "dark");
   }
 
-  function drawThumb(thumb, elements){
+  function drawThumb(thumb, elements, bg){
     if(!thumb) return;
     thumb.innerHTML = "";
+    // Background (Canva-style thumbnail)
+    let bgCss = bg || null;
+    if(!bgCss && Array.isArray(elements)){
+      const bgEl = elements.find(e => String(e.type||"").toLowerCase()==="background");
+      bgCss = bgEl?.fill || bgEl?.background || null;
+    }
+    if(bgCss){
+      // If it looks like a gradient, use as background-image; otherwise background-color
+      if(String(bgCss).includes("gradient")){
+        thumb.style.backgroundImage = String(bgCss);
+        thumb.style.backgroundColor = "";
+      }else{
+        thumb.style.backgroundImage = "";
+        thumb.style.backgroundColor = String(bgCss);
+      }
+    }else{
+      thumb.style.backgroundImage = "";
+      thumb.style.backgroundColor = "";
+    }
     const w0 = 980, h0 = 620;
     const sx = thumb.clientWidth / w0;
     const sy = thumb.clientHeight / h0;
@@ -395,10 +414,11 @@
         <span>${style} • ${layoutWord} layout • Click to edit</span>
       `;
 
-      const elements = patterns[i % patterns.length](i).map(e => ({ id: crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16)), ...e }));
+      const elements = patterns[i % patterns.length](i).map(e => ({ id: (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))), ...e }));
 
       const thumb = div.querySelector('.thumb');
-      );
+      if(thumb){
+        drawThumb(thumb, elements);
       }
 
       const template = {
@@ -412,9 +432,7 @@
       };
       __lastTemplates.push(template);
 
-      
-      try{ renderPreview(thumb, template); }catch(e){}
-div.addEventListener("click", ()=>openEditorWith(template));
+      div.addEventListener("click", ()=>openEditorWith(template));
       div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(template); });
       grid.appendChild(div);
     }
@@ -539,8 +557,8 @@ currentStyle = "Dark Premium";
         div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title}</b><span>${t.description}</span>`;
 
       const thumb = div.querySelector('.thumb');
-      try{ renderPreview(thumb, t); }catch(e){}
-      );
+      if(thumb){
+        drawThumb(thumb, t.elements, t.bg);
       }
 
         div.addEventListener("click", ()=>openEditorWith(t));
@@ -611,176 +629,20 @@ document.getElementById("newStyleBtn")?.addEventListener("click", () => {
 
 
 <script>
-function renderPreview(thumb, t){
-  if(!thumb) return;
-  thumb.innerHTML = "";
-  thumb.style.position = "relative";
-  thumb.style.overflow = "hidden";
-
-  const W = 980, H = 620;
-  const sx = thumb.clientWidth / W;
-  const sy = thumb.clientHeight / H;
-
-  // background
-  const bgEl = (t?.elements || []).find(e => String(e.type||"").toLowerCase() === "background");
-  const bg = (t && (t.bg || t.background)) || bgEl?.fill || bgEl?.background || null;
-  thumb.style.background = bg || "linear-gradient(135deg, rgba(11,95,255,.20), rgba(136,71,255,.16))";
-
-  // subtle overlay (Canva-like thumbnail depth)
-  const overlay = document.createElement("div");
-  overlay.style.position = "absolute";
-  overlay.style.inset = "0";
-  overlay.style.background = "linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.20))";
-  overlay.style.pointerEvents = "none";
-  thumb.appendChild(overlay);
-
-  const clamp = (n,a,b)=>Math.max(a, Math.min(b, n));
-  const elms = Array.isArray(t?.elements) ? t.elements : [];
-
-  const orderRank = (type)=>{
-    const tt = String(type||"").toLowerCase();
-    if(tt==="background") return 0;
-    if(tt==="shape" || tt==="card") return 1;
-    if(tt==="image") return 2;
-    if(tt==="badge") return 3;
-    if(tt==="heading" || tt==="subhead" || tt==="text") return 4;
-    if(tt==="cta") return 5;
-    return 6;
-  };
-
-  const sorted = elms.slice(0, 16).sort((a,b)=>orderRank(a.type)-orderRank(b.type));
-
-  for(const e of sorted){
-    const type = String(e.type || "card").toLowerCase();
-    if(type === "background") continue;
-
-    const x = Number(e.x ?? 0) * sx;
-    const y = Number(e.y ?? 0) * sy;
-    const w = Number(e.w ?? e.width ?? 120) * sx;
-    const h = Number(e.h ?? e.height ?? 40) * sy;
-
-    const d = document.createElement("div");
-    d.style.position = "absolute";
-    d.style.left = x + "px";
-    d.style.top  = y + "px";
-    d.style.width  = w + "px";
-    d.style.height = h + "px";
-    d.style.pointerEvents = "none";
-    d.style.boxSizing = "border-box";
-
-    const radius = Number(e.radius ?? 0);
-    if(radius){
-      d.style.borderRadius = clamp(radius * Math.min(sx,sy), 6, 28) + "px";
-    }
-
-    const softStrokeDark = "rgba(255,255,255,.16)";
-    const softStrokeLight = "rgba(10,20,60,.10)";
-
-    if(type === "shape" || type === "card"){
-      d.style.background = e.background || e.fill || "rgba(255,255,255,.10)";
-      d.style.border = `1px solid ${softStrokeDark}`;
-      d.style.backdropFilter = "blur(10px)";
-      if(!radius) d.style.borderRadius = "14px";
-    }
-
-    if(type === "image"){
-      d.style.background = e.background || "linear-gradient(135deg, rgba(255,255,255,.18), rgba(255,255,255,.06))";
-      d.style.border = `1px solid ${softStrokeDark}`;
-      if(!radius) d.style.borderRadius = "16px";
-      const shine = document.createElement("div");
-      shine.style.position = "absolute";
-      shine.style.inset = "0";
-      shine.style.background = "radial-gradient(120px 70px at 25% 25%, rgba(255,255,255,.18), transparent 60%)";
-      shine.style.pointerEvents = "none";
-      d.appendChild(shine);
-    }
-
-    if(type === "badge"){
-      d.style.display = "flex";
-      d.style.alignItems = "center";
-      d.style.justifyContent = "center";
-      d.style.padding = "0 8px";
-      d.style.borderRadius = "999px";
-      d.style.background = e.background || "rgba(255,255,255,.14)";
-      d.style.border = `1px solid ${softStrokeDark}`;
-      d.style.color = e.color || "#ffffff";
-      d.style.fontWeight = String(e.fontWeight || 700);
-      d.style.fontSize = clamp((Number(e.fontSize || 16) * sy) * 0.9, 9, 13) + "px";
-      d.style.letterSpacing = ".3px";
-      d.style.whiteSpace = "nowrap";
-      d.style.overflow = "hidden";
-      d.style.textOverflow = "ellipsis";
-      d.textContent = (e.title || "").toString().slice(0, 24) || "BADGE";
-    }
-
-    if(type === "cta"){
-      d.style.display = "flex";
-      d.style.alignItems = "center";
-      d.style.justifyContent = "center";
-      d.style.padding = "0 10px";
-      d.style.borderRadius = (radius ? d.style.borderRadius : "14px");
-      d.style.background = e.background || e.fill || "linear-gradient(135deg, rgba(11,95,255,.95), rgba(136,71,255,.85))";
-      d.style.border = "1px solid rgba(255,255,255,.12)";
-      d.style.boxShadow = "0 10px 22px rgba(0,0,0,.20)";
-      d.style.color = e.color || "#ffffff";
-      d.style.fontWeight = String(e.fontWeight || 700);
-      d.style.fontSize = clamp((Number(e.fontSize || 18) * sy) * 0.85, 9, 13) + "px";
-      d.style.whiteSpace = "nowrap";
-      d.style.overflow = "hidden";
-      d.style.textOverflow = "ellipsis";
-      d.textContent = (e.title || "").toString().slice(0, 22) || "CTA";
-    }
-
-    if(type === "heading" || type === "subhead" || type === "text"){
-      d.style.background = "transparent";
-      d.style.border = "0";
-      d.style.padding = "0";
-      const txt = (e.title || e.text || "").toString().trim() || (type==="heading" ? "Headline" : "Text");
-      d.textContent = txt.replace(/\s+/g, " ").slice(0, 34);
-
-      const baseSize = Number(e.fontSize || (type==="heading" ? 72 : 22));
-      const scaled = baseSize * sy * (type==="heading" ? 0.55 : 0.40);
-      d.style.fontSize = clamp(scaled, type==="heading" ? 11 : 9, type==="heading" ? 16 : 12) + "px";
-      d.style.fontWeight = String(e.fontWeight || (type==="heading" ? 800 : 500));
-      d.style.lineHeight = "1.1";
-      d.style.color = e.color || "#ffffff";
-      d.style.textShadow = "0 6px 18px rgba(0,0,0,.35)";
-      d.style.whiteSpace = "nowrap";
-      d.style.overflow = "hidden";
-      d.style.textOverflow = "ellipsis";
-      if((e.align||"").toLowerCase() === "center"){
-        d.style.textAlign = "center";
-      }
-    }
-
-    const theme = document.body.getAttribute("data-theme") || "dark";
-    if(theme === "light"){
-      overlay.style.background = "linear-gradient(180deg, rgba(255,255,255,.00), rgba(10,20,60,.06))";
-      if(type === "shape" || type === "card" || type === "image" || type === "badge"){
-        d.style.border = `1px solid ${softStrokeLight}`;
-      }
-      if(type === "heading" || type === "subhead" || type === "text"){
-        if(!e.color) d.style.color = "#0b1020";
-        d.style.textShadow = "none";
-      }
-    }
-
-    thumb.appendChild(d);
-  }
-
-  if(!sorted.length){
-    const t1 = document.createElement("div");
-    t1.style.position="absolute";
-    t1.style.left="12px";
-    t1.style.top="12px";
-    t1.style.right="12px";
-    t1.style.fontWeight="800";
-    t1.style.fontSize="14px";
-    t1.style.color="#fff";
-    t1.style.textShadow="0 6px 18px rgba(0,0,0,.35)";
-    t1.textContent = t?.title || "Template";
-    thumb.appendChild(t1);
-  }
+function renderPreview(canvas, t){
+  if(!canvas) return;
+  canvas.innerHTML="";
+  if(t.bg) canvas.style.background=t.bg;
+  const texts=(t.elements||[]).filter(e=>e.type==="heading"||e.type==="text").slice(0,2);
+  texts.forEach((e,i)=>{
+    const d=document.createElement("div");
+    d.className="pv-text";
+    d.textContent=e.title||"";
+    d.style.top=(14+i*32)+"px";
+    d.style.fontSize=(i===0?16:12)+"px";
+    d.style.color=e.color||"#fff";
+    canvas.appendChild(d);
+  });
 }
 </script>
 
