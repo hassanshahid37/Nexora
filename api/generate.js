@@ -210,6 +210,12 @@ export default async function handler(req, res) {
     const archetypeNames = ARCHETYPES.map(a => a.name).join(", ");
 
     const schemaHint = `Return STRICT JSON ONLY in this exact format:
+IMPORTANT RULES:
+- Each template MUST include 4–10 elements (no empty templates)
+- Elements MUST be positioned with x,y,w,h for a 980x620 canvas
+- Use these element types only: heading, text, badge, button, image, shape
+- Make layouts premium and readable at thumbnail size (one dominant hero)
+
 {
   "templates":[
     {
