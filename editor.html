@@ -677,55 +677,6 @@ function escapeHtml(str){
     return String(str??"").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
   }
 
-  function applyElementStyle(div, el, type){
-    // Optional styling from generator (safe defaults)
-    if(el.opacity != null) div.style.opacity = String(el.opacity);
-
-    const bg = el.background || el.bg || el.fill;
-    const radius = el.radius != null ? Number(el.radius) : null;
-
-    // Backgrounds / fills
-    if(type === "shape"){
-      if(bg) div.style.background = bg;
-      if(radius != null) div.style.borderRadius = radius + "px";
-      return;
-    }
-    if(type === "image"){
-      if(bg) div.style.background = bg;
-      if(radius != null) div.style.borderRadius = radius + "px";
-      return;
-    }
-
-    if(type === "card" || type === "badge" || type === "cta"){
-      if(bg) div.style.background = bg;
-      if(radius != null) div.style.borderRadius = radius + "px";
-      if(el.color) div.style.color = el.color;
-    }
-
-    // Typography
-    if(type === "heading" || type === "subhead" || type === "text"){
-      if(el.color) div.style.color = el.color;
-      if(el.fontSize != null){
-        const fs = Math.max(10, Number(el.fontSize));
-        // Apply to heading/subhead h4 or text p depending on type
-        const h = div.querySelector("h4");
-        const p = div.querySelector("p");
-        if(h) h.style.fontSize = fs + "px";
-        if(p) p.style.fontSize = fs + "px";
-      }
-      if(el.fontWeight != null){
-        const fw = Number(el.fontWeight);
-        const h = div.querySelector("h4");
-        const p = div.querySelector("p");
-        if(h) h.style.fontWeight = fw;
-        if(p) p.style.fontWeight = fw;
-      }
-      if(el.align){
-        div.style.textAlign = String(el.align);
-      }
-    }
-  }
-
   function updateUI(){
     $("#zoomPill").textContent = Math.round(zoom*100) + "%";
     gridOverlay.style.display = gridOn ? "block" : "none";
@@ -1104,3 +1055,4 @@ function escapeHtml(str){
 </script>
 </body>
 </html>
+
