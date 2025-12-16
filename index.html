@@ -220,78 +220,6 @@
   text-overflow:ellipsis;
 }
 
-
-/* === Canva-style DOM thumbnail renderer === */
-.thumb{ overflow:hidden; }
-.thumb .pv-overlay{
-  position:absolute; inset:0;
-  background:
-    radial-gradient(180px 120px at 20% 15%, rgba(255,255,255,.16), transparent 60%),
-    radial-gradient(240px 160px at 85% 30%, rgba(0,0,0,.18), transparent 65%),
-    linear-gradient(180deg, rgba(0,0,0,.14), rgba(0,0,0,.02));
-  pointer-events:none;
-}
-[data-theme="light"] .thumb .pv-overlay{
-  background:
-    radial-gradient(180px 120px at 20% 15%, rgba(255,255,255,.72), transparent 60%),
-    radial-gradient(240px 160px at 85% 30%, rgba(10,20,60,.10), transparent 65%),
-    linear-gradient(180deg, rgba(10,20,60,.06), rgba(10,20,60,.00));
-}
-
-.thumb .pv-el{
-  position:absolute;
-  box-sizing:border-box;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.10);
-  backdrop-filter: blur(8px);
-  overflow:hidden;
-  white-space:nowrap;
-  text-overflow:ellipsis;
-  padding: 0;
-}
-[data-theme="light"] .thumb .pv-el{
-  border:1px solid rgba(10,20,60,.10);
-  background: rgba(255,255,255,.70);
-}
-
-.thumb .pv-img{
-  background:
-    radial-gradient(160px 120px at 30% 20%, rgba(255,255,255,.18), transparent 60%),
-    linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.06));
-  border:1px solid rgba(255,255,255,.16);
-}
-[data-theme="light"] .thumb .pv-img{
-  background:
-    radial-gradient(160px 120px at 30% 20%, rgba(11,95,255,.10), transparent 60%),
-    linear-gradient(135deg, rgba(10,20,60,.06), rgba(10,20,60,.02));
-  border:1px solid rgba(10,20,60,.12);
-}
-
-.thumb .pv-shape{
-  backdrop-filter: blur(10px);
-}
-
-.thumb .pv-title, .thumb .pv-sub{
-  overflow:hidden;
-  white-space:nowrap;
-  text-overflow:ellipsis;
-}
-
-.thumb .pv-shine{
-  position:absolute;
-  width:140px; height:140px;
-  right:-40px; top:-40px;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.18), transparent 60%);
-  transform: rotate(12deg);
-  pointer-events:none;
-  mix-blend-mode: overlay;
-}
-[data-theme="light"] .thumb .pv-shine{
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,.60), transparent 60%);
-  mix-blend-mode: normal;
-}
-
 </style>
     
 </head>
@@ -405,180 +333,194 @@
 
   function drawThumb(thumb, elements, bg){
     if(!thumb) return;
-    thumb.innerHTML = "";
 
-    // --- Canva-style thumbnail renderer (safe, DOM-based) ---
-    // Background
-    let bgCss = bg || null;
-    if(!bgCss && Array.isArray(elements)){
-      const bgEl = elements.find(e => String(e.type||"").toLowerCase()==="background");
-      bgCss = bgEl?.fill || bgEl?.background || null;
-    }
-    if(bgCss){
-      if(String(bgCss).includes("gradient")){
-        thumb.style.backgroundImage = String(bgCss);
-        thumb.style.backgroundColor = "";
+    // Fail-safe: never break the app if preview rendering has issues
+    try{
+      const W0 = 980, H0 = 620;
+      thumb.innerHTML = "";
+      thumb.style.position = "relative";
+      thumb.style.overflow = "hidden";
+
+      const w = Math.max(1, thumb.clientWidth || 260);
+      const h = Math.max(1, thumb.clientHeight || 84);
+      const sx = w / W0;
+      const sy = h / H0;
+
+      // --- background ---
+      let bgCss = bg || null;
+      if(!bgCss && Array.isArray(elements)){
+        const bgEl = elements.find(e => String(e.type||"").toLowerCase()==="background");
+        bgCss = bgEl?.fill || bgEl?.background || null;
+      }
+      if(bgCss){
+        const s = String(bgCss);
+        if(s.includes("gradient")){
+          thumb.style.backgroundImage = s;
+          thumb.style.backgroundColor = "";
+        }else{
+          thumb.style.backgroundImage = "";
+          thumb.style.backgroundColor = s;
+        }
       }else{
-        thumb.style.backgroundImage = "";
-        thumb.style.backgroundColor = String(bgCss);
-      }
-    }
-
-    // Overlay for depth
-    const overlay = document.createElement("div");
-    overlay.className = "pv-overlay";
-    thumb.appendChild(overlay);
-
-    const W0 = 980, H0 = 620;
-    const sx = thumb.clientWidth / W0;
-    const sy = thumb.clientHeight / H0;
-
-    const clamp = (n, a, b)=> Math.max(a, Math.min(b, n));
-    const pickFirst = (types)=> (Array.isArray(elements) ? elements.find(e => types.includes(String(e.type||"").toLowerCase())) : null);
-
-    const isLightTheme = (document.body.getAttribute("data-theme") === "light");
-    const ink = isLightTheme ? "rgba(10,20,60,.92)" : "rgba(255,255,255,.92)";
-    const inkSoft = isLightTheme ? "rgba(10,20,60,.70)" : "rgba(255,255,255,.74)";
-    const shadow = isLightTheme ? "0 10px 24px rgba(10,20,60,.12)" : "0 14px 32px rgba(0,0,0,.35)";
-
-    function addBlock({x,y,w,h,cls,style={},text=null}){
-      const d = document.createElement("div");
-      d.className = "pv-el " + (cls||"");
-      d.style.left = (clamp(Number(x||0)*sx, 0, thumb.clientWidth-2)) + "px";
-      d.style.top  = (clamp(Number(y||0)*sy, 0, thumb.clientHeight-2)) + "px";
-      d.style.width  = (clamp(Number(w||80)*sx, 10, thumb.clientWidth)) + "px";
-      d.style.height = (clamp(Number(h||22)*sy, 8, thumb.clientHeight)) + "px";
-      d.style.boxShadow = shadow;
-
-      for(const [k,v] of Object.entries(style||{})){
-        d.style[k] = v;
+        // classy default
+        thumb.style.backgroundImage = "linear-gradient(135deg, rgba(11,95,255,.55), rgba(136,71,255,.45))";
+        thumb.style.backgroundColor = "";
       }
 
-      if(text){
-        d.textContent = text;
+      // subtle vignette for contrast
+      const vignette = document.createElement("div");
+      vignette.style.position = "absolute";
+      vignette.style.inset = "0";
+      vignette.style.background = "radial-gradient(120px 80px at 20% 20%, rgba(255,255,255,.12), transparent 60%), linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.25))";
+      vignette.style.pointerEvents = "none";
+      thumb.appendChild(vignette);
+
+      const list = Array.isArray(elements) ? elements.slice(0, 18) : [];
+
+      // helper
+      const place = (el, e) => {
+        const x = Number(e.x ?? 0) * sx;
+        const y = Number(e.y ?? 0) * sy;
+        const ww = Number(e.w ?? e.width ?? 120) * sx;
+        const hh = Number(e.h ?? e.height ?? 40) * sy;
+        el.style.position = "absolute";
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.style.width = Math.max(2, ww) + "px";
+        el.style.height = Math.max(2, hh) + "px";
+      };
+
+      // --- render blocks first (image/cards/shapes) ---
+      const blockTypes = new Set(["image","shape","card"]);
+      list.filter(e => blockTypes.has(String(e.type||"").toLowerCase())).slice(0, 4).forEach((e) => {
+        const type = String(e.type||"").toLowerCase();
+        const d = document.createElement("div");
+        place(d, e);
+
+        const r = Number(e.radius ?? (type==="image" ? 16 : 14));
+        d.style.borderRadius = Math.max(10, r * Math.min(sx,sy)) + "px";
+        d.style.border = "1px solid rgba(255,255,255,.18)";
+        d.style.boxShadow = "0 8px 18px rgba(0,0,0,.22)";
+
+        if(type === "image"){
+          d.style.background = e.background || "linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.06))";
+        }else{
+          d.style.background = e.background || "rgba(255,255,255,.10)";
+        }
+        d.style.backdropFilter = "blur(6px)";
+        d.style.pointerEvents = "none";
+        thumb.appendChild(d);
+      });
+
+      // --- badge ---
+      const badge = list.find(e => String(e.type||"").toLowerCase()==="badge");
+      if(badge){
+        const b = document.createElement("div");
+        place(b, badge);
+        b.style.height = Math.max(10, Number(badge.h ?? 46) * sy) + "px";
+        b.style.borderRadius = "999px";
+        b.style.border = "1px solid rgba(255,255,255,.20)";
+        b.style.background = "rgba(0,0,0,.18)";
+        b.style.display = "flex";
+        b.style.alignItems = "center";
+        b.style.padding = "0 10px";
+        b.style.fontSize = Math.max(9, (Number(badge.fontSize ?? 14) * Math.min(sx,sy))) + "px";
+        b.style.fontWeight = String(badge.fontWeight ?? 800);
+        b.style.letterSpacing = ".3px";
+        b.style.color = badge.color || "rgba(255,255,255,.92)";
+        b.style.textTransform = "uppercase";
+        b.style.whiteSpace = "nowrap";
+        b.style.overflow = "hidden";
+        b.style.textOverflow = "ellipsis";
+        b.textContent = (badge.title || "").toString().slice(0, 32) || "NEW";
+        b.style.pointerEvents = "none";
+        thumb.appendChild(b);
       }
-      thumb.appendChild(d);
-      return d;
-    }
 
-    // Image / hero block
-    const img = pickFirst(["image"]);
-    if(img){
-      addBlock({
-        x: img.x, y: img.y, w: img.w || img.width, h: img.h || img.height,
-        cls: "pv-img",
-      });
-    }
+      // --- headline + subline ---
+      const heading = list.find(e => String(e.type||"").toLowerCase()==="heading") || list.find(e => String(e.type||"").toLowerCase()==="subhead");
+      if(heading){
+        const t = document.createElement("div");
+        place(t, heading);
+        t.style.height = "auto";
+        t.style.maxHeight = (Math.max(18, Number(heading.h ?? 120) * sy)) + "px";
+        t.style.fontWeight = String(heading.fontWeight ?? 800);
+        t.style.color = heading.color || "#fff";
+        t.style.fontSize = Math.max(12, (Number(heading.fontSize ?? 54) * Math.min(sx,sy))) + "px";
+        t.style.lineHeight = "1.05";
+        t.style.textShadow = "0 8px 18px rgba(0,0,0,.35)";
+        t.style.display = "-webkit-box";
+        t.style.webkitLineClamp = "2";
+        t.style.webkitBoxOrient = "vertical";
+        t.style.overflow = "hidden";
+        t.textContent = (heading.title || "").toString().trim() || "Premium Design";
+        t.style.pointerEvents = "none";
+        thumb.appendChild(t);
+      }
 
-    // Shapes / cards (1–2 max for cleanliness)
-    const shapes = (Array.isArray(elements) ? elements.filter(e => ["shape","card"].includes(String(e.type||"").toLowerCase())) : []).slice(0,2);
-    shapes.forEach((s, idx)=>{
-      addBlock({
-        x: s.x, y: s.y, w: s.w || s.width, h: s.h || s.height,
-        cls: "pv-shape",
-        style: {
-          opacity: String(s.opacity ?? 1),
-          borderRadius: ((Number(s.radius)||18) * Math.min(sx,sy)) + "px",
-          background: String(s.background || s.fill || (idx===0 ? "rgba(255,255,255,.12)" : "rgba(255,255,255,.08)")),
-          border: isLightTheme ? "1px solid rgba(10,20,60,.10)" : "1px solid rgba(255,255,255,.16)"
-        }
-      });
-    });
+      const body = list.find(e => String(e.type||"").toLowerCase()==="text" || String(e.type||"").toLowerCase()==="subhead");
+      if(body){
+        const t = document.createElement("div");
+        place(t, body);
+        t.style.height = "auto";
+        t.style.maxHeight = (Math.max(14, Number(body.h ?? 80) * sy)) + "px";
+        t.style.fontWeight = "500";
+        t.style.color = body.color || "rgba(255,255,255,.85)";
+        t.style.fontSize = Math.max(9, (Number(body.fontSize ?? 16) * Math.min(sx,sy))) + "px";
+        t.style.lineHeight = "1.15";
+        t.style.display = "-webkit-box";
+        t.style.webkitLineClamp = "2";
+        t.style.webkitBoxOrient = "vertical";
+        t.style.overflow = "hidden";
+        const s = (body.sub || body.title || "").toString().trim().replace(/\s+/g," ");
+        t.textContent = s.slice(0, 60);
+        t.style.pointerEvents = "none";
+        thumb.appendChild(t);
+      }
 
-    // Badge
-    const badge = pickFirst(["badge"]);
-    if(badge){
-      addBlock({
-        x: badge.x, y: badge.y, w: badge.w || badge.width || 220, h: badge.h || badge.height || 54,
-        cls: "pv-badge",
-        text: (badge.title || "FEATURED").toString().slice(0,18),
-        style: {
-          borderRadius: "999px",
-          background: String(badge.background || "rgba(255,255,255,.16)"),
-          color: String(badge.color || ink),
-          fontWeight: "800",
-          fontSize: clamp((Number(badge.fontSize||14) * Math.min(sx,sy)), 10, 14) + "px",
-          letterSpacing: ".4px",
-          display:"flex",
-          alignItems:"center",
-          justifyContent:"center",
-          padding:"0 10px",
-          textTransform:"uppercase"
-        }
-      });
-    }
+      // --- CTA button ---
+      const cta = list.find(e => String(e.type||"").toLowerCase()==="cta");
+      if(cta){
+        const b = document.createElement("div");
+        place(b, cta);
+        b.style.height = Math.max(10, Number(cta.h ?? 54) * sy) + "px";
+        b.style.borderRadius = Math.max(10, Number(cta.radius ?? 16) * Math.min(sx,sy)) + "px";
+        b.style.background = cta.background || "linear-gradient(135deg, rgba(11,95,255,.95), rgba(136,71,255,.85))";
+        b.style.border = "1px solid rgba(255,255,255,.18)";
+        b.style.boxShadow = "0 10px 20px rgba(11,95,255,.20)";
+        b.style.display = "flex";
+        b.style.alignItems = "center";
+        b.style.justifyContent = "center";
+        b.style.padding = "0 10px";
+        b.style.fontSize = Math.max(9, (Number(cta.fontSize ?? 14) * Math.min(sx,sy))) + "px";
+        b.style.fontWeight = String(cta.fontWeight ?? 800);
+        b.style.color = cta.color || "#fff";
+        b.style.whiteSpace = "nowrap";
+        b.style.overflow = "hidden";
+        b.style.textOverflow = "ellipsis";
+        b.textContent = (cta.title || "Get Started").toString().slice(0, 22);
+        b.style.pointerEvents = "none";
+        thumb.appendChild(b);
+      }
 
-    // Heading + supporting text
-    const heading = pickFirst(["heading"]);
-    if(heading){
-      addBlock({
-        x: heading.x, y: heading.y, w: heading.w || hookup(heading,"width",740), h: heading.h || hookup(heading,"height",120),
-        cls: "pv-title",
-        text: (heading.title || heading.text || "Headline").toString(),
-        style: {
-          background: "transparent",
-          border: "none",
-          boxShadow: "none",
-          color: String(heading.color || ink),
-          fontWeight: String(heading.fontWeight || 800),
-          fontSize: clamp((Number(heading.fontSize||34) * Math.min(sx,sy)), 13, 18) + "px",
-          lineHeight: "1.05",
-          textShadow: isLightTheme ? "none" : "0 10px 26px rgba(0,0,0,.35)",
-          padding: "0"
-        }
-      });
-    }
-
-    const sub = pickFirst(["subhead","text"]);
-    if(sub){
-      addBlock({
-        x: sub.x, y: sub.y, w: sub.w || sub.width || 520, h: sub.h || sub.height || 70,
-        cls: "pv-sub",
-        text: (sub.title || sub.sub || sub.text || "").toString().replace(/
-/g," • ").slice(0,60),
-        style: {
-          background: "transparent",
-          border: "none",
-          boxShadow: "none",
-          color: String(sub.color || inkSoft),
-          fontWeight: String(sub.fontWeight || 600),
-          fontSize: clamp((Number(sub.fontSize||16) * Math.min(sx,sy)), 10, 12) + "px",
-          lineHeight: "1.25",
-          padding: "0"
-        }
-      });
-    }
-
-    // CTA
-    const cta = pickFirst(["cta"]);
-    if(cta){
-      addBlock({
-        x: cta.x, y: cta.y, w: cta.w || cta.width || 240, h: cta.h || cta.height || 64,
-        cls: "pv-cta",
-        text: (cta.title || "Get Started").toString().slice(0,18),
-        style: {
-          borderRadius: ((Number(cta.radius)||18) * Math.min(sx,sy)) + "px",
-          background: String(cta.background || "linear-gradient(135deg, rgba(11,95,255,.95), rgba(136,71,255,.85))"),
-          color: String(cta.color || "#fff"),
-          fontWeight: "800",
-          fontSize: clamp((Number(cta.fontSize||14) * Math.min(sx,sy)), 10, 12) + "px",
-          display:"flex",
-          alignItems:"center",
-          justifyContent:"center",
-          border: "1px solid rgba(255,255,255,.14)"
-        }
-      });
-    }
-
-    // small highlight corner
-    const shine = document.createElement("div");
-    shine.className = "pv-shine";
-    thumb.appendChild(shine);
-
-    function hookup(obj, key, d){
-      // helper to avoid NaN if missing
-      const v = obj?.[key];
-      return (typeof v === "number" && Number.isFinite(v)) ? v : d;
+    }catch(err){
+      console.warn("Preview render failed; using fallback boxes.", err);
+      try{
+        // fallback: simple minis (never crash)
+        thumb.innerHTML = "";
+        const w0 = 980, h0 = 620;
+        const sx = (thumb.clientWidth||260) / w0;
+        const sy = (thumb.clientHeight||84) / h0;
+        (elements||[]).slice(0,6).forEach((e) => {
+          const m = document.createElement("div");
+          m.className = "mini";
+          m.style.left = (Number(e.x||0)*sx) + "px";
+          m.style.top = (Number(e.y||0)*sy) + "px";
+          m.style.width = (Number(e.w||e.width||120)*sx) + "px";
+          m.style.height = (Number(e.h||e.height||40)*sy) + "px";
+          thumb.appendChild(m);
+        });
+      }catch(_){}
     }
   }
 
@@ -593,7 +535,8 @@
     const patterns = [
       // Hero + CTA
       (i)=> ([
-        { type: "heading", x: 80, y: 70,  w: 820, h: 120, title: "Grow Your Brand", sub: "" },
+        { type: "background", x:0,y:0,w:980,h:620, title:"BG", sub:"", fill:"linear-gradient(135deg,#0b5fff,#7b5cff)" },
+        { type: "heading", x: 80, y: 70,  w: 820, h: 120, title: "Grow Your Brand", sub: "", fontSize: 72, fontWeight: 800, color:"#ffffff" },
         { type: "text", x: 80, y: 210, w: 620, h: 110, title: "",  sub: "Premium design with clear hierarchy and focus." },
         { type: "cta", x: 80, y: 350, w: 360, h: 110, title: "Shop Now", sub: "" },
         { type: "image", x: 520,y: 260, w: 380, h: 300, title: "", sub: "" },
@@ -742,10 +685,20 @@ currentStyle = "Dark Premium";
           style: t.style || payload.style || style,
           canvas: t.canvas || { w: 980, h: 620 },
           elements: elements.map(e => ({
-            id: e.id || (crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16))),
+            id: e.id || (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))),
+            type: String(e.type ?? "card"),
             x: Number(e.x ?? 80), y: Number(e.y ?? 80),
             w: Number(e.w ?? e.width ?? 420), h: Number(e.h ?? e.height ?? 120),
-            title: String(e.title ?? "TEXT"), sub: String(e.sub ?? e.text ?? "")
+            title: String(e.title ?? e.text ?? (String(e.type??"").toLowerCase()==="image" ? "IMAGE" : "TEXT")),
+            sub: String(e.sub ?? e.caption ?? ""),
+            fontSize: (e.fontSize ?? null),
+            fontWeight: (e.fontWeight ?? null),
+            color: (e.color ?? null),
+            align: (e.align ?? null),
+            radius: (e.radius ?? null),
+            fill: (e.fill ?? null),
+            background: (e.background ?? null),
+            opacity: (e.opacity ?? null)
           }))
         };
       });
