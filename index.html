@@ -109,6 +109,36 @@
       background:var(--panel2);
       border-radius:16px;
       min-height:92px;
+      position:relative;
+      overflow:hidden;
+    }
+    .thumb{
+      height:84px;
+      border-radius:12px;
+      margin-bottom:10px;
+      position:relative;
+      background:
+        radial-gradient(160px 80px at 20% 20%, rgba(11,95,255,.24), transparent 60%),
+        radial-gradient(140px 90px at 90% 35%, rgba(136,71,255,.18), transparent 60%),
+        linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.14);
+    }
+    [data-theme="light"] .thumb{
+      background:
+        radial-gradient(160px 80px at 20% 20%, rgba(11,95,255,.14), transparent 60%),
+        radial-gradient(140px 90px at 90% 35%, rgba(136,71,255,.10), transparent 60%),
+        linear-gradient(135deg, rgba(10,20,60,.06), rgba(10,20,60,.02));
+      border:1px solid rgba(10,20,60,.12);
+    }
+    .mini{
+      position:absolute;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.10);
+    }
+    [data-theme="light"] .mini{
+      border:1px solid rgba(10,20,60,.12);
+      background:rgba(10,20,60,.06);
     }
     .tile b{display:block;font-size:12.5px;margin-bottom:6px}
     .tile span{font-size:12px;color:var(--muted);line-height:1.35}
@@ -174,8 +204,7 @@
 </head>
 
 <body data-theme="dark">
-    <script src="design.js"></script>
-<div class="wrap">
+  <div class="wrap">
     <header>
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
@@ -267,35 +296,8 @@
     </main>
   </div>
 
-<script>window.applyPhase2Style = window.applyPhase2Style || function(){};</script>
 <script>
   const $ = (s)=>document.querySelector(s);
-
-  function normalizeTemplates(api, fallbackCat, fallbackStyle){
-    const list = Array.isArray(api?.templates) ? api.templates : [];
-    return list.map((t, i) => ({
-      id: t.id || `ai_${Date.now()}_${i+1}`,
-      title: t.title || `${fallbackCat} #${i+1}`,
-      description: t.description || t.subtitle || `${fallbackStyle} • AI layout`,
-      category: t.category || fallbackCat,
-      style: t.style || fallbackStyle,
-      canvas: t.canvas || { w:1080, h:1080, background:"#050712" },
-      elements: (Array.isArray(t.elements)?t.elements:[]).map(e => ({
-        id: e.id || (crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16))),
-        type: e.type || "text",
-        role: e.role || "",
-        x: Number(e.x ?? 80), y: Number(e.y ?? 80),
-        w: Number(e.w ?? 420), h: Number(e.h ?? 120),
-        fill: e.fill || null,
-        text: e.text || null,
-        fontSize: Number(e.fontSize ?? 32),
-        fontWeight: Number(e.fontWeight ?? 600),
-        color: e.color || null,
-        title: String(e.title ?? e.role ?? "TEXT"),
-        sub: String(e.sub ?? e.text ?? "")
-      }))
-    })).filter(t => t.elements.length >= 3);
-  }
   const grid = $("#previewGrid");
   const statusEl = $("#status");
 
@@ -308,85 +310,108 @@
     setTheme(cur === "dark" ? "light" : "dark");
   }
 
+  function drawThumb(thumb, elements){
+    if(!thumb) return;
+    thumb.innerHTML = "";
+    const w0 = 980, h0 = 620;
+    const sx = thumb.clientWidth / w0;
+    const sy = thumb.clientHeight / h0;
+    (elements||[]).slice(0,6).forEach((e, idx)=>{
+      const m = document.createElement("div");
+      m.className = "mini";
+      const type = String(e.type || "card").toLowerCase();
+      m.style.left = (Number(e.x||0)*sx) + "px";
+      m.style.top = (Number(e.y||0)*sy) + "px";
+      m.style.width = (Number(e.w||e.width||120)*sx) + "px";
+      m.style.height = (Number(e.h||e.height||40)*sy) + "px";
+      if(type === "heading"){ m.style.borderRadius = "999px"; m.style.height = (Math.max(10, Number(e.h||36))*sy) + "px"; }
+      if(type === "badge"){ m.style.borderRadius = "999px"; }
+      if(type === "image"){ m.style.background = "rgba(255,255,255,.14)"; }
+      if(type === "shape"){ m.style.border = "none"; m.style.background = "rgba(11,95,255,.22)"; m.style.borderRadius = "18px"; }
+      thumb.appendChild(m);
+    });
+  }
+
+
   function seedTemplates(n){
     grid.innerHTML = "";
     __lastTemplates = [];
     const category = $("#cat").value;
     const style = $("#style").value;
 
-    const palettes = {
-      "Dark Premium": { bg:"#050712", text:"#f6f7fb", muted:"#aab0bd", accent:"#0b5fff", accent2:"#8a5cff" },
-      "Light Minimal": { bg:"#f7f8fc", text:"#0b1020", muted:"#5b6477", accent:"#0b5fff", accent2:"#00b3a4" },
-      "Neon": { bg:"#070716", text:"#f6f7fb", muted:"#aab0bd", accent:"#00e5ff", accent2:"#ff2bd6" },
-      "Glassmorphism": { bg:"#050712", text:"#f6f7fb", muted:"#aab0bd", accent:"#7aa2ff", accent2:"#b38cff" },
-      "Corporate": { bg:"#0b1020", text:"#f6f7fb", muted:"#c6ccda", accent:"#2d6cff", accent2:"#00c2a8" }
-    };
-    const pal = palettes[style] || palettes["Dark Premium"];
-
-    const families = [
-      // Family 1: Top banner + hero image + CTA chip
-      (i)=> ({
-        canvas:{ w:1080, h:1080, background: pal.bg },
-        elements:[
-          { type:"shape", x:0,y:0,w:1080,h:360, fill: pal.accent },
-          { type:"text", role:"headline", text:`${category} that converts`, x:80,y:90, fontSize:76, fontWeight:800, color:"#ffffff" },
-          { type:"text", role:"body", text:"Premium layouts • clean hierarchy • bold visuals", x:80,y:190, fontSize:30, fontWeight:500, color:"rgba(255,255,255,.85)" },
-          { type:"shape", x:80,y:270,w:360,h:64, fill:"rgba(0,0,0,.25)" },
-          { type:"text", role:"cta", text:"Get Started →", x:110,y:286, fontSize:26, fontWeight:700, color:"#ffffff" },
-          { type:"image", role:"hero", x:80,y:420,w:920,h:580 }
-        ]
-      }),
-      // Family 2: Split left text / right image
-      (i)=> ({
-        canvas:{ w:1080, h:1080, background: pal.bg },
-        elements:[
-          { type:"shape", x:0,y:0,w:520,h:1080, fill:"rgba(255,255,255,.05)" },
-          { type:"text", role:"badge", text:"LIMITED DROP", x:80,y:90, fontSize:22, fontWeight:800, color: pal.accent2 },
-          { type:"text", role:"headline", text:"Modern. Minimal. Premium.", x:80,y:140, fontSize:64, fontWeight:900, color: pal.text },
-          { type:"text", role:"body", text:"Three benefits • one clean message • strong brand.", x:80,y:230, fontSize:28, fontWeight:500, color: pal.muted },
-          { type:"shape", x:80,y:320,w:320,h:62, fill: pal.accent },
-          { type:"text", role:"cta", text:"Shop Now", x:120,y:336, fontSize:26, fontWeight:800, color:"#ffffff" },
-          { type:"image", role:"hero", x:560,y:120,w:440,h:840 }
-        ]
-      }),
-      // Family 3: Centered luxury typography + frame
-      (i)=> ({
-        canvas:{ w:1080, h:1080, background: pal.bg },
-        elements:[
-          { type:"shape", x:80,y:110,w:920,h:860, fill:"rgba(255,255,255,.04)" },
-          { type:"shape", x:110,y:140,w:860,h:800, fill:"rgba(0,0,0,.22)" },
-          { type:"text", role:"badge", text:"NEW COLLECTION", x:360,y:210, fontSize:22, fontWeight:800, color: pal.accent },
-          { type:"text", role:"headline", text:"Elegant Design", x:250,y:280, fontSize:84, fontWeight:900, color: pal.text },
-          { type:"text", role:"body", text:"Minimal luxury • premium spacing • high contrast", x:250,y:390, fontSize:30, fontWeight:500, color: pal.muted },
-          { type:"shape", x:390,y:760,w:300,h:70, fill: pal.accent2 },
-          { type:"text", role:"cta", text:"Explore →", x:460,y:780, fontSize:28, fontWeight:900, color:"#ffffff" }
-        ]
-      })
+    // Simple "real" layouts for the editor (cards on canvas)
+    const patterns = [
+      // Hero + CTA
+      (i)=> ([
+        { type: "heading", x: 80, y: 70,  w: 820, h: 120, title: "Grow Your Brand", sub: "" },
+        { type: "text", x: 80, y: 210, w: 620, h: 110, title: "",  sub: "Premium design with clear hierarchy and focus." },
+        { type: "cta", x: 80, y: 350, w: 360, h: 110, title: "Shop Now", sub: "" },
+        { type: "image", x: 520,y: 260, w: 380, h: 300, title: "", sub: "" },
+      ]),
+      // Split left text / right image
+      (i)=> ([
+        { type: "heading", x: 70, y: 80,  w: 420, h: 150, title: "New Collection", sub: "" },
+        { type: "text", x: 70, y: 250, w: 420, h: 170, title: "",  sub: "• Premium quality\n• Fast delivery\n• Limited offer" },
+        { type: "image", x: 520,y: 80,  w: 390, h: 360, title: "", sub: "" },
+      ]),
+      // Badge + centered headline
+      (i)=> ([
+        { type: "badge", x: 320,y: 70,  w: 320, h: 70,  title: "LIMITED", sub: "" },
+        { type: "heading", x: 160,y: 190, w: 660, h: 150, title: "Flash Sale", sub: "" },
+        { type: "cta", x: 250,y: 390, w: 480, h: 90, title: "Get 30% Off", sub: "" },
+      ]),
     ];
 
     for(let i=1;i<=n;i++){
-      const family = families[i % families.length](i);
-      const t = {
-        id: `seed_${Date.now()}_${i}`,
-        title: `${category} #${i}`,
-        description: `${style} • Visual layout`,
-        category,
-        style,
-        canvas: family.canvas,
-        elements: family.elements.map(e => ({ id: crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16)), ...e }))
-      };
-      __lastTemplates.push(t);
-
       const div = document.createElement("div");
       div.className = "tile";
       div.tabIndex = 0;
-      div.innerHTML = `<b>${t.title}</b><span>${t.description}</span>`;
-            try{ window.applyPhase2Style(div, __lastTemplates.length); }catch(e){}
-div.addEventListener("click", ()=>openEditorWith(t));
-      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
+
+      const layoutWord = ["Bold","Clean","Modern","Vibrant","Minimal"][i%5];
+      div.innerHTML = `
+        <div class="thumb" aria-hidden="true"></div>
+        <b>${category} #${i}</b>
+        <span>${style} • ${layoutWord} layout • Click to edit</span>
+      `;
+
+      const elements = patterns[i % patterns.length](i).map(e => ({ id: crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16)), ...e }));
+
+      const thumb = div.querySelector('.thumb');
+      if(thumb){
+        const w0 = 980, h0 = 620;
+        const sx = thumb.clientWidth / w0;
+        const sy = thumb.clientHeight / h0;
+        (elements||[]).slice(0,6).forEach((e)=>{
+          const m = document.createElement('div');
+          m.className = 'mini';
+          m.style.left = (e.x*sx) + 'px';
+          m.style.top = (e.y*sy) + 'px';
+          m.style.width = (e.w*sx) + 'px';
+          m.style.height = (e.h*sy) + 'px';
+          // type hint -> different opacity
+          const t = String(e.type||'card');
+          if(t==='heading') m.style.background = 'rgba(255,255,255,.14)';
+          if(t==='image') m.style.background = 'rgba(11,95,255,.18)';
+          if(t==='shape') m.style.background = 'rgba(136,71,255,.16)';
+          thumb.appendChild(m);
+        });
+      }
+
+      const template = {
+        id: `seed_${Date.now()}_${i}`,
+        title: `${category} #${i}`,
+        description: `${style} • ${layoutWord} layout`,
+        category,
+        style,
+        canvas: { w: 980, h: 620 },
+        elements
+      };
+      __lastTemplates.push(template);
+
+      div.addEventListener("click", ()=>openEditorWith(template));
+      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(template); });
       grid.appendChild(div);
     }
-  }
   }
 
   function openEditorWith(payload){
@@ -394,6 +419,7 @@ div.addEventListener("click", ()=>openEditorWith(t));
     const cat = payload?.category || payload?.cat || $("#cat").value;
     const style = payload?.style || $("#style").value;
 
+    // Store draft so editor can load a REAL template (elements/positions)
     localStorage.setItem("templify_draft", JSON.stringify({
       meta: {
         cat,
@@ -404,12 +430,13 @@ div.addEventListener("click", ()=>openEditorWith(t));
         title: payload?.title || null,
         description: payload?.description || payload?.subtitle || null,
       },
-      template: (payload && payload.elements) ? payload : null,
+      template: payload?.elements ? payload : null,
       createdAt: Date.now()
     }));
     window.location.href = "editor.html";
   }
 
+  // Keep latest generated templates (for tile click -> editor)
   let __lastTemplates = [];
 
   $("#openEditor").addEventListener("click", ()=>openEditorWith({cat:$("#cat").value, style:$("#style").value, i:1}));
@@ -470,24 +497,67 @@ currentStyle = "Dark Premium";
       const cat = payload.category;
       const style = payload.style;
 
-      const normalized = normalizeTemplates(data, cat, style);
+      // Normalize templates to our editor-friendly schema
+      const normalized = (templates.length ? templates : []).map((t, i) => {
+        const elements = Array.isArray(t.elements) ? t.elements : [];
+        return {
+          id: t.id || `ai_${Date.now()}_${i+1}`,
+          title: t.title || `${cat} #${i+1}`,
+          description: t.description || t.subtitle || `${style} • AI generated`,
+          category: t.category || payload.category || cat,
+          style: t.style || payload.style || style,
+          canvas: t.canvas || { w: 980, h: 620 },
+          elements: elements.map(e => ({
+            id: e.id || (crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16))),
+            x: Number(e.x ?? 80), y: Number(e.y ?? 80),
+            w: Number(e.w ?? e.width ?? 420), h: Number(e.h ?? e.height ?? 120),
+            title: String(e.title ?? "TEXT"), sub: String(e.sub ?? e.text ?? "")
+          }))
+        };
+      });
+
+      // If AI returned nothing usable, fall back to seeded "real" templates
       if(!normalized.length){
         seedTemplates(payload.count);
         statusEl.textContent = `Generated ${payload.count}`;
         return;
       }
+
       __lastTemplates = normalized;
       grid.innerHTML = "";
+
       __lastTemplates.forEach((t) => {
         const div = document.createElement("div");
         div.className = "tile";
         div.tabIndex = 0;
-        div.innerHTML = `<b>${t.title}</b><span>${t.description}</span>`;
-                try{ window.applyPhase2Style(div, grid.children.length); }catch(e){}
-div.addEventListener("click", ()=>openEditorWith(t));
+        div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title}</b><span>${t.description}</span>`;
+
+      const thumb = div.querySelector('.thumb');
+      if(thumb){
+        const w0 = 980, h0 = 620;
+        const sx = thumb.clientWidth / w0;
+        const sy = thumb.clientHeight / h0;
+        ((t.elements||[])).slice(0,6).forEach((e)=>{
+          const m = document.createElement('div');
+          m.className = 'mini';
+          m.style.left = (e.x*sx) + 'px';
+          m.style.top = (e.y*sy) + 'px';
+          m.style.width = (e.w*sx) + 'px';
+          m.style.height = (e.h*sy) + 'px';
+          // type hint -> different opacity
+          const t = String(e.type||'card');
+          if(t==='heading') m.style.background = 'rgba(255,255,255,.14)';
+          if(t==='image') m.style.background = 'rgba(11,95,255,.18)';
+          if(t==='shape') m.style.background = 'rgba(136,71,255,.16)';
+          thumb.appendChild(m);
+        });
+      }
+
+        div.addEventListener("click", ()=>openEditorWith(t));
         div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
         grid.appendChild(div);
       });
+
       statusEl.textContent = `Generated ${__lastTemplates.length}`;
     } catch (e) {
       // ✅ Fallback: never leave user with "nothing happened"
@@ -504,6 +574,49 @@ div.addEventListener("click", ()=>openEditorWith(t));
   document.getElementById("btnAnimate")?.addEventListener("click", () => {
     alert("Animate – coming soon");
   });
+</script>
+
+<script type="module">
+// Nexora: New Layout + New Style (SAFE)
+// UI unchanged. Only updates the preview tile text.
+
+const layouts = ["Bold","Clean","Modern","Minimal","Vibrant"];
+const styles  = ["Dark Premium","Light Minimal","Neon","Glassmorphism","Corporate"];
+
+const grid = document.getElementById("previewGrid");
+const statusEl = document.getElementById("status");
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function setStatus(msg){ if(statusEl) statusEl.textContent = msg; }
+
+function updateTilesText({layout=null, style=null}={}){
+  if(!grid) return;
+  const tiles = Array.from(grid.querySelectorAll(".tile"));
+  tiles.forEach((tile) => {
+    const span = tile.querySelector("span");
+    if(!span) return;
+    const curStyle = style || (document.getElementById("style")?.value) || "Dark Premium";
+    const curLayout = layout || span.textContent.match(/\b(Bold|Clean|Modern|Minimal|Vibrant)\b/)?.[0] || "Modern";
+    span.textContent = `${curStyle} • ${curLayout} layout • Click to edit`;
+  });
+}
+
+document.getElementById("newLayoutBtn")?.addEventListener("click", () => {
+  updateTilesText({ layout: pick(layouts) });
+  setStatus("New layout applied");
+});
+
+document.getElementById("newStyleBtn")?.addEventListener("click", () => {
+  const s = pick(styles);
+  const sel = document.getElementById("style");
+  if(sel){
+    const opt = Array.from(sel.options).find(o => o.textContent.trim() === s);
+    if(opt) sel.value = opt.textContent.trim();
+  }
+  updateTilesText({ style: s });
+  setStatus("New style applied");
+});
+
 </script>
 
 </body>
