@@ -109,36 +109,6 @@
       background:var(--panel2);
       border-radius:16px;
       min-height:92px;
-      position:relative;
-      overflow:hidden;
-    }
-    .thumb{
-      height:84px;
-      border-radius:12px;
-      margin-bottom:10px;
-      position:relative;
-      background:
-        radial-gradient(160px 80px at 20% 20%, rgba(11,95,255,.24), transparent 60%),
-        radial-gradient(140px 90px at 90% 35%, rgba(136,71,255,.18), transparent 60%),
-        linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
-      border:1px solid rgba(255,255,255,.14);
-    }
-    [data-theme="light"] .thumb{
-      background:
-        radial-gradient(160px 80px at 20% 20%, rgba(11,95,255,.14), transparent 60%),
-        radial-gradient(140px 90px at 90% 35%, rgba(136,71,255,.10), transparent 60%),
-        linear-gradient(135deg, rgba(10,20,60,.06), rgba(10,20,60,.02));
-      border:1px solid rgba(10,20,60,.12);
-    }
-    .mini{
-      position:absolute;
-      border-radius:10px;
-      border:1px solid rgba(255,255,255,.16);
-      background:rgba(255,255,255,.10);
-    }
-    [data-theme="light"] .mini{
-      border:1px solid rgba(10,20,60,.12);
-      background:rgba(10,20,60,.06);
     }
     .tile b{display:block;font-size:12.5px;margin-bottom:6px}
     .tile span{font-size:12px;color:var(--muted);line-height:1.35}
@@ -199,28 +169,7 @@
     }
     
     [data-theme="dark"] select option{color:#ffffff;background:#0b1020;}
-    
-/* === Nexora Canva-style previews === */
-.tile .preview-canvas{
-  position: relative;
-  height: 120px;
-  border-radius: 14px;
-  overflow: hidden;
-  background: rgba(255,255,255,.06);
-  border: 1px solid var(--stroke);
-  margin-bottom: 10px;
-}
-.tile .preview-canvas .pv-text{
-  position:absolute;
-  left:12px;
-  right:12px;
-  font-weight:700;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-</style>
+    </style>
     
 </head>
 
@@ -331,29 +280,6 @@
     setTheme(cur === "dark" ? "light" : "dark");
   }
 
-  function drawThumb(thumb, elements){
-    if(!thumb) return;
-    thumb.innerHTML = "";
-    const w0 = 980, h0 = 620;
-    const sx = thumb.clientWidth / w0;
-    const sy = thumb.clientHeight / h0;
-    (elements||[]).slice(0,6).forEach((e, idx)=>{
-      const m = document.createElement("div");
-      m.className = "mini";
-      const type = String(e.type || "card").toLowerCase();
-      m.style.left = (Number(e.x||0)*sx) + "px";
-      m.style.top = (Number(e.y||0)*sy) + "px";
-      m.style.width = (Number(e.w||e.width||120)*sx) + "px";
-      m.style.height = (Number(e.h||e.height||40)*sy) + "px";
-      if(type === "heading"){ m.style.borderRadius = "999px"; m.style.height = (Math.max(10, Number(e.h||36))*sy) + "px"; }
-      if(type === "badge"){ m.style.borderRadius = "999px"; }
-      if(type === "image"){ m.style.background = "rgba(255,255,255,.14)"; }
-      if(type === "shape"){ m.style.border = "none"; m.style.background = "rgba(11,95,255,.22)"; m.style.borderRadius = "18px"; }
-      thumb.appendChild(m);
-    });
-  }
-
-
   function seedTemplates(n){
     grid.innerHTML = "";
     __lastTemplates = [];
@@ -364,22 +290,22 @@
     const patterns = [
       // Hero + CTA
       (i)=> ([
-        { type: "heading", x: 80, y: 70,  w: 820, h: 120, title: "Grow Your Brand", sub: "" },
-        { type: "text", x: 80, y: 210, w: 620, h: 110, title: "",  sub: "Premium design with clear hierarchy and focus." },
-        { type: "cta", x: 80, y: 350, w: 360, h: 110, title: "Shop Now", sub: "" },
-        { type: "image", x: 520,y: 260, w: 380, h: 300, title: "", sub: "" },
+        { x: 80, y: 70,  w: 820, h: 120, title: "HEADLINE", sub: "Bold offer / value prop" },
+        { x: 80, y: 210, w: 620, h: 110, title: "SUBHEAD",  sub: "One sentence benefit + context" },
+        { x: 80, y: 350, w: 360, h: 110, title: "CTA",      sub: "Shop now • Learn more • Sign up" },
+        { x: 520,y: 350, w: 380, h: 210, title: "IMAGE",    sub: "Photo / product placeholder" },
       ]),
       // Split left text / right image
       (i)=> ([
-        { type: "heading", x: 70, y: 80,  w: 420, h: 150, title: "New Collection", sub: "" },
-        { type: "text", x: 70, y: 250, w: 420, h: 170, title: "",  sub: "• Premium quality\n• Fast delivery\n• Limited offer" },
-        { type: "image", x: 520,y: 80,  w: 390, h: 360, title: "", sub: "" },
+        { x: 70, y: 80,  w: 420, h: 150, title: "TITLE",    sub: "Clean modern headline" },
+        { x: 70, y: 250, w: 420, h: 170, title: "DETAILS",  sub: "3 key points • feature • feature" },
+        { x: 520,y: 80,  w: 390, h: 360, title: "IMAGE",    sub: "Hero image placeholder" },
       ]),
       // Badge + centered headline
       (i)=> ([
-        { type: "badge", x: 320,y: 70,  w: 320, h: 70,  title: "LIMITED", sub: "" },
-        { type: "heading", x: 160,y: 190, w: 660, h: 150, title: "Flash Sale", sub: "" },
-        { type: "cta", x: 250,y: 390, w: 480, h: 90, title: "Get 30% Off", sub: "" },
+        { x: 300,y: 70,  w: 360, h: 90,  title: "BADGE",    sub: "NEW • LIMITED • SALE" },
+        { x: 160,y: 190, w: 660, h: 150, title: "HEADLINE", sub: "Premium centered typography" },
+        { x: 200,y: 360, w: 580, h: 120, title: "CTA",      sub: "Call to action + urgency" },
       ]),
     ];
 
@@ -390,34 +316,11 @@
 
       const layoutWord = ["Bold","Clean","Modern","Vibrant","Minimal"][i%5];
       div.innerHTML = `
-        <div class="thumb" aria-hidden="true"></div>
         <b>${category} #${i}</b>
         <span>${style} • ${layoutWord} layout • Click to edit</span>
       `;
 
       const elements = patterns[i % patterns.length](i).map(e => ({ id: crypto?.randomUUID?.() || (Math.random().toString(16).slice(2)+Date.now().toString(16)), ...e }));
-
-      const thumb = div.querySelector('.thumb');
-      if(thumb){
-        const w0 = 980, h0 = 620;
-        const sx = thumb.clientWidth / w0;
-        const sy = thumb.clientHeight / h0;
-        (elements||[]).slice(0,6).forEach((e)=>{
-          const m = document.createElement('div');
-          m.className = 'mini';
-          m.style.left = (e.x*sx) + 'px';
-          m.style.top = (e.y*sy) + 'px';
-          m.style.width = (e.w*sx) + 'px';
-          m.style.height = (e.h*sy) + 'px';
-          // type hint -> different opacity
-          const t = String(e.type||'card');
-          if(t==='heading') m.style.background = 'rgba(255,255,255,.14)';
-          if(t==='image') m.style.background = 'rgba(11,95,255,.18)';
-          if(t==='shape') m.style.background = 'rgba(136,71,255,.16)';
-          thumb.appendChild(m);
-        });
-      }
-
       const template = {
         id: `seed_${Date.now()}_${i}`,
         title: `${category} #${i}`,
@@ -551,29 +454,7 @@ currentStyle = "Dark Premium";
         const div = document.createElement("div");
         div.className = "tile";
         div.tabIndex = 0;
-        div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title}</b><span>${t.description}</span>`;
-
-      const thumb = div.querySelector('.thumb');
-      if(thumb){
-        const w0 = 980, h0 = 620;
-        const sx = thumb.clientWidth / w0;
-        const sy = thumb.clientHeight / h0;
-        ((t.elements||[])).slice(0,6).forEach((e)=>{
-          const m = document.createElement('div');
-          m.className = 'mini';
-          m.style.left = (e.x*sx) + 'px';
-          m.style.top = (e.y*sy) + 'px';
-          m.style.width = (e.w*sx) + 'px';
-          m.style.height = (e.h*sy) + 'px';
-          // type hint -> different opacity
-          const t = String(e.type||'card');
-          if(t==='heading') m.style.background = 'rgba(255,255,255,.14)';
-          if(t==='image') m.style.background = 'rgba(11,95,255,.18)';
-          if(t==='shape') m.style.background = 'rgba(136,71,255,.16)';
-          thumb.appendChild(m);
-        });
-      }
-
+        div.innerHTML = `<b>${t.title}</b><span>${t.description}</span>`;
         div.addEventListener("click", ()=>openEditorWith(t));
         div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
         grid.appendChild(div);
@@ -638,25 +519,6 @@ document.getElementById("newStyleBtn")?.addEventListener("click", () => {
   setStatus("New style applied");
 });
 
-</script>
-
-
-<script>
-function renderPreview(canvas, t){
-  if(!canvas) return;
-  canvas.innerHTML="";
-  if(t.bg) canvas.style.background=t.bg;
-  const texts=(t.elements||[]).filter(e=>e.type==="heading"||e.type==="text").slice(0,2);
-  texts.forEach((e,i)=>{
-    const d=document.createElement("div");
-    d.className="pv-text";
-    d.textContent=e.title||"";
-    d.style.top=(14+i*32)+"px";
-    d.style.fontSize=(i===0?16:12)+"px";
-    d.style.color=e.color||"#fff";
-    canvas.appendChild(d);
-  });
-}
 </script>
 
 </body>
