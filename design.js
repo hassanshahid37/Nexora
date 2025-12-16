@@ -1,101 +1,102 @@
-// design.js — Canva Form Enforced (Hero-first, minimal, premium)
-// SAFE: compatible with current index.html + editor.html + generate.js
+// design.js — Premium Static Templates (AI-layout compatible)
+// This file is safe to keep for future client-side generation.
+// Current index uses /api/generate, but editor can also use this schema.
 
-export function generateTemplates(count = 24) {
-  const forms = [
-    heroTypography,
-    imageLedPoster,
-    promoBadge,
-    editorialEvent
-  ];
+export function generateTemplates(count = 24, opts = {}) {
+  const category = opts.category || "Instagram Post";
+  const style = opts.style || "Dark Premium";
+  const W = 980, H = 620;
 
   const palettes = [
-    { bg: "linear-gradient(135deg,#0b5fff,#7b5cff)", ink:"#ffffff", accent:"#7b5cff", soft:"rgba(255,255,255,.12)" },
-    { bg: "linear-gradient(135deg,#07130f,#00c389)", ink:"#ffffff", accent:"#00c389", soft:"rgba(255,255,255,.10)" },
-    { bg: "linear-gradient(135deg,#1f1409,#ffcc66)", ink:"#fff7ed", accent:"#ffcc66", soft:"rgba(255,255,255,.10)" },
-    { bg: "linear-gradient(135deg,#0b1020,#00d1ff)", ink:"#ffffff", accent:"#00d1ff", soft:"rgba(255,255,255,.10)" }
+    { name:"Blue Violet", bg:"linear-gradient(135deg,#0b5fff,#7b5cff)", ink:"#ffffff", accent:"#7b5cff" },
+    { name:"Midnight Cyan", bg:"linear-gradient(135deg,#0b1020,#00d1ff)", ink:"#ffffff", accent:"#00d1ff" },
+    { name:"Emerald Noir", bg:"linear-gradient(135deg,#07130f,#00c389)", ink:"#ffffff", accent:"#00c389" },
+    { name:"Sunset Premium", bg:"linear-gradient(135deg,#ff4d6d,#ffcc66)", ink:"#fff7ed", accent:"#ffcc66" },
   ];
 
+  const forms = [heroType, imageLed, promoBadge, editorial];
+
   const out = [];
-  for (let i = 0; i < count; i++) {
-    const form = forms[i % forms.length];
-    const pal = palettes[i % palettes.length];
-    out.push(form(i, pal));
+  for(let i=0;i<count;i++){
+    const p = palettes[i % palettes.length];
+    const f = forms[i % forms.length];
+    const tpl = f(i, { W, H, p, category, style });
+    out.push(tpl);
   }
   return out;
 }
 
-// ---------- FORMS (MAX 3–4 ELEMENTS EACH) ----------
-
-function heroTypography(i, p){
+function heroType(i, {W,H,p,category,style}){
   return {
-    title: `Hero Type #${i+1}`,
-    canvas: { width:1080, height:1080, background:p.bg },
+    id: `d_${Date.now()}_${i}`,
+    title: `${category} #${i+1}`,
+    description: `${style} • Hero Typography`,
+    category, style,
+    bg: p.bg,
+    canvas: { w: W, h: H },
     elements: [
-      heading("Create Your Future", 120, 260, 840, 110, p.ink, "left"),
-      text("Premium Canva-style typography with bold hierarchy.", 120, 410, 620, 30, "rgba(255,255,255,.85)"),
-      cta("Get Started", 120, 470, p.accent)
+      el("heading", 70, 110, 740, 120, "Create Your Future", { fontSize: 70, fontWeight: 900, color: p.ink }),
+      el("text", 70, 235, 560, 70, "Premium spacing • bold hierarchy • clean layout", { fontSize: 22, fontWeight: 600, color: "rgba(255,255,255,.86)" }),
+      el("button", 70, 330, 240, 56, "Get Started", { fill: "rgba(255,255,255,.14)", color: p.ink, radius: 999 }),
     ]
   };
 }
 
-function imageLedPoster(i, p){
+function imageLed(i, {W,H,p,category,style}){
   return {
-    title: `Image Poster #${i+1}`,
-    canvas: { width:1080, height:1080, background:p.bg },
+    id: `d_${Date.now()}_${i}`,
+    title: `${category} #${i+1}`,
+    description: `${style} • Image-led Poster`,
+    category, style,
+    bg: p.bg,
+    canvas: { w: W, h: H },
     elements: [
-      image(80, 80, 920, 640, p.soft),
-      heading("Experience Luxury", 120, 760, 840, 88, p.ink, "left")
+      el("image", 560, 90, 340, 440, "IMAGE", { background: "rgba(255,255,255,.10)", radius: 24 }),
+      el("heading", 70, 120, 460, 150, "Experience Luxury", { fontSize: 62, fontWeight: 900, color: p.ink }),
+      el("text", 70, 255, 420, 60, "Minimal copy • strong visual anchor", { fontSize: 20, fontWeight: 600, color: "rgba(255,255,255,.86)" }),
+      el("badge", 70, 90, 160, 44, "NEW", { background:"rgba(255,255,255,.14)", radius: 999, color: p.ink, fontSize: 14, fontWeight: 800 }),
     ]
   };
 }
 
-function promoBadge(i, p){
+function promoBadge(i, {W,H,p,category,style}){
   return {
-    title: `Promo #${i+1}`,
-    canvas: { width:1080, height:1080, background:p.bg },
+    id: `d_${Date.now()}_${i}`,
+    title: `${category} #${i+1}`,
+    description: `${style} • Promo / Offer`,
+    category, style,
+    bg: p.bg,
+    canvas: { w: W, h: H },
     elements: [
-      badge("LIMITED", 120, 200, p.accent),
-      heading("30% OFF", 120, 300, 840, 140, p.ink, "left"),
-      cta("Shop Now", 120, 470, p.accent)
+      el("badge", 70, 100, 210, 48, "LIMITED", { background:"rgba(255,255,255,.14)", radius: 999, color: p.ink, fontSize: 14, fontWeight: 900 }),
+      el("heading", 70, 175, 720, 170, "30% OFF", { fontSize: 92, fontWeight: 950, color: p.ink }),
+      el("text", 70, 320, 520, 64, "Premium collection • today only", { fontSize: 22, fontWeight: 700, color: "rgba(255,255,255,.86)" }),
+      el("button", 70, 410, 260, 56, "Shop Now", { fill: "rgba(255,255,255,.14)", color: p.ink, radius: 999 }),
     ]
   };
 }
 
-function editorialEvent(i, p){
+function editorial(i, {W,H,p,category,style}){
   return {
-    title: `Editorial #${i+1}`,
-    canvas: { width:1080, height:1080, background:p.bg },
+    id: `d_${Date.now()}_${i}`,
+    title: `${category} #${i+1}`,
+    description: `${style} • Editorial`,
+    category, style,
+    bg: p.bg,
+    canvas: { w: W, h: H },
     elements: [
-      heading("Design Conference 2025", 120, 360, 840, 88, p.ink, "center"),
-      divider(320, 470, 440),
-      text("A minimal editorial layout with calm spacing.", 220, 520, 640, 28, "rgba(255,255,255,.85)", "center")
+      el("heading", 90, 165, 800, 120, "Design Conference", { fontSize: 64, fontWeight: 900, color: p.ink, align:"center" }),
+      el("shape", 300, 285, 380, 2, "", { fill:"rgba(255,255,255,.30)" }),
+      el("text", 160, 310, 660, 80, "A calm, centered layout with intentional spacing.", { fontSize: 20, fontWeight: 600, color: "rgba(255,255,255,.86)", align:"center" }),
+      el("button", 370, 420, 240, 56, "Reserve Spot", { fill: "rgba(255,255,255,.14)", color: p.ink, radius: 999 }),
     ]
   };
 }
 
-// ---------- ELEMENT HELPERS ----------
-
-function heading(text, x, y, w, size, color, align="left"){
-  return { type:"heading", text, x, y, width:w, fontSize:size, fontWeight:800, color, align };
-}
-
-function text(text, x, y, w, size, color, align="left"){
-  return { type:"text", text, x, y, width:w, fontSize:size, fontWeight:500, color, align };
-}
-
-function cta(text, x, y, color){
-  return { type:"button", text, x, y, width:280, height:64, background:color, color:"#fff", radius:18, fontSize:18, fontWeight:700 };
-}
-
-function image(x, y, w, h, bg){
-  return { type:"image", x, y, width:w, height:h, background:bg, radius:24 };
-}
-
-function badge(text, x, y, color){
-  return { type:"badge", text, x, y, width:200, height:54, background:color, color:"#fff", radius:999, fontSize:16, fontWeight:700 };
-}
-
-function divider(x, y, w){
-  return { type:"divider", x, y, width:w, height:2, color:"rgba(255,255,255,.35)" };
+function el(type, x, y, w, h, title, extra={}){
+  return {
+    id: `${type}_${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`,
+    type, x, y, w, h, title, sub: "",
+    ...extra
+  };
 }
