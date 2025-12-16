@@ -12,7 +12,6 @@ export function generateTemplates(count = 24) {
         height: 1080,
         background: "#050712"
       },
-      bg: "linear-gradient(135deg,#0b5fff,#7b5cff)",
       elements: [
         {
           type: "heading",
