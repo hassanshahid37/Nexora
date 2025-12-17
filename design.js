@@ -1,62 +1,125 @@
+// design.js — Canva-level Layout Intelligence Upgrade
+// SAFE: UI-agnostic, preview-agnostic, editor-compatible
 
-/* Nexora – design.js (Browser-safe version) */
-(function(){
-  const NexoraDesign = {};
-
-  const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
-  const pick=(arr,seed)=>arr[(seed%arr.length+arr.length)%arr.length];
-  const hash=(s)=>{
-    s=String(s||"");
-    let h=2166136261;
-    for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h = Math.imul(h,16777619); }
-    return (h>>>0);
-  };
-
-  const PALETTES = [
-    { bg:"#0b1020", bg2:"#0a2a5a", ink:"#f7f9ff", muted:"#b9c3d6" },
-    { bg:"#071613", bg2:"#0b3a2b", ink:"#f4fffb", muted:"#b9d7cc" },
-    { bg:"#140a12", bg2:"#3b0f2b", ink:"#fff6fb", muted:"#f3cfe0" }
+export function generateTemplates(count = 24) {
+  const layouts = [
+    heroLeftImageRight,
+    fullBleedImageOverlay,
+    minimalTypography,
+    badgePromo,
+    editorialAnnouncement
   ];
 
-  function generateTemplates(opts){
-    const count = clamp(parseInt(opts?.count||24,10),1,200);
-    const prompt = opts?.prompt || "";
-    const category = opts?.category || "Instagram Post";
-    const style = opts?.style || "Dark Premium";
-    const out = [];
+  const palettes = [
+    { bg: "#0b1220", primary: "#ffffff", accent: "#4f8cff", muted: "#aab0bd" },
+    { bg: "#052016", primary: "#eafff4", accent: "#22c55e", muted: "#7dd3a7" },
+    { bg: "#1f1409", primary: "#fff7ed", accent: "#f59e0b", muted: "#fdba74" },
+    { bg: "#1b0f17", primary: "#fde7f3", accent: "#ec4899", muted: "#f9a8d4" },
+    { bg: "#0f1a17", primary: "#ecfeff", accent: "#06b6d4", muted: "#67e8f9" }
+  ];
 
-    for(let i=0;i<count;i++){
-      const seed = hash(prompt + category + style + i);
-      const pal = pick(PALETTES, seed);
-      const title = prompt ? prompt.slice(0, 32) : `${category} #${i+1}`;
+  const templates = [];
 
-      out.push({
-        id:`tpl_${seed}_${i}`,
-        title,
-        subtitle:`${style} • Ready`,
-        category,
-        canvas:{w:1080,h:1080},
-        palette:pal,
-        elements:[
-          {type:"bg", x:0,y:0,w:1080,h:1080, fill:pal.bg},
-          {type:"text", x:80,y:160, text:title, size:64, weight:800, color:pal.ink},
-          {type:"text", x:80,y:260, text:prompt || "Premium template", size:32, weight:600, color:pal.muted}
-        ]
-      });
-    }
-    return out;
+  for (let i = 0; i < count; i++) {
+    const layout = layouts[i % layouts.length];
+    const palette = palettes[i % palettes.length];
+    templates.push(layout(i, palette));
   }
 
-  function renderPreview(template, container){
-    if(!template || !container) return;
-    container.innerHTML = "";
-    container.style.background = template.palette.bg;
-    container.style.borderRadius = "14px";
-    container.style.padding = "12px";
-    container.innerHTML = `<div style="color:${template.palette.ink};font-weight:700">${template.title}</div>`;
-  }
+  return templates;
+}
 
-  NexoraDesign.generateTemplates = generateTemplates;
-  NexoraDesign.renderPreview = renderPreview;
-  window.NexoraDesign = NexoraDesign;
-})();
+/* ---------- LAYOUT ARCHETYPES ---------- */
+
+function heroLeftImageRight(i, p) {
+  return {
+    title: `Hero Brand #${i + 1}`,
+    canvas: { width: 1080, height: 1080, background: p.bg },
+    elements: [
+      heading("Grow Your Brand", 90, 140, 520, 96, p.primary),
+      text("Premium design built to convert", 90, 270, 460, 34, p.muted),
+      cta("Shop Now", 90, 360, p.accent),
+      image(600, 120, 380, 840)
+    ]
+  };
+}
+
+function fullBleedImageOverlay(i, p) {
+  return {
+    title: `Visual Impact #${i + 1}`,
+    canvas: { width: 1080, height: 1080, background: p.bg },
+    elements: [
+      image(0, 0, 1080, 1080),
+      overlay(0.45),
+      heading("Discover the Moment", 120, 420, 840, 88, p.primary, "center"),
+      text("Bold visuals. Clear message.", 120, 520, 840, 30, p.muted, "center")
+    ]
+  };
+}
+
+function minimalTypography(i, p) {
+  return {
+    title: `Minimal Type #${i + 1}`,
+    canvas: { width: 1080, height: 1080, background: p.bg },
+    elements: [
+      heading("Midnight Thoughts", 140, 420, 800, 104, p.primary),
+      text("A calm, modern statement.", 140, 560, 600, 32, p.muted)
+    ]
+  };
+}
+
+function badgePromo(i, p) {
+  return {
+    title: `Limited Offer #${i + 1}`,
+    canvas: { width: 1080, height: 1080, background: p.bg },
+    elements: [
+      badge("LIMITED", 90, 90, p.accent),
+      heading("Flash Sale", 90, 200, 720, 96, p.primary),
+      cta("Get 30% Off", 90, 320, p.accent),
+      image(90, 420, 900, 500)
+    ]
+  };
+}
+
+function editorialAnnouncement(i, p) {
+  return {
+    title: `Editorial #${i + 1}`,
+    canvas: { width: 1080, height: 1080, background: p.bg },
+    elements: [
+      heading("Celebrate in Style", 120, 180, 840, 88, p.primary, "center"),
+      divider(120, 300, 840),
+      text("Join us for an exclusive event", 120, 340, 840, 32, p.muted, "center"),
+      cta("Reserve Spot", 420, 420, p.accent)
+    ]
+  };
+}
+
+/* ---------- ELEMENT HELPERS ---------- */
+
+function heading(text, x, y, width, size, color, align = "left") {
+  return { type: "heading", text, x, y, width, fontSize: size, fontWeight: 700, color, align };
+}
+
+function text(text, x, y, width, size, color, align = "left") {
+  return { type: "text", text, x, y, width, fontSize: size, fontWeight: 400, color, align };
+}
+
+function cta(text, x, y, color) {
+  return { type: "button", text, x, y, width: 280, height: 64, background: color, color: "#fff", radius: 999 };
+}
+
+function image(x, y, w, h) {
+  return { type: "image", x, y, width: w, height: h };
+}
+
+function badge(text, x, y, color) {
+  return { type: "badge", text, x, y, background: color, color: "#fff" };
+}
+
+function divider(x, y, w) {
+  return { type: "divider", x, y, width: w, height: 2, color: "rgba(255,255,255,.2)" };
+}
+
+function overlay(opacity) {
+  return { type: "overlay", opacity };
+}
