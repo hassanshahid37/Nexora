@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -330,6 +331,38 @@
     const cur = document.body.getAttribute("data-theme") || "dark";
     setTheme(cur === "dark" ? "light" : "dark");
   }
+
+  // Phase G (Generator-side invisible editor helpers)
+  // Ensures prompt meaningfully maps into template elements BEFORE rendering/opening editor.
+  function applyPromptToTemplate(tpl, prompt){
+    if(!tpl || !prompt) return tpl;
+    const p = String(prompt).trim();
+    if(!p) return tpl;
+
+    // Title
+    tpl.title = tpl.title && tpl.title.startsWith("Instagram") ? p.slice(0, 32) : (tpl.title || p.slice(0, 32));
+
+    // Elements mapping
+    const els = Array.isArray(tpl.elements) ? tpl.elements : [];
+    const heading = els.find(e => String(e.type||"").toLowerCase()==="heading");
+    if(heading) heading.title = p.slice(0, 60);
+
+    const body = els.find(e => String(e.type||"").toLowerCase()==="text");
+    if(body) body.sub = p.slice(0, 90);
+
+    return tpl;
+  }
+
+  function applyPromptToTemplates(templates, prompt){
+    if(!Array.isArray(templates)) return templates;
+    templates.forEach(t => applyPromptToTemplate(t, prompt));
+    return templates;
+  }
+
+  // Expose for debugging / future bridge (non-destructive)
+  window.NEXORA = window.NEXORA || {};
+  window.NEXORA.applyPromptToTemplates = applyPromptToTemplates;
+
 
   function drawThumb(thumb, elements, bg){
     if(!thumb) return;
@@ -703,7 +736,10 @@ currentStyle = "Dark Premium";
         };
       });
 
-      // If AI returned nothing usable, fall back to seeded "real" templates
+      
+      // Phase G: inject prompt into template elements for stronger previews/editor
+      applyPromptToTemplates(normalized, payload.prompt);
+// If AI returned nothing usable, fall back to seeded "real" templates
       if(!normalized.length){
         seedTemplates(payload.count);
         statusEl.textContent = `Generated ${payload.count}`;
@@ -711,6 +747,7 @@ currentStyle = "Dark Premium";
       }
 
       __lastTemplates = normalized;
+      window.NEXORA.lastTemplates = __lastTemplates;
       grid.innerHTML = "";
 
       __lastTemplates.forEach((t) => {
@@ -808,6 +845,9 @@ function renderPreview(canvas, t){
   });
 }
 </script>
+
+
+<script src="invisible-editor.js"></script>
 
 </body>
 </html>
