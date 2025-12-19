@@ -318,6 +318,7 @@
     </main>
   </div>
 
+<script src="design.js"></script>
 <script>
   const $ = (s)=>document.querySelector(s);
   const grid = $("#previewGrid");
@@ -344,8 +345,7 @@
 
     // Elements mapping
     const els = Array.isArray(tpl.elements) ? tpl.elements : [];
-    const heading = list.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase()))
-        || list.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
+    const heading = els.find(e => String(e.type||"").toLowerCase()==="heading");
     if(heading) heading.title = p.slice(0, 60);
 
     const body = els.find(e => String(e.type||"").toLowerCase()==="text");
@@ -365,15 +365,12 @@
   window.NEXORA.applyPromptToTemplates = applyPromptToTemplates;
 
 
-  function drawThumb(thumb, tplOrElements, bg){
+  function drawThumb(thumb, elements, bg){
     if(!thumb) return;
 
     // Fail-safe: never break the app if preview rendering has issues
     try{
-      const tpl = Array.isArray(tplOrElements) ? { elements: tplOrElements, canvas: { w: 980, h: 620 } } : (tplOrElements || {});
-      const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
-      const W0 = Number(tpl?.canvas?.w || 980);
-      const H0 = Number(tpl?.canvas?.h || 620);
+      const W0 = 980, H0 = 620;
       thumb.innerHTML = "";
       thumb.style.position = "relative";
       thumb.style.overflow = "hidden";
@@ -386,10 +383,8 @@
       // --- background ---
       let bgCss = bg || null;
       if(!bgCss && Array.isArray(elements)){
-        const bgEl = elements.find(e => ["background","bg"].includes(String(e.type||"").toLowerCase()));
-        bgCss = (bgEl && String(bgEl.type||"").toLowerCase()==="bg" && bgEl.style==="radial" && (bgEl.fill2||bgEl.fill))
-          ? `radial-gradient(120% 90% at 20% 10%, ${bgEl.fill2||bgEl.fill}, ${bgEl.fill||bgEl.fill2})`
-          : (bgEl?.fill || bgEl?.background || null);
+        const bgEl = elements.find(e => String(e.type||"").toLowerCase()==="background");
+        bgCss = bgEl?.fill || bgEl?.background || null;
       }
       if(bgCss){
         const s = String(bgCss);
@@ -430,7 +425,7 @@
       };
 
       // --- render blocks first (image/cards/shapes) ---
-      const blockTypes = new Set(["image","photo","shape","card"]);
+      const blockTypes = new Set(["image","shape","card"]);
       list.filter(e => blockTypes.has(String(e.type||"").toLowerCase())).slice(0, 4).forEach((e) => {
         const type = String(e.type||"").toLowerCase();
         const d = document.createElement("div");
@@ -441,26 +436,18 @@
         d.style.border = "1px solid rgba(255,255,255,.18)";
         d.style.boxShadow = "0 8px 18px rgba(0,0,0,.22)";
 
-        if(type === "image" || type === "photo"){
-          if(e.src){
-            d.style.backgroundImage = `url(${e.src})`;
-            d.style.backgroundSize = "cover";
-            d.style.backgroundPosition = "center";
-          }else{
-            d.style.background = e.background || "linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.06))";
-          }
+        if(type === "image"){
+          d.style.background = e.background || "linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.06))";
         }else{
-          d.style.background = e.fill || e.background || "rgba(255,255,255,.10)";
+          d.style.background = e.background || "rgba(255,255,255,.10)";
         }
-        if(e.opacity!=null) d.style.opacity = String(e.opacity);
-        if(e.stroke) d.style.border = `1px solid ${e.stroke}`;
         d.style.backdropFilter = "blur(6px)";
         d.style.pointerEvents = "none";
         thumb.appendChild(d);
       });
 
       // --- badge ---
-      const badge = list.find(e => ["badge","pill","chip"].includes(String(e.type||"").toLowerCase()));
+      const badge = list.find(e => String(e.type||"").toLowerCase()==="badge");
       if(badge){
         const b = document.createElement("div");
         place(b, badge);
@@ -479,14 +466,13 @@
         b.style.whiteSpace = "nowrap";
         b.style.overflow = "hidden";
         b.style.textOverflow = "ellipsis";
-        b.textContent = (badge.title || badge.text || "").toString().slice(0, 32) || "NEW";
+        b.textContent = (badge.title || "").toString().slice(0, 32) || "NEW";
         b.style.pointerEvents = "none";
         thumb.appendChild(b);
       }
 
       // --- headline + subline ---
-      const heading = list.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase()))
-        || list.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
+      const heading = list.find(e => String(e.type||"").toLowerCase()==="heading") || list.find(e => String(e.type||"").toLowerCase()==="subhead");
       if(heading){
         const t = document.createElement("div");
         place(t, heading);
@@ -501,20 +487,12 @@
         t.style.webkitLineClamp = "2";
         t.style.webkitBoxOrient = "vertical";
         t.style.overflow = "hidden";
-        t.textContent = (heading.title || heading.text || "").toString().trim() || "Premium Design";
+        t.textContent = (heading.title || "").toString().trim() || "Premium Design";
         t.style.pointerEvents = "none";
         thumb.appendChild(t);
       }
 
-      const body = list.find(e => {
-        const ty = String(e.type||"").toLowerCase();
-        if(ty==="subhead") return true;
-        if(ty!=="text") return false;
-        if(e===heading) return false;
-        const wt = Number(e.weight||e.fontWeight||0);
-        const sz = Number(e.size||e.fontSize||0);
-        return (wt < 800 && sz < 46);
-      });
+      const body = list.find(e => String(e.type||"").toLowerCase()==="text" || String(e.type||"").toLowerCase()==="subhead");
       if(body){
         const t = document.createElement("div");
         place(t, body);
@@ -528,14 +506,14 @@
         t.style.webkitLineClamp = "2";
         t.style.webkitBoxOrient = "vertical";
         t.style.overflow = "hidden";
-        const s = (body.sub || body.title || body.text || "").toString().trim().replace(/\s+/g," ");
+        const s = (body.sub || body.title || "").toString().trim().replace(/\s+/g," ");
         t.textContent = s.slice(0, 60);
         t.style.pointerEvents = "none";
         thumb.appendChild(t);
       }
 
       // --- CTA button ---
-      const cta = list.find(e => ["cta","button"].includes(String(e.type||"").toLowerCase()));
+      const cta = list.find(e => String(e.type||"").toLowerCase()==="cta");
       if(cta){
         const b = document.createElement("div");
         place(b, cta);
@@ -586,38 +564,10 @@
     __lastTemplates = [];
     const category = $("#cat").value;
     const style = $("#style").value;
-    const prompt = ($("#prompt").value || "").trim();
 
-    // Phase I: client-side "Canva-style" generator (design.js) as the primary safe fallback.
-    if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
-      try{
-        const raw = window.NexoraDesign.generateTemplates({ category, style, prompt, count: n });
-        const templates = (Array.isArray(raw) ? raw : []).map(t => toEditorTemplate(t));
-
-        templates.forEach((t, i) => {
-          const div = document.createElement("div");
-          div.className = "tile";
-          div.tabIndex = 0;
-          div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title || (category+" #"+(i+1))}</b><span>${t.description || (style+" • Canva-style")}</span>`;
-
-          const thumb = div.querySelector(".thumb");
-          if(thumb) drawThumb(thumb, t, t.bg);
-
-          __lastTemplates.push(t);
-          div.addEventListener("click", ()=>openEditorWith(t));
-          div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
-          grid.appendChild(div);
-        });
-
-        statusEl.textContent = `Generated ${templates.length}`;
-        return;
-      }catch(e){
-        // fall through to legacy seeds
-      }
-    }
-
-    // Legacy ultra-safe seeds (never blank UI)
+    // Simple "real" layouts for the editor (cards on canvas)
     const patterns = [
+      // Hero + CTA
       (i)=> ([
         { type: "background", x:0,y:0,w:980,h:620, title:"BG", sub:"", fill:"linear-gradient(135deg,#0b5fff,#7b5cff)" },
         { type: "heading", x: 80, y: 70,  w: 820, h: 120, title: "Grow Your Brand", sub: "", fontSize: 72, fontWeight: 800, color:"#ffffff" },
@@ -625,11 +575,13 @@
         { type: "cta", x: 80, y: 350, w: 360, h: 110, title: "Shop Now", sub: "" },
         { type: "image", x: 520,y: 260, w: 380, h: 300, title: "", sub: "" },
       ]),
+      // Split left text / right image
       (i)=> ([
         { type: "heading", x: 70, y: 80,  w: 420, h: 150, title: "New Collection", sub: "" },
         { type: "text", x: 70, y: 250, w: 420, h: 170, title: "",  sub: "• Premium quality\n• Fast delivery\n• Limited offer" },
         { type: "image", x: 520,y: 80,  w: 390, h: 360, title: "", sub: "" },
       ]),
+      // Badge + centered headline
       (i)=> ([
         { type: "badge", x: 320,y: 70,  w: 320, h: 70,  title: "LIMITED", sub: "" },
         { type: "heading", x: 160,y: 190, w: 660, h: 150, title: "Flash Sale", sub: "" },
@@ -653,7 +605,7 @@
 
       const thumb = div.querySelector('.thumb');
       if(thumb){
-        drawThumb(thumb, { elements, canvas: { w: 980, h: 620 } });
+        drawThumb(thumb, elements);
       }
 
       const template = {
@@ -673,86 +625,141 @@
     }
   }
 
-function toEditorTemplate(tpl){
-    if(!tpl) return tpl;
-    const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
-    const looksLikeDesignJS = elements.some(e => ["bg","photo","pill","chip"].includes(String(e.type||"").toLowerCase()) || ("text" in (e||{}) && !("title" in (e||{}))));
-    if(!looksLikeDesignJS) return tpl;
-
-    const W = Number(tpl?.canvas?.w || 980);
-    const H = Number(tpl?.canvas?.h || 620);
-
-    const outEls = elements.map((e, idx)=> {
-      const type = String(e.type||"card").toLowerCase();
-      const id = e.id || (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16)));
-      const x = Number(e.x ?? 80), y = Number(e.y ?? 80);
-      const w = Number(e.w ?? 320), h = Number(e.h ?? 120);
-
-      let title = "";
-      let sub = "";
-
-      if(type === "text"){
-        title = String(e.text ?? "");
-        sub = "";
-      }else if(["pill","badge","chip"].includes(type)){
-        title = String(e.text ?? e.title ?? "BADGE");
-      }else if(type === "button" || type === "cta"){
-        title = String(e.text ?? e.title ?? "CTA");
-      }else if(type === "photo" || type === "image"){
-        title = "IMAGE";
-        sub = String(e.label ?? "");
-      }else if(type === "bg"){
-        title = "BG";
-      }else if(type === "shape"){
-        title = "SHAPE";
-      }else{
-        title = String(e.title ?? "");
-        sub = String(e.sub ?? "");
-      }
-
-      return { id, type, x, y, w, h, title, sub };
-    });
-
-    return {
-      id: tpl.id || `tpl_${Date.now()}`,
-      title: tpl.title || "Template",
-      description: tpl.description || tpl.subtitle || "",
-      category: tpl.category || "Instagram Post",
-      style: tpl.style || "Dark Premium",
-      bg: tpl.bg || null,
-      canvas: tpl.canvas || { w: W, h: H },
-      elements: outEls
-    };
-  }
-
-function openEditorWith(payload){
+  function openEditorWith(payload){
     // payload can be {cat,style,i} OR a full template object
     const cat = payload?.category || payload?.cat || $("#cat").value;
     const style = payload?.style || $("#style").value;
-const tpl = payload?.elements ? toEditorTemplate(payload) : null;
-
-    // keep latest settings for editor intelligence
-    try{
-      localStorage.setItem("nexora_last_settings_v1", JSON.stringify({ category: cat, style, prompt: $("#prompt").value.trim(), notes: $("#notes").value.trim(), count: Number($("#count")?.value||24) }));
-    }catch(e){}
-
-    // Also store selected template in a stable key
-    try{
-      if(tpl) localStorage.setItem("nexora_selected_template_v1", JSON.stringify(tpl));
-    }catch(e){}
 
     // Store draft so editor can load a REAL template (elements/positions)
-    localStorage.setItem("templify_draft", JSON.stringify({
+
+    // Phase I/J bridge: ensure any Phase-J (design.js) template can open in Ultimate Editor v1
+    function normalizeForEditorTemplate(tpl){
+      try{
+        if(!tpl || !Array.isArray(tpl.elements)) return null;
+
+        // Detect Phase-J schema (text/photo/bg/pill etc)
+        const looksPhaseJ = tpl.elements.some(e => ("text" in e) || ["bg","pill","chip","photo","dot","dots"].includes(String(e.type||"").toLowerCase()));
+        if(!looksPhaseJ) return tpl; // already editor-friendly
+
+        const W = 980, H = 620;
+        const out = {
+          id: tpl.id || (`vj_${Date.now()}_${Math.random().toString(16).slice(2)}`),
+          title: tpl.title || "Design",
+          description: tpl.description || "Nexora Visual",
+          category: tpl.category || (payload?.category || payload?.cat || $("#cat").value),
+          style: tpl.style || ($("#style").value || "Dark Premium"),
+          bg: tpl.bg || null,
+          canvas: { w: W, h: H },
+          elements: []
+        };
+
+        const els = tpl.elements || [];
+        els.forEach((e, idx) => {
+          const type = String(e.type||"card").toLowerCase();
+          const x = Number(e.x ?? 80);
+          const y = Number(e.y ?? 80);
+          const w = Number(e.w ?? e.width ?? 320);
+          const h = Number(e.h ?? e.height ?? 140);
+
+          if(type === "bg"){
+            out.bg = out.bg || (e.fill2 && e.fill ? `radial-gradient(120% 90% at 20% 10%, ${e.fill2}, ${e.fill})` : (e.fill || null));
+            out.elements.push({
+              id: e.id || (`bg_${idx}_${Date.now().toString(16)}`),
+              type: "background",
+              x: 0, y: 0, w: W, h: H,
+              title: "BG",
+              sub: "",
+              fill: out.bg || null
+            });
+            return;
+          }
+
+          if(type === "text"){
+            const title = String(e.text ?? "").slice(0, 120) || "TEXT";
+            const isHeading = Number(e.weight||0) >= 850 || Number(e.size||0) >= 56;
+            out.elements.push({
+              id: e.id || (`tx_${idx}_${Date.now().toString(16)}`),
+              type: isHeading ? "heading" : "text",
+              x, y, w, h,
+              title,
+              sub: "",
+              color: e.color || null,
+              fontSize: e.size ?? null,
+              fontWeight: e.weight ?? null,
+              opacity: e.opacity ?? null
+            });
+            return;
+          }
+
+          if(["pill","badge","chip"].includes(type)){
+            out.elements.push({
+              id: e.id || (`bd_${idx}_${Date.now().toString(16)}`),
+              type: "badge",
+              x, y, w: Number(e.w ?? 240), h: Number(e.h ?? 64),
+              title: String(e.text ?? "CTA").slice(0, 60),
+              sub: "",
+              background: e.fill || null,
+              radius: e.r ?? e.radius ?? 18,
+              color: e.tcolor || null,
+              fontSize: e.tsize ?? null,
+              fontWeight: e.tweight ?? null,
+              opacity: e.opacity ?? null
+            });
+            return;
+          }
+
+          if(type === "photo"){
+            out.elements.push({
+              id: e.id || (`im_${idx}_${Date.now().toString(16)}`),
+              type: "image",
+              x, y, w, h,
+              title: "IMAGE",
+              sub: "Auto image",
+              background: "linear-gradient(135deg, rgba(255,255,255,.16), rgba(255,255,255,.06))",
+              radius: e.r ?? e.radius ?? 22,
+              opacity: e.opacity ?? null
+            });
+            return;
+          }
+
+          out.elements.push({
+            id: e.id || (`sh_${idx}_${Date.now().toString(16)}`),
+            type: (type==="shape" ? "shape" : "card"),
+            x, y, w, h,
+            title: (type==="shape" ? "SHAPE" : "CARD"),
+            sub: "",
+            background: e.fill || e.background || null,
+            radius: e.r ?? e.radius ?? 22,
+            opacity: e.opacity ?? null,
+            stroke: e.stroke || null
+          });
+        });
+
+        if(out.elements.length < 3){
+          out.elements.push({ id:`fd_${Date.now()}`, type:"card", x:90,y:90,w:320,h:160, title: out.title || "Design", sub: out.description || "" });
+        }
+        return out;
+      }catch(err){
+        return null;
+      }
+    }
+
+    let templateForEditor = null;
+    if(payload?.elements){
+      templateForEditor = normalizeForEditorTemplate(payload) || null;
+    }
+
+    localStorage.setItem(\"templify_draft\", JSON.stringify({
       meta: {
         cat,
         style,
         i: payload?.i || 1,
         prompt: $("#prompt").value.trim(),
         notes: $("#notes").value.trim(),
-        title: (tpl?.title || payload?.title || null),
-        description: (tpl?.description || payload?.description || payload?.subtitle || null),
+        title: payload?.title || null,
+        description: payload?.description || payload?.subtitle || null,
       },
-      template: tpl,
+      template: templateForEditor,
       createdAt: Date.now()
     }));
     window.location.href = "editor.html";
@@ -820,7 +827,7 @@ currentStyle = "Dark Premium";
       const style = payload.style;
 
       // Normalize templates to our editor-friendly schema
-      const normalized = (templates.length ? templates : []).map((t, i) => {
+      let normalized = (templates.length ? templates : []).map((t, i) => {
         const elements = Array.isArray(t.elements) ? t.elements : [];
         return {
           id: t.id || `ai_${Date.now()}_${i+1}`,
@@ -851,6 +858,41 @@ currentStyle = "Dark Premium";
       
       // Phase G: inject prompt into template elements for stronger previews/editor
       applyPromptToTemplates(normalized, payload.prompt);
+      // Phase I→J: Upgrade previews using Phase-J Visual Intelligence (design.js)
+      if (window.NexoraDesign && typeof NexoraDesign.generateTemplates === "function" && normalized.length){
+        try{
+          const visual = NexoraDesign.generateTemplates({
+            prompt: payload.prompt || "",
+            category: cat || payload.category || "Instagram Post",
+            count: normalized.length
+          }) || [];
+
+          // Inject AI/normalized text into visual layouts (headline + subline)
+          visual.forEach((vt, i) => {
+            const src = normalized[i];
+            if(!vt || !Array.isArray(vt.elements) || !src) return;
+
+            const srcEls = Array.isArray(src.elements) ? src.elements : [];
+            const headSrc = (srcEls.find(e => String(e.type||"").toLowerCase()==="heading")?.title) || src.title || "";
+            const subSrc  = (srcEls.find(e => String(e.type||"").toLowerCase()==="text")?.title) || src.description || "";
+
+            const tx = vt.elements.filter(e => String(e.type||"").toLowerCase()==="text");
+            tx.sort((a,b)=> (Number(b.weight||0)-Number(a.weight||0)) || (Number(b.size||0)-Number(a.size||0)));
+
+            if(tx[0] && headSrc) tx[0].text = String(headSrc).slice(0, 64);
+            if(tx[1] && subSrc)  tx[1].text = String(subSrc).slice(0, 90);
+
+            vt.title = String(headSrc || vt.title || `${cat} #${i+1}`).slice(0, 40);
+            vt.description = String(subSrc || vt.description || `${payload.style||style} • Visual`).slice(0, 70);
+            vt.category = src.category || payload.category || cat;
+            vt.style = src.style || payload.style || style;
+            vt.canvas = { w: 980, h: 620 };
+          });
+
+          normalized = visual;
+        }catch(e){}
+      }
+
 // If AI returned nothing usable, fall back to seeded "real" templates
       if(!normalized.length){
         seedTemplates(payload.count);
@@ -870,7 +912,7 @@ currentStyle = "Dark Premium";
 
       const thumb = div.querySelector('.thumb');
       if(thumb){
-        drawThumb(thumb, t, t.bg);
+        drawThumb(thumb, t.elements, t.bg);
       }
 
         div.addEventListener("click", ()=>openEditorWith(t));
@@ -959,7 +1001,6 @@ function renderPreview(canvas, t){
 </script>
 
 
-<script src="design.js"></script>
 <script src="invisible-editor.js"></script>
 
 </body>
