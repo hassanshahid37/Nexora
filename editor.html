@@ -611,38 +611,11 @@ const state = {
     if(draft?.template?.elements && Array.isArray(draft.template.elements)){
       state.elements = draft.template.elements.map(e => ({
         id: e.id || uid(),
-        type: String(e.type ?? "card"),
         x: Number(e.x ?? 80), y: Number(e.y ?? 80),
-        w: Number(e.w ?? e.width ?? 420), h: Number(e.h ?? e.height ?? 120),
-        title: String(e.title ?? e.text ?? "TEXT"),
-        sub: String(e.sub ?? e.caption ?? ""),
-        fontSize: (e.fontSize ?? null),
-        fontWeight: (e.fontWeight ?? null),
-        color: (e.color ?? null),
-        align: (e.align ?? null),
-        radius: (e.radius ?? null),
-        fill: (e.fill ?? null),
-        background: (e.background ?? null),
-        opacity: (e.opacity ?? null)
+        w: Number(e.w ?? 420), h: Number(e.h ?? 120),
+        title: String(e.title ?? "TEXT"),
+        sub: String(e.sub ?? "")
       }));
-      // Keep doc size consistent with the generated template canvas (Phase I bridge)
-      try{
-        const cw = Number(draft?.template?.canvas?.w || 980);
-        const ch = Number(draft?.template?.canvas?.h || 620);
-        if(cw && ch){
-          localStorage.setItem("templify_canvas_size", JSON.stringify({ w: cw, h: ch }));
-        }
-      }catch(e){}
-
-      // Prefer template background for the canvas
-      try{
-        const bgEl = (Array.isArray(draft?.template?.elements) ? draft.template.elements : []).find(x => String(x?.type||"").toLowerCase()==="background");
-        const bgCss = draft?.template?.bg || bgEl?.fill || bgEl?.background || "";
-        if(bgCss){
-          localStorage.setItem("templify_doc_bg", String(bgCss));
-        }
-      }catch(e){}
-
     }
   }catch(e){}
 
@@ -735,50 +708,6 @@ const state = {
       div.style.width = el.w + "px";
       div.style.height = el.h + "px";
       div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
-
-      // Phase I → J: render element visuals (non-destructive, keeps same DOM)
-      const type = String(el.type || "").toLowerCase();
-      const h4 = div.querySelector("h4");
-      const p = div.querySelector("p");
-
-      // Background / shape / image
-      if(type === "background"){
-        div.style.left = "0px";
-        div.style.top = "0px";
-        div.style.width = `${baseCanvas.w}px`;
-        div.style.height = `${baseCanvas.h}px`;
-        const bg = el.fill || el.background || "";
-        if(bg){
-          if(String(bg).includes("gradient")) div.style.backgroundImage = String(bg);
-          else div.style.backgroundColor = String(bg);
-        }
-        div.style.border = "1px solid rgba(255,255,255,.10)";
-        div.style.zIndex = "0";
-      }else if(type === "shape"){
-        div.style.background = el.fill || el.background || "rgba(255,255,255,.08)";
-        if(el.radius != null) div.style.borderRadius = `${Number(el.radius)}px`;
-        if(el.opacity != null) div.style.opacity = String(el.opacity);
-        div.style.zIndex = "1";
-      }else if(type === "image"){
-        div.style.background = el.background || "linear-gradient(135deg, rgba(255,255,255,.20), rgba(255,255,255,.06))";
-        if(el.radius != null) div.style.borderRadius = `${Number(el.radius)}px`;
-        if(el.opacity != null) div.style.opacity = String(el.opacity);
-        div.style.zIndex = "2";
-      }else{
-        div.style.zIndex = "3";
-      }
-
-      // Typography
-      if(h4){
-        if(el.fontSize != null) h4.style.fontSize = `${Number(el.fontSize)}px`;
-        if(el.fontWeight != null) h4.style.fontWeight = String(el.fontWeight);
-        if(el.color) h4.style.color = String(el.color);
-        if(el.align) h4.style.textAlign = String(el.align);
-      }
-      if(p){
-        if(el.color) p.style.color = String(el.color);
-        if(el.align) p.style.textAlign = String(el.align);
-      }
       if(state.selectedIds.has(el.id)) div.classList.add("selected");
       canvas.appendChild(div);
       wireElement(div);
@@ -948,23 +877,6 @@ function escapeHtml(str){
     canvas.style.transform = `scale(${zoom})`;
     canvas.style.width = `${baseCanvas.w}px`;
     canvas.style.height = `${baseCanvas.h}px`;
-
-     // Apply document background if available
-     try{
-       const bg = localStorage.getItem("templify_doc_bg") || "";
-       if(bg){
-         if(bg.includes("gradient")){
-           canvas.style.backgroundImage = bg;
-           canvas.style.backgroundColor = "";
-         }else{
-           canvas.style.backgroundImage = "";
-           canvas.style.backgroundColor = bg;
-         }
-       }else{
-         canvas.style.backgroundImage = "";
-         canvas.style.backgroundColor = "transparent";
-       }
-     }catch(e){}
 
     for(const el of state.elements){
       const div = document.createElement("div");
