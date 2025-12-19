@@ -365,43 +365,50 @@
 
 
 /* ==============================
-   Phase O — Visual Composition Intelligence
+   Phase P — Content-Aware Visual Intelligence
    ============================== */
 
-function applyComposition(template){
+function inferIntent(prompt=""){
+  const p = prompt.toLowerCase();
+  if(p.includes("hire") || p.includes("job")) return "hiring";
+  if(p.includes("sale") || p.includes("discount")) return "sale";
+  if(p.includes("launch") || p.includes("new")) return "launch";
+  if(p.includes("brand")) return "brand";
+  return "generic";
+}
+
+function applyContentAwareness(template, prompt){
+  const intent = inferIntent(prompt);
+
   if(!template || !template.blocks) return template;
 
-  // Hierarchy rules
-  const title = template.blocks.find(b=>b.role==="title");
-  const subtitle = template.blocks.find(b=>b.role==="subtitle");
-  const cta = template.blocks.find(b=>b.role==="cta");
+  template.blocks.forEach((b,i)=>{
+    if(b.role==="cta"){
+      const map = {
+        hiring:["Apply Now","Join Us","We’re Hiring"],
+        sale:["Shop Now","Get Offer","Limited Deal"],
+        launch:["Discover","Learn More","Explore"],
+        brand:["Grow With Us","Build Your Brand"],
+        generic:["Learn More","Get Started"]
+      };
+      b.text = map[intent][i % map[intent].length];
+    }
 
-  if(title){
-    title.weight = "hero";
-    title.size = "xl";
-    title.contrast = "high";
-  }
-  if(subtitle){
-    subtitle.size = "md";
-    subtitle.opacity = 0.85;
-    subtitle.spacing = "compact";
-  }
-  if(cta){
-    cta.emphasis = "primary";
-    cta.shape = "pill";
-    cta.shadow = true;
-  }
+    if(b.role==="badge"){
+      b.text = intent==="sale" ? "LIMITED" :
+               intent==="hiring" ? "WE’RE HIRING" :
+               intent==="launch" ? "NEW" : "";
+    }
 
-  template.composition = {
-    spacing:"balanced",
-    alignment:"left",
-    flow:"Z",
-    contrast:"optimized"
-  };
+    if(b.role==="title"){
+      b.tone = intent;
+    }
+  });
 
+  template.variationSeed = Math.random().toString(36).slice(2,7);
   return template;
 }
 
 if(typeof window!=="undefined"){
-  window.__NEXORA_APPLY_COMPOSITION__ = applyComposition;
+  window.__NEXORA_APPLY_CONTENT_AWARE__ = applyContentAwareness;
 }
