@@ -344,9 +344,8 @@
 
     // Elements mapping
     const els = Array.isArray(tpl.elements) ? tpl.elements : [];
-    // FIX: use the correct local list variable (was `list` which caused ReferenceError)
-    const heading = els.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase()))
-        || els.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
+    const heading = list.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase()))
+        || list.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
     if(heading) heading.title = p.slice(0, 60);
 
     const body = els.find(e => String(e.type||"").toLowerCase()==="text");
