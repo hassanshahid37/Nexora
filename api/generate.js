@@ -2,8 +2,7 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const apiKey = process.env.OPENAI_API_KEY;
-  // If OPENAI_API_KEY is missing, we will return high-quality fallback templates instead of error.
-  // (Keeps Nexora usable without any API keys.)
+  if (!apiKey) return res.status(500).json({ error: "OPENAI_API_KEY missing" });
 
   // --- helpers ---
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -283,12 +282,6 @@ Hard requirements:
 - If you add style fields, only these: fontSize, fontWeight, color, align, radius, fill, background, opacity.
 
 ${schemaHint}`;
-
-    // No key? Use fallback templates (Phase I reliability)
-    if(!apiKey){
-      const fb = makeFallbackTemplates({ count: safeCount, category, style });
-      return res.status(200).json({ success: true, warning: "OPENAI_API_KEY missing — fallback used", templates: fb });
-    }
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
