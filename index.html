@@ -344,12 +344,8 @@
 
     // Elements mapping
     const els = Array.isArray(tpl.elements) ? tpl.elements : [];
-
-    // Headline-like element (heading/subhead, or the strongest text)
-    const heading =
-      els.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase())) ||
-      els.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
-
+    const heading = list.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase()))
+        || list.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
     if(heading) heading.title = p.slice(0, 60);
 
     const body = els.find(e => String(e.type||"").toLowerCase()==="text");
@@ -376,7 +372,6 @@
     try{
       const tpl = Array.isArray(tplOrElements) ? { elements: tplOrElements, canvas: { w: 980, h: 620 } } : (tplOrElements || {});
       const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
-      const list = elements;
       const W0 = Number(tpl?.canvas?.w || 980);
       const H0 = Number(tpl?.canvas?.h || 620);
       thumb.innerHTML = "";
