@@ -194,6 +194,107 @@ export default async function handler(req, res) {
     return templates;
   }
 
+
+  function svgToDataUri(svg) {
+    const cleaned = String(svg || "")
+      .replace(/\r?\n/g, " ")
+      .replace(/\s{2,}/g, " ")
+      .trim();
+    const encoded = encodeURIComponent(cleaned)
+      .replace(/%0A/g, "")
+      .replace(/%20/g, " ")
+      .replace(/%3D/g, "=")
+      .replace(/%3A/g, ":")
+      .replace(/%2F/g, "/");
+    return `data:image/svg+xml;utf8,${encoded}`;
+  }
+
+  async function generateAiVisualSvgs({ apiKey, count, category, style, prompt, notes, palettes }) {
+    const safeN = Math.max(1, Math.min(12, Number(count) || 6));
+    const paletteLine = (palettes || []).slice(0, 8).map(p => `${p.name}: primary ${p.primary}, accent ${p.accent}`).join(" | ");
+
+    const visualPrompt = `Create ${safeN} distinct SVG hero visuals for Canva-style template thumbnails.
+Return STRICT JSON only in this shape:
+{
+  "visuals":[
+    {"name":"v1","svg":"<svg ...>...</svg>"}
+  ]
+}
+
+Rules for each SVG:
+- Pure SVG markup only (no external images, no external fonts, no <image> tags).
+- Size: viewBox="0 0 1200 800" and width/height 1200/800.
+- Dark-premium look by default (glows, gradients, subtle noise, abstract shapes).
+- Keep center area calmer for text overlay (leave whitespace in middle-left).
+- Use these palette hints but you can vary within them: ${paletteLine}
+- Category: ${category}. Style: ${style}.
+- User prompt: ${prompt}
+- Notes: ${notes}
+- Output must be valid JSON with properly escaped strings. No markdown.`;
+
+    const r = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        temperature: 0.8,
+        messages: [
+          { role: "system", content: "Respond ONLY with valid JSON. No extra text." },
+          { role: "user", content: visualPrompt }
+        ]
+      })
+    });
+
+    const raw = await r.json();
+    const content = raw?.choices?.[0]?.message?.content || "";
+    const data = extractJson(content);
+    const visuals = Array.isArray(data?.visuals) ? data.visuals : [];
+    return visuals
+      .map(v => ({ name: String(v?.name || ""), svg: String(v?.svg || "") }))
+      .filter(v => v.svg.includes("<svg") && v.svg.includes("</svg>"))
+      .slice(0, safeN);
+  }
+
+  function applyVisualsToTemplates(templates, visuals) {
+    if (!Array.isArray(templates) || !templates.length || !Array.isArray(visuals) || !visuals.length) return templates;
+
+    return templates.map((t, i) => {
+      const v = visuals[i % visuals.length];
+      const dataUri = svgToDataUri(v.svg);
+
+      let elements = Array.isArray(t.elements) ? [...t.elements] : [];
+      let imgIdx = elements.findIndex(e => String(e.type) === "image");
+      if (imgIdx === -1) imgIdx = elements.findIndex(e => String(e.type) === "shape");
+
+      if (imgIdx !== -1) {
+        const e = { ...elements[imgIdx] };
+        e.type = "image";
+        e.src = dataUri;
+        // keep radius / layout; remove placeholder background to show svg
+        if (!e.radius) e.radius = 22;
+        e.background = e.background || "transparent";
+        elements[imgIdx] = e;
+      } else {
+        // if no suitable slot, append a standard hero image on right
+        elements = elements.concat([{
+          id: (globalThis.crypto?.randomUUID?.() || (`${Date.now().toString(16)}_${Math.random().toString(16).slice(2)}`)),
+          type: "image",
+          x: 650, y: 250, w: 250, h: 230,
+          title: "VISUAL",
+          sub: "",
+          radius: 22,
+          background: "transparent",
+          src: dataUri
+        }]);
+      }
+
+      return { ...t, elements };
+    });
+  }
+
   try {
     const {
       prompt = "",
@@ -303,21 +404,80 @@ ${schemaHint}`;
     const content = raw?.choices?.[0]?.message?.content || "";
     const data = extractJson(content);
 
-    const normalized = normalizeTemplates(data?.templates, { count: safeCount, category, style });
+    let normalized = normalizeTemplates(data?.templates, { count: safeCount, category, style });
 
-    if (!normalized.length) {
-      const fb = makeFallbackTemplates({ count: safeCount, category, style });
-      return res.status(200).json({
-        success: true,
-        warning: "AI returned unusable templates — fallback used",
-        templates: fb
-      });
+
+// --- Option B: AI visual generation (SVG hero visuals) ---
+// Default ON (can be disabled by sending { aiVisuals: false })
+const enableAiVisuals = (req.body?.aiVisuals !== false);
+
+if (enableAiVisuals && normalized.length) {
+  try {
+    const visuals = await generateAiVisualSvgs({
+      apiKey,
+      count: Math.min(8, Math.max(4, Math.round(Math.sqrt(safeCount) * 2))),
+      category,
+      style,
+      prompt: safePrompt,
+      notes: String(notes || ""),
+      palettes: PALETTES
+    });
+
+    if (visuals.length) {
+      normalized = applyVisualsToTemplates(normalized, visuals);
     }
+  } catch (_) {
+    // visuals are optional; ignore failures
+  }
+}
+
+    
+if (!normalized.length) {
+  let fb = makeFallbackTemplates({ count: safeCount, category, style });
+
+  if (enableAiVisuals && fb.length) {
+    try {
+      const visuals = await generateAiVisualSvgs({
+        apiKey,
+        count: 6,
+        category,
+        style,
+        prompt: safePrompt,
+        notes: String(notes || ""),
+        palettes: PALETTES
+      });
+      if (visuals.length) fb = applyVisualsToTemplates(fb, visuals);
+    } catch (_) {}
+  }
+
+  return res.status(200).json({
+    success: true,
+    warning: "AI returned unusable templates — fallback used",
+    templates: fb
+  });
+}
 
     return res.status(200).json({ success: true, templates: normalized });
 
-  } catch (err) {
-    const fb = makeFallbackTemplates({ count: 24, category: "Instagram Post", style: "Dark Premium" });
+} catch (err) {
+    let fb = makeFallbackTemplates({ count: 24, category: "Instagram Post", style: "Dark Premium" });
+
+    // Try visuals even on fallback (optional)
+    try {
+      const enableAiVisuals = (req.body?.aiVisuals !== false);
+      if (enableAiVisuals && fb.length && process.env.OPENAI_API_KEY) {
+        const visuals = await generateAiVisualSvgs({
+          apiKey: process.env.OPENAI_API_KEY,
+          count: 6,
+          category: "Instagram Post",
+          style: "Dark Premium",
+          prompt: "Premium Canva-style templates",
+          notes: "",
+          palettes: PALETTES
+        });
+        if (visuals.length) fb = applyVisualsToTemplates(fb, visuals);
+      }
+    } catch (_) {}
 
     return res.status(200).json({
       success: true,
