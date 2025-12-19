@@ -363,36 +363,19 @@
   window.NexoraDesign = { CATEGORIES, generateTemplates, renderPreview };
 })();
 
-// === VISUAL ENHANCEMENT PATCH ===
 
-// Adds visual diversity based on prompt intent without blocking UI
-function applyVisualTheme(template, index, prompt) {
-  const themes = [
-    { bg: 'linear-gradient(135deg,#0f2027,#203a43,#2c5364)', accent:'#00d4ff' },
-    { bg: 'linear-gradient(135deg,#1f1c2c,#928dab)', accent:'#ffb703' },
-    { bg: 'linear-gradient(135deg,#232526,#414345)', accent:'#21e6c1' },
-    { bg: 'linear-gradient(135deg,#141e30,#243b55)', accent:'#f72585' }
-  ];
-  const t = themes[index % themes.length];
-  template.style = template.style || {};
-  template.style.background = t.bg;
-  template.style.accent = t.accent;
-  template.style.visual = true;
-
-  if (prompt && /hire|hiring|job/i.test(prompt)) {
-    template.badge = 'WE ARE HIRING';
-    template.cta = template.cta || 'Apply Now';
-  }
-  if (prompt && /sale|offer|discount/i.test(prompt)) {
-    template.badge = 'LIMITED';
-    template.cta = template.cta || 'Shop Now';
-  }
+/* ==============================
+   Phase N — Visual Layers
+   ============================== */
+function addVisualLayers(template, intent) {
+  const visuals = {
+    hiring:{image:"gradient-people",shape:"glass-card"},
+    saas:{image:"gradient-tech",shape:"glass-blob"},
+    sale:{image:"gradient-sale",shape:"badge-overlay"},
+    brand:{image:"gradient-brand",shape:"soft-frame"}
+  };
+  const v = visuals[intent] || visuals.brand;
+  template.visual={imageLayer:v.image,shapeLayer:v.shape,depth:true};
   return template;
 }
-
-// Hook into existing generation result if present
-if (typeof window !== 'undefined') {
-  window.__applyVisuals = function(templates, prompt){
-    return templates.map((t,i)=>applyVisualTheme(t,i,prompt));
-  }
-}
+if(typeof window!=="undefined"){window.__NEXORA_ADD_VISUALS__=addVisualLayers;}
