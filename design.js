@@ -365,50 +365,45 @@
 
 
 /* ==============================
-   Phase P — Content-Aware Visual Intelligence
+   Phase Q — Layout Mutation Engine
    ============================== */
 
-function inferIntent(prompt=""){
-  const p = prompt.toLowerCase();
-  if(p.includes("hire") || p.includes("job")) return "hiring";
-  if(p.includes("sale") || p.includes("discount")) return "sale";
-  if(p.includes("launch") || p.includes("new")) return "launch";
-  if(p.includes("brand")) return "brand";
-  return "generic";
-}
-
-function applyContentAwareness(template, prompt){
-  const intent = inferIntent(prompt);
-
+function mutateLayout(template){
   if(!template || !template.blocks) return template;
 
-  template.blocks.forEach((b,i)=>{
-    if(b.role==="cta"){
-      const map = {
-        hiring:["Apply Now","Join Us","We’re Hiring"],
-        sale:["Shop Now","Get Offer","Limited Deal"],
-        launch:["Discover","Learn More","Explore"],
-        brand:["Grow With Us","Build Your Brand"],
-        generic:["Learn More","Get Started"]
-      };
-      b.text = map[intent][i % map[intent].length];
-    }
+  const blocks = [...template.blocks];
 
-    if(b.role==="badge"){
-      b.text = intent==="sale" ? "LIMITED" :
-               intent==="hiring" ? "WE’RE HIRING" :
-               intent==="launch" ? "NEW" : "";
+  function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
     }
+    return arr;
+  }
 
-    if(b.role==="title"){
-      b.tone = intent;
-    }
-  });
+  const title = blocks.filter(b=>b.role==="title");
+  const subtitle = blocks.filter(b=>b.role==="subtitle");
+  const badge = blocks.filter(b=>b.role==="badge");
+  const cta = blocks.filter(b=>b.role==="cta");
+  const rest = blocks.filter(b=>!["title","subtitle","badge","cta"].includes(b.role));
 
-  template.variationSeed = Math.random().toString(36).slice(2,7);
+  const patterns = [
+    () => [...badge, ...title, ...subtitle, ...rest, ...cta],
+    () => [...title, ...badge, ...rest, ...subtitle, ...cta],
+    () => [...rest, ...title, ...subtitle, ...cta, ...badge],
+    () => [...title, ...cta, ...subtitle, ...rest, ...badge],
+    () => shuffle([...blocks])
+  ];
+
+  const pattern = patterns[Math.floor(Math.random()*patterns.length)];
+  template.blocks = pattern();
+
+  template.layoutVariant = Math.floor(Math.random()*patterns.length);
+  template.structure = template.blocks.map(b=>b.role);
+
   return template;
 }
 
-if(typeof window!=="undefined"){
-  window.__NEXORA_APPLY_CONTENT_AWARE__ = applyContentAwareness;
+if(typeof window !== "undefined"){
+  window.__NEXORA_MUTATE_LAYOUT__ = mutateLayout;
 }
