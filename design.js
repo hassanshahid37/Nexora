@@ -4,15 +4,25 @@
 */
 (function(){
 
-/* === PATCH: Reduce prompt dominance (intent > overwrite) === */
-function promptIntent(prompt){
-  const p = String(prompt||"").toLowerCase();
-  const intent = {
-    motivational: /(awesome|believe|journey|success|grow|inspire)/.test(p),
-    promo: /(sale|offer|discount|limited|deal)/.test(p),
-    personal: /(my name is|i am)/.test(p)
-  };
-  return intent;
+/* === PHASE K COMPOSITION === */
+function composeTemplate(elements){
+  if(!Array.isArray(elements)) return elements;
+  // keep strongest 6 elements max
+  const kept = elements.slice(0,6);
+  // find headline
+  const h = kept.find(e=>['heading','text'].includes(String(e.type)) && (e.fontSize||0)>=40) || kept[0];
+  if(h){
+    h.fontSize = Math.max(h.fontSize||48, 56);
+    h.fontWeight = 800;
+  }
+  // CTA smaller than headline
+  kept.forEach(e=>{
+    if(String(e.type).includes('cta')){
+      e.fontSize = Math.min(e.fontSize||20, 22);
+      e.fontWeight = 700;
+    }
+  });
+  return kept;
 }
 
   const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -44,8 +54,6 @@ function promptIntent(prompt){
   ];
 
   function brandFromPrompt(prompt){
-  const intent = promptIntent(prompt);
-
     const p=(prompt||"").trim();
     if(!p) return { brand:"Nexora", tagline:"Premium templates, fast.", keywords:["premium","clean","modern"] };
     const words=p.replace(/\s+/g," ").split(" ").filter(Boolean);
