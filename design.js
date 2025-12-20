@@ -89,6 +89,83 @@
 
     return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
   }
+/* ------------------------------
+   Phase X — Visual Depth & Texture
+   - Adds subtle overlays + glow shapes for more "Canva-level" richness
+   - Does NOT change UI, only element generation
+--------------------------------- */
+
+function fxPatternOverlay(pal, seed){
+  // Soft dots + diagonal sheen. Kept very low opacity.
+  const a = pal.accent || "#4aa3ff";
+  const b = pal.accent2 || pal.card || "#7c5cff";
+  const dot = `radial-gradient(circle at 20% 25%, ${a}22 0 2px, transparent 3px),
+               radial-gradient(circle at 70% 65%, ${b}22 0 2px, transparent 3px),
+               radial-gradient(circle at 40% 80%, ${a}18 0 2px, transparent 3px)`;
+  const sheen = `linear-gradient(${Math.floor(rand(seed+41)*360)}deg, transparent 0%, rgba(255,255,255,.06) 35%, transparent 70%)`;
+  const grain = `repeating-linear-gradient(90deg, rgba(255,255,255,.02) 0 1px, transparent 1px 3px)`;
+  return `${sheen}, ${dot}, ${grain}`;
+}
+
+function fxGlowFrom(pal, seed){
+  const a = pal.accent || "#4aa3ff";
+  const b = pal.accent2 || pal.card || "#7c5cff";
+  const ang = Math.floor(rand(seed+77)*360);
+  return `radial-gradient(closest-side at 35% 35%, ${a}55 0%, transparent 60%),
+          radial-gradient(closest-side at 75% 65%, ${b}44 0%, transparent 62%),
+          linear-gradient(${ang}deg, ${a}22 0%, transparent 55%, ${b}18 100%)`;
+}
+
+function phaseXEnhanceElements(elements, layout, pal, seed){
+  const out = Array.isArray(elements) ? elements.slice() : [];
+  // 1) Full-canvas overlay texture (very subtle)
+  out.unshift({
+    type:"shape",
+    x:0, y:0, w:100, h:100,
+    radius:22,
+    fill: fxPatternOverlay(pal, seed),
+    opacity: 0.10,
+    stroke: "transparent",
+    shadow: "none"
+  });
+
+  // 2) Title glow (find title element and insert glow behind it)
+  const titleIdx = out.findIndex(e => e && e.type==="text" && (e.role==="title" || (typeof e.text==="string" && e.text.length>=8)));
+  if(titleIdx > -1){
+    const t = out[titleIdx];
+    const gx = clamp((t.x ?? 8) - 4, 0, 90);
+    const gy = clamp((t.y ?? 10) - 6, 0, 90);
+    const gw = clamp((t.w ?? 70) + 10, 20, 100);
+    const gh = clamp((t.h ?? 22) + 14, 14, 60);
+
+    out.splice(titleIdx, 0, {
+      type:"shape",
+      x: gx, y: gy, w: gw, h: gh,
+      radius: 24,
+      fill: fxGlowFrom(pal, seed),
+      opacity: 0.22,
+      stroke: "transparent",
+      shadow: `0 24px 80px rgba(0,0,0,.35)`
+    });
+
+    // Slightly bump title weight/size for hierarchy (safe caps)
+    if(typeof t.size === "number") t.size = clamp(t.size + 2, 16, 54);
+    if(typeof t.weight === "number") t.weight = clamp(t.weight + 50, 500, 800);
+  }
+
+  // 3) CTA polish (if a button exists, give it a richer fill)
+  for(const el of out){
+    if(!el) continue;
+    if(el.type==="button" || el.type==="pill"){
+      const a = pal.accent || "#4aa3ff";
+      const b = pal.accent2 || pal.card || "#7c5cff";
+      const ang = Math.floor(rand(seed+99)*360);
+      el.fill = `linear-gradient(${ang}deg, ${a} 0%, ${b} 100%)`;
+      if(!el.shadow) el.shadow = "0 12px 30px rgba(0,0,0,.35)";
+    }
+  }
+  return out;
+}
 
   function escapeXML(str){
     return String(str)
@@ -186,7 +263,7 @@
       add({ type:"chip", x:Math.round(w*0.14),y:Math.round(h*0.71), text:"@"+brand.replace(/\s+/g,"").toLowerCase(), size:Math.round(h*0.028), color: pal.muted });
     }
 
-    return elements;
+    return phaseXEnhanceElements(elements, layout, pal, seed);
   }
 
   function generateOne(category, prompt, style, idx){
@@ -365,40 +442,45 @@
 
 
 /* ==============================
-   Phase W — Brand Color & Hierarchy Intelligence
+   Phase Q — Layout Mutation Engine
    ============================== */
 
-const BRAND_PALETTES = {
-  tech:{bg:"linear-gradient(135deg,#0b1020,#0b5fff)",accent:"#0b5fff",cta:"#00d1ff"},
-  lifestyle:{bg:"linear-gradient(135deg,#2a0845,#6441a5)",accent:"#ff7ad9",cta:"#ffd166"},
-  business:{bg:"linear-gradient(135deg,#0f2027,#203a43)",accent:"#21e6c1",cta:"#21e6c1"},
-  generic:{bg:"linear-gradient(135deg,#050712,#14162b)",accent:"#7b5cff",cta:"#7b5cff"}
-};
+function mutateLayout(template){
+  if(!template || !template.blocks) return template;
 
-function inferBrandType(template){
-  const t=(template.intent||template.title||"").toLowerCase();
-  if(t.includes("saas")||t.includes("tech"))return"tech";
-  if(t.includes("life")||t.includes("people"))return"lifestyle";
-  if(t.includes("business")||t.includes("company"))return"business";
-  return"generic";
-}
+  const blocks = [...template.blocks];
 
-function applyBrandColors(template){
-  if(!template)return template;
-  const brand=inferBrandType(template);
-  const p=BRAND_PALETTES[brand]||BRAND_PALETTES.generic;
-  template.brand={type:brand,palette:p};
-  if(template.blocks){
-    template.blocks=template.blocks.map(b=>{
-      if(b.role==="title")return{...b,color:p.accent,emphasis:(b.emphasis||2)+1};
-      if(b.role==="cta")return{...b,color:p.cta,emphasis:(b.emphasis||2)+1};
-      return b;
-    });
+  function shuffle(arr){
+    for(let i = arr.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
   }
-  template.background=p.bg;
+
+  const title = blocks.filter(b=>b.role==="title");
+  const subtitle = blocks.filter(b=>b.role==="subtitle");
+  const badge = blocks.filter(b=>b.role==="badge");
+  const cta = blocks.filter(b=>b.role==="cta");
+  const rest = blocks.filter(b=>!["title","subtitle","badge","cta"].includes(b.role));
+
+  const patterns = [
+    () => [...badge, ...title, ...subtitle, ...rest, ...cta],
+    () => [...title, ...badge, ...rest, ...subtitle, ...cta],
+    () => [...rest, ...title, ...subtitle, ...cta, ...badge],
+    () => [...title, ...cta, ...subtitle, ...rest, ...badge],
+    () => shuffle([...blocks])
+  ];
+
+  const pattern = patterns[Math.floor(Math.random()*patterns.length)];
+  template.blocks = pattern();
+
+  template.layoutVariant = Math.floor(Math.random()*patterns.length);
+  template.structure = template.blocks.map(b=>b.role);
+
   return template;
 }
 
-if(typeof window!=="undefined"){
-  window.__NEXORA_BRAND_COLORS__=applyBrandColors;
+if(typeof window !== "undefined"){
+  window.__NEXORA_MUTATE_LAYOUT__ = mutateLayout;
 }
