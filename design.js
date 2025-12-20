@@ -365,40 +365,47 @@
 
 
 /* =====================================================
-   AI VISUAL COMPOSITION ENGINE (Alive, Non-Templated)
+   PHASE AA — VISUAL ART LAYER ENGINE (POSTER STYLE)
    ===================================================== */
 
-function applyVisualComposition(template){
+function applyVisualArtLayer(template){
   if(!template) return template;
 
-  const styles = ["split","centered","asymmetric","stacked"];
-  const style = styles[Math.floor(Math.random()*styles.length)];
-  template.composition = { style };
+  // Decide art direction
+  const artStyles = ["corporate-abstract","dynamic-curves","soft-gradient","geometric-bold"];
+  const artStyle = artStyles[Math.floor(Math.random()*artStyles.length)];
 
-  template.background = template.background || {};
-  template.background.geometry = {
-    type: ["curve","circle","panel"][Math.floor(Math.random()*3)],
-    opacity: 0.12 + Math.random()*0.18,
-    emphasis: Math.random()>0.5 ? "soft" : "bold"
+  template.visualArt = { style: artStyle };
+
+  // Background art
+  template.backgroundArt = {
+    gradient: [
+      "#0b1c2d",
+      "#123c5a",
+      "#1f6fa3",
+      "#38bdf8"
+    ].sort(()=>0.5-Math.random()).slice(0,2),
+    intensity: 0.6 + Math.random()*0.4
   };
 
-  template.shapes = [];
-  const shapeCount = 2 + Math.floor(Math.random()*3);
-  for(let i=0;i<shapeCount;i++){
-    template.shapes.push({
-      kind: ["blob","rounded-rect","arc"][Math.floor(Math.random()*3)],
-      scale: ["hero","support","accent"][Math.floor(Math.random()*3)],
-      opacity: 0.15 + Math.random()*0.25
+  // Abstract shapes
+  template.artShapes = [];
+  const count = 3 + Math.floor(Math.random()*3);
+  for(let i=0;i<count;i++){
+    template.artShapes.push({
+      type: ["circle","wave","polygon","diagonal"][Math.floor(Math.random()*4)],
+      scale: ["xl","lg","md"][Math.floor(Math.random()*3)],
+      opacity: 0.18 + Math.random()*0.25,
+      anchor: ["top-left","top-right","bottom-left","bottom-right","center"][Math.floor(Math.random()*5)]
     });
   }
 
-  template.visualDominance =
-    style==="centered" ? "text" :
-    style==="split" ? "balanced" : "visual";
+  // Art-first dominance
+  template.visualDominance = "art";
 
   return template;
 }
 
-if(typeof window!=="undefined"){
-  window.__NEXORA_VISUAL_COMPOSITION__ = applyVisualComposition;
+if(typeof window !== "undefined"){
+  window.__NEXORA_PHASE_AA_ART__ = applyVisualArtLayer;
 }
