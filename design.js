@@ -365,56 +365,47 @@
 
 
 /* ==============================
-   Phase Z — Market-Specific Polish
+   Phase Z+ — Controlled Expressiveness Layer
    ============================== */
 
-function applyMarketPolish(template){
-  if(!template) return template;
+function applyZPlusExpressiveness(template){
+  if(!template || !template.blocks) return template;
 
-  // Typography rhythm
-  template.typography = {
-    headlineWeight: "700",
-    bodyWeight: "400",
-    letterSpacing: "0.2px",
-    lineHeight: "1.25"
+  // Detect emotional keywords for subtle emphasis
+  const textBlob = (template.title || "") + " " + (template.subtitle || "");
+  const lower = textBlob.toLowerCase();
+
+  let emphasisTone = "neutral";
+  if(lower.includes("proud") || lower.includes("together")) emphasisTone = "pride";
+  if(lower.includes("game") || lower.includes("battle")) emphasisTone = "energy";
+  if(lower.includes("grow") || lower.includes("future")) emphasisTone = "aspiration";
+
+  template.zPlus = {
+    tone: emphasisTone,
+    enabled: true
   };
 
-  // CTA confidence
-  if(template.blocks){
-    template.blocks = template.blocks.map(b => {
-      if(b.role === "cta"){
-        return {
-          ...b,
-          textTransform: "uppercase",
-          emphasis: (b.emphasis || 2) + 1,
-          padding: "12px 20px"
-        };
-      }
-      if(b.role === "title"){
-        return {
-          ...b,
-          maxLines: 2
-        };
-      }
-      return b;
-    });
-  }
-
-  // Market-ready spacing
-  template.spacing = {
-    cardPadding: "20px",
-    blockGap: "12px",
-    safeArea: true
-  };
-
-  template.polish = {
-    market: "instagram",
-    confidence: "high"
-  };
+  template.blocks = template.blocks.map(b => {
+    if(b.role === "title"){
+      return {
+        ...b,
+        letterSpacing: emphasisTone === "pride" ? "0.4px" : "0.2px",
+        transform: emphasisTone === "energy" ? "uppercase" : "none"
+      };
+    }
+    if(b.role === "cta"){
+      return {
+        ...b,
+        glow: emphasisTone !== "neutral",
+        confidence: emphasisTone
+      };
+    }
+    return b;
+  });
 
   return template;
 }
 
 if(typeof window !== "undefined"){
-  window.__NEXORA_PHASE_Z__ = applyMarketPolish;
+  window.__NEXORA_PHASE_Z_PLUS__ = applyZPlusExpressiveness;
 }
