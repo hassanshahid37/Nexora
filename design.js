@@ -239,6 +239,59 @@
     return out;
   }
 
+  // --------- Phase T: Asset Resolver (NO 404 placeholders) ---------
+  function svgToDataUri(svg){
+    try{
+      return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    }catch(e){
+      return "data:image/svg+xml;charset=utf-8," + svg;
+    }
+  }
+
+  function looksLikeMissingAsset(src){
+    if(!src || typeof src!=="string") return false;
+    if(src.startsWith("data:")) return false;
+    const s = src.split("?")[0].toLowerCase();
+    // any explicit placeholder png or known missing demo assets
+    if(s.endsWith("placeholder.png") || s.includes("placeholder") && s.endsWith(".png")) return true;
+    if(s.endsWith(".png") && (s.includes("house-") || s.includes("home-") || s.includes("blueprint-") || s.includes("layout-") || s.includes("luxury-") || s.includes("future-"))) return true;
+    return false;
+  }
+
+  function fallbackPhotoSvg(){
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+      <defs>
+        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stop-color="#0b5fff" stop-opacity="0.35"/>
+          <stop offset="1" stop-color="#22d3ee" stop-opacity="0.18"/>
+        </linearGradient>
+        <radialGradient id="r" cx="20%" cy="20%" r="80%">
+          <stop offset="0" stop-color="#ffffff" stop-opacity="0.10"/>
+          <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <rect width="1200" height="800" fill="url(#g)"/>
+      <rect width="1200" height="800" fill="url(#r)"/>
+      <g opacity="0.45" fill="none" stroke="#ffffff" stroke-opacity="0.16">
+        <path d="M140 560 L380 360 L520 440 L720 280 L980 520" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M160 610 L340 470 L520 540 L700 410 L940 610" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+      </g>
+      <g opacity="0.55">
+        <rect x="80" y="70" width="420" height="120" rx="28" fill="#ffffff" fill-opacity="0.08"/>
+        <rect x="120" y="110" width="320" height="16" rx="8" fill="#ffffff" fill-opacity="0.22"/>
+        <rect x="120" y="145" width="240" height="14" rx="7" fill="#ffffff" fill-opacity="0.16"/>
+      </g>
+    </svg>`;
+  }
+
+  function resolvePhotoSrc(src, template){
+    if(!looksLikeMissingAsset(src)) return src;
+    if(template && template.inlineVisual && template.inlineVisual.svg){
+      return svgToDataUri(template.inlineVisual.svg);
+    }
+    return svgToDataUri(fallbackPhotoSvg());
+  }
+
   function renderPreview(template, container){
     if(!container) return;
     container.innerHTML = "";
@@ -277,18 +330,28 @@
         continue;
       }
       if(e.type==="photo"){
-        const d=mk("div");
-        d.style.position="absolute";
-        d.style.left=(e.x*scale)+"px"; d.style.top=(e.y*scale)+"px";
-        d.style.width=(e.w*scale)+"px"; d.style.height=(e.h*scale)+"px";
-        d.style.borderRadius=((e.r||0)*scale)+"px";
-        d.style.background = e.src ? `url(${e.src})` : "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))";
-        if(e.src){ d.style.backgroundSize="cover"; d.style.backgroundPosition="center"; }
-        d.style.border=`${Math.max(1,Math.round(1.2*scale))}px dashed ${e.stroke||"rgba(255,255,255,0.18)"}`;
-        container.appendChild(d);
+        const ph = document.createElement("div");
+        ph.className = "ph";
+        const rad = (e.radius!=null?e.radius:16);
+        ph.style.borderRadius = rad+"px";
+        ph.style.opacity = (e.opacity!=null?e.opacity:1);
+
+        // Phase T: resolve any missing placeholder assets to inline SVG data URIs
+        let src = resolvePhotoSrc(e.src, template);
+        if(!src && template && template.inlineVisual && template.inlineVisual.svg){
+          src = svgToDataUri(template.inlineVisual.svg);
+        }
+        if(src){
+          ph.style.backgroundImage = `url("${src}")`;
+          ph.style.backgroundSize = "cover";
+          ph.style.backgroundPosition = "center";
+        }else{
+          ph.style.background = "linear-gradient(135deg, rgba(11,95,255,.20), rgba(34,211,238,.10))";
+        }
+        el.appendChild(ph);
         continue;
       }
-      if(e.type==="text"){
+if(e.type==="text"){
         const d=mk("div");
         d.style.position="absolute";
         d.style.left=(e.x*scale)+"px"; d.style.top=(e.y*scale)+"px";
