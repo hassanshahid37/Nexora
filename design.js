@@ -365,47 +365,54 @@
 
 
 /* =====================================================
-   PHASE AA — VISUAL ART LAYER ENGINE (POSTER STYLE)
+   PHASE AB — SCENE BUILDER ENGINE (POSTER STRUCTURE)
    ===================================================== */
 
-function applyVisualArtLayer(template){
+function applySceneBuilder(template){
   if(!template) return template;
 
-  // Decide art direction
-  const artStyles = ["corporate-abstract","dynamic-curves","soft-gradient","geometric-bold"];
-  const artStyle = artStyles[Math.floor(Math.random()*artStyles.length)];
+  // Scene regions
+  const scenes = ["hero-left","hero-right","hero-top","center-focus"];
+  const scene = scenes[Math.floor(Math.random()*scenes.length)];
 
-  template.visualArt = { style: artStyle };
-
-  // Background art
-  template.backgroundArt = {
-    gradient: [
-      "#0b1c2d",
-      "#123c5a",
-      "#1f6fa3",
-      "#38bdf8"
-    ].sort(()=>0.5-Math.random()).slice(0,2),
-    intensity: 0.6 + Math.random()*0.4
+  template.scene = {
+    layout: scene,
+    regions: {
+      hero: { weight: 0.55 + Math.random()*0.2 },
+      support: { weight: 0.2 + Math.random()*0.15 },
+      base: { weight: 0.15 + Math.random()*0.1 }
+    }
   };
 
-  // Abstract shapes
-  template.artShapes = [];
-  const count = 3 + Math.floor(Math.random()*3);
-  for(let i=0;i<count;i++){
-    template.artShapes.push({
-      type: ["circle","wave","polygon","diagonal"][Math.floor(Math.random()*4)],
-      scale: ["xl","lg","md"][Math.floor(Math.random()*3)],
-      opacity: 0.18 + Math.random()*0.25,
-      anchor: ["top-left","top-right","bottom-left","bottom-right","center"][Math.floor(Math.random()*5)]
-    });
-  }
+  // Anchors
+  template.anchors = [
+    { type: "panel", dominance: "hero", radius: 18, opacity: 0.9 },
+    { type: "shape", dominance: "support", radius: 999, opacity: 0.35 }
+  ];
 
-  // Art-first dominance
-  template.visualDominance = "art";
+  // Structured blocks
+  template.blocksStructure = {
+    textPlacement:
+      scene === "hero-left" ? "right" :
+      scene === "hero-right" ? "left" :
+      scene === "hero-top" ? "bottom" : "center",
+    visualPlacement:
+      scene === "hero-left" ? "left" :
+      scene === "hero-right" ? "right" :
+      scene === "hero-top" ? "top" : "center"
+  };
+
+  // Poster balance
+  template.posterBalance = {
+    negativeSpace: 0.18 + Math.random()*0.12,
+    contrastBias: Math.random() > 0.5 ? "visual" : "text"
+  };
+
+  template.visualDominance = "scene";
 
   return template;
 }
 
 if(typeof window !== "undefined"){
-  window.__NEXORA_PHASE_AA_ART__ = applyVisualArtLayer;
+  window.__NEXORA_PHASE_AB_SCENE__ = applySceneBuilder;
 }
