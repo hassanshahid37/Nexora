@@ -365,30 +365,64 @@
 
 
 /* ==============================
-   Phase U — Hierarchy Intelligence
+   Phase V — Asset Injection Intelligence
    ============================== */
-function applyPhaseUHierarchy(template){
-  if(!template || !template.blocks) return template;
 
-  const intent = (template.intent || "").toLowerCase();
+// Detect intent from prompt or template metadata
+function inferAssetIntent(template){
+  const t = (template.intent || template.title || "").toLowerCase();
+  if(t.includes("hire") || t.includes("career")) return "people";
+  if(t.includes("sale") || t.includes("offer")) return "promo";
+  if(t.includes("fashion")) return "fashion";
+  if(t.includes("real estate") || t.includes("home")) return "property";
+  if(t.includes("saas") || t.includes("software")) return "saas";
+  return "abstract";
+}
 
-  let map = { title:3, subtitle:2, badge:2, cta:2 };
-  if(intent.includes("hire")) map = { title:3, cta:3, badge:2, subtitle:1 };
-  if(intent.includes("sale")) map = { badge:3, title:3, cta:2, subtitle:1 };
+// Inline SVG asset library (zero network requests)
+const INLINE_ASSETS = {
+  people: () => `<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg">
+    <rect width="300" height="180" fill="url(#g)"/>
+    <circle cx="90" cy="80" r="26" fill="rgba(255,255,255,.6)"/>
+    <circle cx="150" cy="70" r="22" fill="rgba(255,255,255,.5)"/>
+    <circle cx="210" cy="85" r="24" fill="rgba(255,255,255,.55)"/>
+  </svg>`,
+  promo: () => `<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg">
+    <rect width="300" height="180" fill="rgba(255,255,255,.08)"/>
+    <polygon points="0,140 300,60 300,180 0,180" fill="rgba(255,255,255,.18)"/>
+  </svg>`,
+  saas: () => `<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg">
+    <rect width="300" height="180" rx="18" fill="rgba(255,255,255,.12)"/>
+    <rect x="30" y="40" width="240" height="18" rx="6" fill="rgba(255,255,255,.4)"/>
+    <rect x="30" y="70" width="180" height="14" rx="6" fill="rgba(255,255,255,.25)"/>
+  </svg>`,
+  property: () => `<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg">
+    <rect width="300" height="180" fill="rgba(255,255,255,.1)"/>
+    <polygon points="150,40 240,100 60,100" fill="rgba(255,255,255,.45)"/>
+    <rect x="90" y="100" width="120" height="60" fill="rgba(255,255,255,.3)"/>
+  </svg>`,
+  abstract: () => `<svg viewBox="0 0 300 180" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="60" cy="50" r="40" fill="rgba(255,255,255,.25)"/>
+    <circle cx="200" cy="120" r="60" fill="rgba(255,255,255,.18)"/>
+  </svg>`
+};
 
-  template.blocks = template.blocks.map(b => {
-    const w = map[b.role] || 1;
-    return {
-      ...b,
-      emphasis: w,
-      scale: 1 + w * 0.1,
-      opacity: 1 - (3 - w) * 0.1
-    };
-  });
+// Inject assets into templates
+function injectAssets(template){
+  if(!template) return template;
+
+  const intent = inferAssetIntent(template);
+  const svg = INLINE_ASSETS[intent] ? INLINE_ASSETS[intent]() : INLINE_ASSETS.abstract();
+
+  template.asset = {
+    type: "inline-svg",
+    svg,
+    intent
+  };
 
   return template;
 }
 
 if(typeof window !== "undefined"){
-  window.__NEXORA_PHASE_U__ = applyPhaseUHierarchy;
+  window.__NEXORA_INJECT_ASSETS__ = injectAssets;
 }
