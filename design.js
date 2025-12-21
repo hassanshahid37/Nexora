@@ -31,6 +31,86 @@
     { name:"Mono Luxe", bg:"#0b0c10", bg2:"#1a1d29", ink:"#f6f7fb", muted:"#b4bbcb", accent:"#e5e7eb", accent2:"#60a5fa" }
   ];
 
+  // === Phase AD – Style Variant Engine (family + variant, no UI change) ===
+  const STYLE_FAMILIES = {
+    "Dark Premium": {
+      variants: ["Luxe Glow","Cinematic","Bold Contrast","Soft Editorial","Deep Night"],
+      palettes: PALETTES
+    },
+    "Corporate": {
+      variants: ["Executive","Editorial","Modern Tech","Data Dense","Boardroom"],
+      palettes: [
+        { name:"Slate Executive", bg:"#0b1220", bg2:"#111a2e", ink:"#f7f9ff", muted:"#b7c2d6", accent:"#3b82f6", accent2:"#22c55e" },
+        { name:"Navy Ledger", bg:"#071022", bg2:"#0a2a5a", ink:"#f7f9ff", muted:"#b9c3d6", accent:"#60a5fa", accent2:"#a78bfa" },
+        { name:"Mono Office", bg:"#0b0c10", bg2:"#1a1d29", ink:"#f6f7fb", muted:"#b4bbcb", accent:"#e5e7eb", accent2:"#60a5fa" }
+      ]
+    },
+    "Light Minimal": {
+      variants: ["Swiss","Airy","Apple Clean","Editorial Light","Soft Gray"],
+      palettes: [
+        { name:"Paper White", bg:"#f7f9ff", bg2:"#e9efff", ink:"#0b1020", muted:"#46506a", accent:"#0b5fff", accent2:"#7c3aed" },
+        { name:"Soft Gray", bg:"#f6f7fb", bg2:"#eef2ff", ink:"#0b1020", muted:"#4b5563", accent:"#2563eb", accent2:"#10b981" },
+        { name:"Cream Editorial", bg:"#fbf7f1", bg2:"#f2e8ff", ink:"#111827", muted:"#6b7280", accent:"#7c3aed", accent2:"#ef4444" }
+      ]
+    },
+    "Glassmorphism": {
+      variants: ["Frost","Aurora Glass","Soft Prism","Night Glass","Clean Glass"],
+      palettes: [
+        { name:"Aurora Glass", bg:"#060816", bg2:"#1b1440", ink:"#f7f9ff", muted:"#b9c3d6", accent:"#22d3ee", accent2:"#a78bfa" },
+        { name:"Frost Blue", bg:"#070b1a", bg2:"#0b2a5a", ink:"#f7f9ff", muted:"#b9c3d6", accent:"#60a5fa", accent2:"#34d399" },
+        { name:"Prism Night", bg:"#0a0614", bg2:"#2a0b3a", ink:"#fff6fb", muted:"#f3cfe0", accent:"#fb7185", accent2:"#38bdf8" }
+      ]
+    },
+    "Neon": {
+      variants: ["Electric","Cyber","Rave","Laser Pop","Arcade"],
+      palettes: [
+        { name:"Electric Blue", bg:"#050712", bg2:"#0b1020", ink:"#f7f9ff", muted:"#aab0bd", accent:"#22d3ee", accent2:"#a3e635" },
+        { name:"Cyber Magenta", bg:"#080310", bg2:"#1b0030", ink:"#fff6fb", muted:"#e0c7ff", accent:"#a78bfa", accent2:"#fb7185" },
+        { name:"Laser Lime", bg:"#030712", bg2:"#062a14", ink:"#f4fffb", muted:"#b9d7cc", accent:"#84cc16", accent2:"#22c55e" }
+      ]
+    }
+  };
+
+  function normalizeStyleName(style){
+    const s = String(style||"").trim();
+    if(!s) return "Dark Premium";
+    // keep exact UI names, but allow small variations
+    const key = Object.keys(STYLE_FAMILIES).find(k => k.toLowerCase() === s.toLowerCase());
+    return key || "Dark Premium";
+  }
+
+  function resolveStyle(style, seed){
+    const family = normalizeStyleName(style);
+    const fam = STYLE_FAMILIES[family] || STYLE_FAMILIES["Dark Premium"];
+    const vIdx = seed % (fam.variants.length||1);
+    const variant = fam.variants[vIdx] || fam.variants[0] || "Default";
+    const pal = pick(fam.palettes, seed);
+
+    // attach rendering rules onto palette (so existing logic stays intact)
+    const isLight = (family === "Light Minimal");
+    const isGlass = (family === "Glassmorphism");
+    const isNeon  = (family === "Neon");
+    const isCorp  = (family === "Corporate");
+
+    pal.family = family;
+    pal.variant = variant;
+
+    // surface + stroke tokens used by layouts (replace hardcoded rgba in code below)
+    pal.surface   = isLight ? "rgba(10,20,60,0.06)" : (isGlass ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)");
+    pal.surface2  = isLight ? "rgba(10,20,60,0.10)" : (isGlass ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)");
+    pal.strokeSoft= isLight ? "rgba(10,20,60,0.14)" : "rgba(255,255,255,0.12)";
+    pal.strokeHard= isLight ? "rgba(10,20,60,0.22)" : "rgba(255,255,255,0.18)";
+
+    // vibe knobs
+    pal.glow = isNeon ? 0.65 : (isGlass ? 0.35 : 0.18);
+    pal.contrast = isLight ? 0.70 : (isCorp ? 0.62 : 0.58);
+
+    return { family, variant, pal };
+  }
+  // === End Style Variant Engine ===
+
+
+
   function brandFromPrompt(prompt){
     const p=(prompt||"").trim();
     if(!p) return { brand:"Nexora", tagline:"Premium templates, fast.", keywords:["premium","clean","modern"] };
@@ -121,13 +201,13 @@
 
     if(layout==="splitHero"){
       add({ type:"shape", x:0,y:0,w:Math.round(w*0.56),h, r:48, fill: pal.bg2, opacity:0.85 });
-      add({ type:"shape", x:Math.round(w*0.53),y:Math.round(h*0.1),w:Math.round(w*0.42),h:Math.round(h*0.55), r:48, stroke:"rgba(255,255,255,0.14)", fill:"rgba(255,255,255,0.04)" });
+      add({ type:"shape", x:Math.round(w*0.53),y:Math.round(h*0.1),w:Math.round(w*0.42),h:Math.round(h*0.55), r:48, stroke:"rgba(255,255,255,0.14)", fill: pal.surface });
       add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.14), text: brand.toUpperCase(), size:Math.round(h*0.055), weight:800, color: pal.ink, letter: -0.5 });
       add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.25), text: "NEW COLLECTION", size:Math.round(h*0.03), weight:700, color: pal.muted, letter: 2 });
       add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.33), text: tagline, size:Math.round(h*0.038), weight:600, color: pal.ink });
       add({ type:"pill", x:Math.round(w*0.07),y:Math.round(h*0.72), w:Math.round(w*0.28),h:Math.round(h*0.085), r:999, fill: pal.accent, text:"Get Started", tcolor:"#0b1020", tsize:Math.round(h*0.032), tweight:800 });
       add({ type:"chip", x:Math.round(w*0.07),y:Math.round(h*0.82), text:"Premium • Fast • Ready", size:Math.round(h*0.028), color: pal.muted });
-      add({ type:"photo", src: smartPhotoSrc(s+11, pal, brand), x:Math.round(w*0.60),y:Math.round(h*0.16),w:Math.round(w*0.32),h:Math.round(h*0.38), r:40, stroke:"rgba(255,255,255,0.18)" });
+      add({ type:"photo", src: smartPhotoSrc(s+11, pal, brand), x:Math.round(w*0.60),y:Math.round(h*0.16),w:Math.round(w*0.32),h:Math.round(h*0.38), r:40, stroke: pal.strokeHard });
     }
 
     if(layout==="badgePromo"){
@@ -139,11 +219,11 @@
       add({ type:"shape", x:Math.round(w*0.12),y:Math.round(h*0.46),w:Math.round(w*0.56),h:Math.round(h*0.01), r:8, fill:"rgba(255,255,255,0.16)" });
       add({ type:"pill", x:Math.round(w*0.12),y:Math.round(h*0.52), w:Math.round(w*0.34),h:Math.round(h*0.095), r:999, fill: pal.accent, text:"Get 30% Off", tcolor:"#0b1020", tsize:Math.round(h*0.035), tweight:900 });
       add({ type:"chip", x:Math.round(w*0.12),y:Math.round(h*0.65), text:"Use code: NEXORA", size:Math.round(h*0.03), color: pal.muted });
-      add({ type:"shape", x:Math.round(w*0.70),y:Math.round(h*0.40),w:Math.round(w*0.18),h:Math.round(w*0.18), r:40, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.14)" });
+      add({ type:"shape", x:Math.round(w*0.70),y:Math.round(h*0.40),w:Math.round(w*0.18),h:Math.round(w*0.18), r:40, fill: pal.surface, stroke:"rgba(255,255,255,0.14)" });
     }
 
     if(layout==="minimalQuote"){
-      add({ type:"shape", x:Math.round(w*0.10),y:Math.round(h*0.12),w:Math.round(w*0.80),h:Math.round(h*0.76), r:46, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.12)" });
+      add({ type:"shape", x:Math.round(w*0.10),y:Math.round(h*0.12),w:Math.round(w*0.80),h:Math.round(h*0.76), r:46, fill: pal.surface, stroke: pal.strokeSoft });
       add({ type:"text", x:Math.round(w*0.16),y:Math.round(h*0.22), text:"“"+(tagline||"Create something memorable.")+"”", size:Math.round(h*0.06), weight:800, color: pal.ink, italic:true });
       add({ type:"text", x:Math.round(w*0.16),y:Math.round(h*0.52), text:"— "+brand, size:Math.round(h*0.035), weight:700, color: pal.muted });
       add({ type:"pill", x:Math.round(w*0.16),y:Math.round(h*0.66), w:Math.round(w*0.30),h:Math.round(h*0.08), r:999, fill: "rgba(255,255,255,0.06)", stroke:"rgba(255,255,255,0.16)", text:"Learn More", tcolor: pal.ink, tsize:Math.round(h*0.03), tweight:800 });
@@ -159,7 +239,7 @@
         for(let c=0;c<2;c++){
           const x=startX + c*(boxW+Math.round(w*0.04));
           const y=startY + r*(boxH+Math.round(h*0.03));
-          add({ type:"shape", x,y,w:boxW,h:boxH, r:28, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.12)" });
+          add({ type:"shape", x,y,w:boxW,h:boxH, r:28, fill: pal.surface, stroke: pal.strokeSoft });
           add({ type:"dot", x:x+22,y:y+22, r:8, fill: (c===0?pal.accent:pal.accent2) });
           add({ type:"text", x:x+44,y:y+16, text: pick(["Clean layout","Bold title","Smart spacing","Premium palette","Strong CTA","Easy edit"], (s+r*7+c*3)), size:Math.round(h*0.03), weight:800, color: pal.ink });
           add({ type:"text", x:x+44,y:y+50, text: pick(["Optimized typography","Designed for scroll","Balanced hierarchy","Readable and modern","Looks expensive","Canva-style"], (s+r*11+c*5)), size:Math.round(h*0.025), weight:600, color: pal.muted });
@@ -177,8 +257,8 @@
     }
 
     if(layout==="photoCard"){
-      add({ type:"shape", x:Math.round(w*0.08),y:Math.round(h*0.12),w:Math.round(w*0.84),h:Math.round(h*0.76), r:50, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.12)" });
-      add({ type:"photo", src: smartPhotoSrc(s+37, pal, brand), x:Math.round(w*0.58),y:Math.round(h*0.18),w:Math.round(w*0.30),h:Math.round(h*0.40), r:42, stroke:"rgba(255,255,255,0.18)" });
+      add({ type:"shape", x:Math.round(w*0.08),y:Math.round(h*0.12),w:Math.round(w*0.84),h:Math.round(h*0.76), r:50, fill: pal.surface, stroke: pal.strokeSoft });
+      add({ type:"photo", src: smartPhotoSrc(s+37, pal, brand), x:Math.round(w*0.58),y:Math.round(h*0.18),w:Math.round(w*0.30),h:Math.round(h*0.40), r:42, stroke: pal.strokeHard });
       add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.22), text: brand, size:Math.round(h*0.06), weight:900, color: pal.ink });
       add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.31), text: pick(["Grow your brand","Creative studio","Premium design","New launch","Build momentum","Meet your goals"], s), size:Math.round(h*0.075), weight:900, color: pal.ink, letter:-1 });
       add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.44), text: tagline, size:Math.round(h*0.032), weight:650, color: pal.muted });
@@ -191,12 +271,9 @@
 
   function generateOne(category, prompt, style, idx){
     const meta = CATEGORIES[category] || CATEGORIES["Instagram Post"];
-    const __vs = (typeof window!=="undefined" ? (window.__NEXORA_VARIATION_SALT__||0) : 0);
-    const __ls = (typeof window!=="undefined" ? (window.__NEXORA_LAYOUT_SALT__||0) : 0);
-    const __ss = (typeof window!=="undefined" ? (window.__NEXORA_STYLE_SALT__||0) : 0);
-    const __salt = (__vs + (__ls*131) + (__ss*977)) >>> 0;
-    const seed = (hash(category+"|"+style+"|"+prompt) + (__salt*7919) + idx*1013) >>> 0;
-    const pal = pick(PALETTES, seed);
+    const seed = (hash(category+"|"+style+"|"+prompt) + idx*1013) >>> 0;
+    const styleMeta = resolveStyle(style, seed);
+    const pal = styleMeta.pal;
     const b = brandFromPrompt(prompt);
     const arch = archetype(seed);
 
@@ -234,9 +311,6 @@
   }
 
   function generateTemplates(opts){
-    if(typeof window!=="undefined"){
-      window.__NEXORA_VARIATION_SALT__ = ((window.__NEXORA_VARIATION_SALT__||0) + 1) >>> 0;
-    }
     const category = opts?.category || "Instagram Post";
     const prompt = opts?.prompt || "";
     const style = opts?.style || "Dark Premium";
@@ -469,41 +543,3 @@ function ad1EnhanceLayout(t, index){
 if (Array.isArray(window.templates)) {
   window.templates = window.templates.map((t, i) => ad1EnhanceLayout(t, i));
 }
-
-
-// === Phase AD-Layout/Style Buttons: make New Layout / New Style actually regenerate (logic-only) ===
-(function(){
-  if(typeof window === "undefined") return;
-  if(window.__NEXORA_LAYOUT_STYLE_BRIDGE__) return;
-  window.__NEXORA_LAYOUT_STYLE_BRIDGE__ = true;
-
-  const bump = (k)=>{
-    window[k] = ((window[k]||0) + 1) >>> 0;
-  };
-
-  function reseed(){
-    try{
-      if(typeof window.seedTemplates === "function"){
-        const n = Number(document.getElementById("count")?.value || 24);
-        window.seedTemplates(n);
-      }
-    }catch(e){}
-  }
-
-  const layoutBtn = document.getElementById("newLayoutBtn");
-  if(layoutBtn){
-    layoutBtn.addEventListener("click", ()=>{
-      bump("__NEXORA_LAYOUT_SALT__");
-      reseed();
-    }, {capture:false});
-  }
-
-  const styleBtn = document.getElementById("newStyleBtn");
-  if(styleBtn){
-    styleBtn.addEventListener("click", ()=>{
-      bump("__NEXORA_STYLE_SALT__");
-      reseed();
-    }, {capture:false});
-  }
-})();
-
