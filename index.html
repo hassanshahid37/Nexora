@@ -812,11 +812,29 @@ currentStyle = "Dark Premium";
 seedTemplates(payload.count);
 statusEl.textContent = "Generating (instant)…";
 
-      const res = await fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, mode: "copy" })
-      });
+      
+// === AE-3.2 Silent backend (fire-and-forget) ===
+// Backend copy enrichment should NEVER block or surface errors.
+fetch("/api/generate", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ ...payload, mode: "copy" })
+}).then(res => {
+  if(!res || !res.ok) return null;
+  return res.json().catch(() => null);
+}).then(data => {
+  if(!data || !Array.isArray(data.templates)) return;
+  // merge happens only if data exists (safe)
+  if(Array.isArray(__lastTemplates)){
+    data.templates.forEach((ai, i) => {
+      const t = __lastTemplates[i];
+      if(!t) return;
+      if(ai?.title) t.title = String(ai.title);
+      if(ai?.description) t.description = String(ai.description);
+      if(ai?.cta) t.cta = String(ai.cta);
+    });
+  }
+}).catch(() => {});
 
       const data = await res.json();
       console.log("AI RESPONSE:", data);
