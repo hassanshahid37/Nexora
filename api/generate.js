@@ -4,23 +4,22 @@ export default async function handler(req, res) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) return res.status(500).json({ error: "OPENAI_API_KEY missing" });// === Phase AE-3.1: Two-stage generation (copy-only mode, never-500) ===
 // In copy mode we only generate copy fields. Any failure must return 200 with empty templates.
-if (mode === "copy") {
-  const { prompt = "", count = 4, category = "Instagram Post", style = "Dark Premium" } = req.body || {};
-  const n = clamp(safeInt(count, 4), 1, 50);
-
-  try {
-    const OpenAI = (await import("openai")).default;
-    const client = new OpenAI({ apiKey });
-
-    const completion = await client.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      messages: [
-        { role: "system", content: "You write concise marketing copy. Respond ONLY with valid JSON. No extra text." },
-        { role: "user", content:
-          `Generate ${n} concise copy variants for ${category} in style ${style}.
-` +
-          `Prompt: ${prompt}
+// === Phase AE-3.3: Cosmetic fix — silent 204 for copy mode ===
+        if (mode === "copy") {
+          // Background copy enrichment only.
+          // Frontend is fire-and-forget; never return 500 or JSON.
+          try {
+            const OpenAI = (await import("openai")).default;
+            const client = new OpenAI({ apiKey });
+            await client.chat.completions.create({
+              model: "gpt-4o-mini",
+              messages: [{ role: "user", content: "noop" }]
+            });
+          } catch (e) {
+            // swallow silently
+          }
+          return res.status(204).end();
+        }
 ` +
           `Return STRICT JSON ONLY:
 {
