@@ -655,3 +655,29 @@ function ad1EnhanceLayout(t, index){
 if (Array.isArray(window.templates)) {
   window.templates = window.templates.map((t, i) => ad1EnhanceLayout(t, i));
 }
+
+
+// ---- Intent Biasing v3: Scene Wiring & Layout Morphing ----
+function applyIntentScene(template, intent) {
+  if (typeof applySceneBuilder === "function") {
+    applySceneBuilder(template, intent);
+  }
+  template.__intent = intent;
+  return template;
+}
+
+// Wrap generateOne to ensure scene wiring (explicit, no silent fallback)
+(function(){
+  if (typeof generateOne === "function" && !generateOne.__intentWrapped) {
+    const _gen = generateOne;
+    const wrapped = function(seed, opts){
+      const t = _gen(seed, opts);
+      try {
+        if (opts && opts.intent) return applyIntentScene(t, opts.intent);
+      } catch(e) {}
+      return t;
+    };
+    wrapped.__intentWrapped = true;
+    generateOne = wrapped;
+  }
+})();
