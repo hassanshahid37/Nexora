@@ -31,86 +31,6 @@
     { name:"Mono Luxe", bg:"#0b0c10", bg2:"#1a1d29", ink:"#f6f7fb", muted:"#b4bbcb", accent:"#e5e7eb", accent2:"#60a5fa" }
   ];
 
-  // === Phase AD – Style Variant Engine (family + variant, no UI change) ===
-  const STYLE_FAMILIES = {
-    "Dark Premium": {
-      variants: ["Luxe Glow","Cinematic","Bold Contrast","Soft Editorial","Deep Night"],
-      palettes: PALETTES
-    },
-    "Corporate": {
-      variants: ["Executive","Editorial","Modern Tech","Data Dense","Boardroom"],
-      palettes: [
-        { name:"Slate Executive", bg:"#0b1220", bg2:"#111a2e", ink:"#f7f9ff", muted:"#b7c2d6", accent:"#3b82f6", accent2:"#22c55e" },
-        { name:"Navy Ledger", bg:"#071022", bg2:"#0a2a5a", ink:"#f7f9ff", muted:"#b9c3d6", accent:"#60a5fa", accent2:"#a78bfa" },
-        { name:"Mono Office", bg:"#0b0c10", bg2:"#1a1d29", ink:"#f6f7fb", muted:"#b4bbcb", accent:"#e5e7eb", accent2:"#60a5fa" }
-      ]
-    },
-    "Light Minimal": {
-      variants: ["Swiss","Airy","Apple Clean","Editorial Light","Soft Gray"],
-      palettes: [
-        { name:"Paper White", bg:"#f7f9ff", bg2:"#e9efff", ink:"#0b1020", muted:"#46506a", accent:"#0b5fff", accent2:"#7c3aed" },
-        { name:"Soft Gray", bg:"#f6f7fb", bg2:"#eef2ff", ink:"#0b1020", muted:"#4b5563", accent:"#2563eb", accent2:"#10b981" },
-        { name:"Cream Editorial", bg:"#fbf7f1", bg2:"#f2e8ff", ink:"#111827", muted:"#6b7280", accent:"#7c3aed", accent2:"#ef4444" }
-      ]
-    },
-    "Glassmorphism": {
-      variants: ["Frost","Aurora Glass","Soft Prism","Night Glass","Clean Glass"],
-      palettes: [
-        { name:"Aurora Glass", bg:"#060816", bg2:"#1b1440", ink:"#f7f9ff", muted:"#b9c3d6", accent:"#22d3ee", accent2:"#a78bfa" },
-        { name:"Frost Blue", bg:"#070b1a", bg2:"#0b2a5a", ink:"#f7f9ff", muted:"#b9c3d6", accent:"#60a5fa", accent2:"#34d399" },
-        { name:"Prism Night", bg:"#0a0614", bg2:"#2a0b3a", ink:"#fff6fb", muted:"#f3cfe0", accent:"#fb7185", accent2:"#38bdf8" }
-      ]
-    },
-    "Neon": {
-      variants: ["Electric","Cyber","Rave","Laser Pop","Arcade"],
-      palettes: [
-        { name:"Electric Blue", bg:"#050712", bg2:"#0b1020", ink:"#f7f9ff", muted:"#aab0bd", accent:"#22d3ee", accent2:"#a3e635" },
-        { name:"Cyber Magenta", bg:"#080310", bg2:"#1b0030", ink:"#fff6fb", muted:"#e0c7ff", accent:"#a78bfa", accent2:"#fb7185" },
-        { name:"Laser Lime", bg:"#030712", bg2:"#062a14", ink:"#f4fffb", muted:"#b9d7cc", accent:"#84cc16", accent2:"#22c55e" }
-      ]
-    }
-  };
-
-  function normalizeStyleName(style){
-    const s = String(style||"").trim();
-    if(!s) return "Dark Premium";
-    // keep exact UI names, but allow small variations
-    const key = Object.keys(STYLE_FAMILIES).find(k => k.toLowerCase() === s.toLowerCase());
-    return key || "Dark Premium";
-  }
-
-  function resolveStyle(style, seed){
-    const family = normalizeStyleName(style);
-    const fam = STYLE_FAMILIES[family] || STYLE_FAMILIES["Dark Premium"];
-    const vIdx = seed % (fam.variants.length||1);
-    const variant = fam.variants[vIdx] || fam.variants[0] || "Default";
-    const pal = pick(fam.palettes, seed);
-
-    // attach rendering rules onto palette (so existing logic stays intact)
-    const isLight = (family === "Light Minimal");
-    const isGlass = (family === "Glassmorphism");
-    const isNeon  = (family === "Neon");
-    const isCorp  = (family === "Corporate");
-
-    pal.family = family;
-    pal.variant = variant;
-
-    // surface + stroke tokens used by layouts (replace hardcoded rgba in code below)
-    pal.surface   = isLight ? "rgba(10,20,60,0.06)" : (isGlass ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.04)");
-    pal.surface2  = isLight ? "rgba(10,20,60,0.10)" : (isGlass ? "rgba(255,255,255,0.12)" : "rgba(255,255,255,0.06)");
-    pal.strokeSoft= isLight ? "rgba(10,20,60,0.14)" : "rgba(255,255,255,0.12)";
-    pal.strokeHard= isLight ? "rgba(10,20,60,0.22)" : "rgba(255,255,255,0.18)";
-
-    // vibe knobs
-    pal.glow = isNeon ? 0.65 : (isGlass ? 0.35 : 0.18);
-    pal.contrast = isLight ? 0.70 : (isCorp ? 0.62 : 0.58);
-
-    return { family, variant, pal };
-  }
-  // === End Style Variant Engine ===
-
-
-
   function brandFromPrompt(prompt){
     const p=(prompt||"").trim();
     if(!p) return { brand:"Nexora", tagline:"Premium templates, fast.", keywords:["premium","clean","modern"] };
@@ -179,6 +99,196 @@
       .replace(/'/g,"&#39;");
   }
 
+  
+  // === Phase AD: Intent Biasing (no UI changes) ===
+  function classifyIntent(prompt, category, style){
+    const p = (prompt||"").toLowerCase();
+    const has = (arr)=>arr.some(k=>p.includes(k));
+    const intent = {
+      type: "generic",
+      energy: "medium",   // low|medium|high
+      density: "balanced",// text|balanced|visual
+      ctaMode: "generic"  // hiring|promo|info|brand|generic
+    };
+
+    if(has(["hiring","we are hiring","job","jobs","vacancy","vacancies","career","careers","apply","join our team","recruit"])){
+      intent.type="hiring"; intent.energy="medium"; intent.density="text"; intent.ctaMode="hiring";
+    } else if(has(["sale","discount","%","off","limited","offer","deal","flash","promo","promotion","black friday","clearance"])){
+      intent.type="promo"; intent.energy="high"; intent.density="balanced"; intent.ctaMode="promo";
+    } else if(has(["launch","new","update","announcement","announcing","introducing","event","webinar","workshop","meetup","conference"])){
+      intent.type="announcement"; intent.energy="medium"; intent.density="balanced"; intent.ctaMode="info";
+    } else if(has(["quote","motiv","inspir","mindset","success","dream","life"]) || (p.split(/\s+/).filter(Boolean).length<=6 && !has(["sale","discount","hiring","job"]))){
+      intent.type="quote"; intent.energy="low"; intent.density="text"; intent.ctaMode="brand";
+    }
+
+    // Category bias
+    const cat = (category||"").toLowerCase();
+    if(cat.includes("presentation") || cat.includes("slide") || cat.includes("resume")){
+      // more structured & text-friendly by default
+      if(intent.density==="visual") intent.density="balanced";
+      if(intent.energy==="high") intent.energy="medium";
+    }
+    // Style bias (keep premium and consistent)
+    const st = (style||"").toLowerCase();
+    if(st.includes("corporate") && intent.type==="promo"){
+      // corporate promos should be less loud
+      intent.energy="medium";
+    }
+    return intent;
+  }
+
+  function weightedPick(list, seed){
+    // list: [{w:number, v:any}, ...]
+    let total = 0;
+    for(const it of list) total += Math.max(0, it.w||0);
+    if(total<=0) return list[0]?.v;
+    let r = (seed>>>0) / 4294967296 * total;
+    for(const it of list){
+      r -= Math.max(0, it.w||0);
+      if(r<=0) return it.v;
+    }
+    return list[list.length-1].v;
+  }
+
+  function archetypeWithIntent(seed, intent){
+    // Keep existing archetypes but weight them by intent.
+    const base = [
+      { name:"Split Hero", layout:"splitHero" },
+      { name:"Badge Promo", layout:"badgePromo" },
+      { name:"Minimal Quote", layout:"minimalQuote" },
+      { name:"Feature Grid", layout:"featureGrid" },
+      { name:"Big Number", layout:"bigNumber" },
+      { name:"Photo Card", layout:"photoCard" }
+    ];
+
+    const t = intent?.type || "generic";
+    const s = (seed ^ hash("intent|"+t)) >>> 0;
+
+    const weights = {
+      generic:     { splitHero:18, badgePromo:14, minimalQuote:10, featureGrid:14, bigNumber:12, photoCard:12 },
+      promo:       { splitHero:12, badgePromo:22, minimalQuote:6,  featureGrid:12, bigNumber:22, photoCard:10 },
+      hiring:      { splitHero:20, badgePromo:6,  minimalQuote:8,  featureGrid:22, bigNumber:10, photoCard:14 },
+      announcement:{ splitHero:18, badgePromo:10, minimalQuote:10, featureGrid:16, bigNumber:10, photoCard:18 },
+      quote:       { splitHero:10, badgePromo:6,  minimalQuote:30, featureGrid:10, bigNumber:10, photoCard:12 }
+    };
+
+    const w = weights[t] || weights.generic;
+    const wlist = base.map(a=>({ w: w[a.layout] ?? 10, v: a }));
+    return weightedPick(wlist, s);
+  }
+
+  function normalizeStyleName(style){
+    return (style||"Dark Premium").trim();
+  }
+
+  function paletteForStyle(style, seed, intent){
+    // Use base palettes but transform according to style family (visible dropdown).
+    const sname = normalizeStyleName(style).toLowerCase();
+    const base = pick(PALETTES, seed);
+
+    // shallow clone
+    let pal = { ...base };
+
+    const toLight = (hex)=>{
+      // very small util; fallback if parsing fails
+      try{
+        const h = hex.replace("#","").trim();
+        const r = parseInt(h.slice(0,2),16), g=parseInt(h.slice(2,4),16), b=parseInt(h.slice(4,6),16);
+        const mix = (c, t)=>Math.round(c + (t-c)*0.9);
+        return "#"+[mix(r,255),mix(g,255),mix(b,255)].map(x=>x.toString(16).padStart(2,"0")).join("");
+      }catch(e){ return "#f8fafc"; }
+    };
+
+    if(sname.includes("light minimal")){
+      pal.bg = "#f8fafc";
+      pal.bg2 = toLight(base.bg2 || base.bg);
+      pal.ink = "#0b1220";
+      pal.muted = "#334155";
+      pal.accent = base.accent2 || "#2563eb";
+      pal.accent2 = base.accent || "#0ea5e9";
+    } else if(sname.includes("corporate")){
+      pal.bg = "#071423";
+      pal.bg2 = "#0b2a4a";
+      pal.ink = "#f3f7ff";
+      pal.muted = "#b8c7dd";
+      pal.accent = "#38bdf8";
+      pal.accent2 = "#a78bfa";
+    } else if(sname.includes("glass")){
+      pal.bg = base.bg;
+      pal.bg2 = base.bg2;
+      pal.ink = "#f7fbff";
+      pal.muted = "#c9d6ea";
+      pal.accent = base.accent || "#60a5fa";
+      pal.accent2 = base.accent2 || "#a78bfa";
+      pal.__glass = true; // hint to renderer/buildElements for more translucent overlays
+    } else if(sname.includes("neon")){
+      pal.bg = "#05040a";
+      pal.bg2 = "#130a2a";
+      pal.ink = "#ffffff";
+      pal.muted = "#c7c3ff";
+      pal.accent = "#22d3ee";
+      pal.accent2 = "#fb7185";
+    } else {
+      // Dark Premium default: keep base but strengthen contrast a bit
+      pal.bg = base.bg;
+      pal.bg2 = base.bg2;
+      pal.ink = base.ink;
+      pal.muted = base.muted;
+      pal.accent = base.accent;
+      pal.accent2 = base.accent2;
+    }
+
+    // Intent tinting: hiring should feel trustworthy; promo louder accents
+    const t = intent?.type;
+    if(t==="hiring"){
+      pal.accent = "#60a5fa";
+      pal.accent2 = "#34d399";
+    } else if(t==="promo"){
+      pal.accent = pal.accent2 || pal.accent;
+    }
+    return pal;
+  }
+
+  function pickCTA(intent, seed){
+    const t = intent?.ctaMode || "generic";
+    const s = (seed ^ hash("cta|"+t)) >>> 0;
+
+    const choices = {
+      hiring: [
+        { w:28, v:"Apply Now" },
+        { w:22, v:"View Roles" },
+        { w:18, v:"Join Our Team" },
+        { w:12, v:"Send CV" }
+      ],
+      promo: [
+        { w:26, v:"Shop Now" },
+        { w:24, v:"Get 30% Off" },
+        { w:16, v:"Limited Offer" },
+        { w:14, v:"Buy Now" }
+      ],
+      info: [
+        { w:26, v:"Learn More" },
+        { w:18, v:"Read More" },
+        { w:16, v:"Get Details" }
+      ],
+      brand: [
+        { w:26, v:"Discover" },
+        { w:20, v:"Explore" },
+        { w:14, v:"Get Started" }
+      ],
+      generic: [
+        { w:22, v:"Get Started" },
+        { w:18, v:"Learn More" },
+        { w:14, v:"Join Now" }
+      ]
+    };
+
+    const list = choices[t] || choices.generic;
+    return weightedPick(list.map(x=>({w:x.w, v:x.v})), s);
+  }
+  // === End Phase AD Intent Biasing ===
+
+
   function archetype(seed){
     const archetypes = [
       { name:"Split Hero", layout:"splitHero" },
@@ -201,13 +311,13 @@
 
     if(layout==="splitHero"){
       add({ type:"shape", x:0,y:0,w:Math.round(w*0.56),h, r:48, fill: pal.bg2, opacity:0.85 });
-      add({ type:"shape", x:Math.round(w*0.53),y:Math.round(h*0.1),w:Math.round(w*0.42),h:Math.round(h*0.55), r:48, stroke:"rgba(255,255,255,0.14)", fill: pal.surface });
+      add({ type:"shape", x:Math.round(w*0.53),y:Math.round(h*0.1),w:Math.round(w*0.42),h:Math.round(h*0.55), r:48, stroke:"rgba(255,255,255,0.14)", fill:"rgba(255,255,255,0.04)" });
       add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.14), text: brand.toUpperCase(), size:Math.round(h*0.055), weight:800, color: pal.ink, letter: -0.5 });
       add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.25), text: "NEW COLLECTION", size:Math.round(h*0.03), weight:700, color: pal.muted, letter: 2 });
       add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.33), text: tagline, size:Math.round(h*0.038), weight:600, color: pal.ink });
-      add({ type:"pill", x:Math.round(w*0.07),y:Math.round(h*0.72), w:Math.round(w*0.28),h:Math.round(h*0.085), r:999, fill: pal.accent, text:"Get Started", tcolor:"#0b1020", tsize:Math.round(h*0.032), tweight:800 });
+      add({ type:"pill", x:Math.round(w*0.07),y:Math.round(h*0.72), w:Math.round(w*0.28),h:Math.round(h*0.085), r:999, fill: pal.accent, text:(spec.ctaText||"Get Started"), tcolor:"#0b1020", tsize:Math.round(h*0.032), tweight:800 });
       add({ type:"chip", x:Math.round(w*0.07),y:Math.round(h*0.82), text:"Premium • Fast • Ready", size:Math.round(h*0.028), color: pal.muted });
-      add({ type:"photo", src: smartPhotoSrc(s+11, pal, brand), x:Math.round(w*0.60),y:Math.round(h*0.16),w:Math.round(w*0.32),h:Math.round(h*0.38), r:40, stroke: pal.strokeHard });
+      add({ type:"photo", src: smartPhotoSrc(s+11, pal, brand), x:Math.round(w*0.60),y:Math.round(h*0.16),w:Math.round(w*0.32),h:Math.round(h*0.38), r:40, stroke:"rgba(255,255,255,0.18)" });
     }
 
     if(layout==="badgePromo"){
@@ -217,16 +327,16 @@
       add({ type:"text", x:Math.round(w*0.12),y:Math.round(h*0.22), text: brand, size:Math.round(h*0.06), weight:900, color: pal.ink });
       add({ type:"text", x:Math.round(w*0.12),y:Math.round(h*0.31), text: "Flash Sale", size:Math.round(h*0.09), weight:900, color: pal.ink, letter:-1 });
       add({ type:"shape", x:Math.round(w*0.12),y:Math.round(h*0.46),w:Math.round(w*0.56),h:Math.round(h*0.01), r:8, fill:"rgba(255,255,255,0.16)" });
-      add({ type:"pill", x:Math.round(w*0.12),y:Math.round(h*0.52), w:Math.round(w*0.34),h:Math.round(h*0.095), r:999, fill: pal.accent, text:"Get 30% Off", tcolor:"#0b1020", tsize:Math.round(h*0.035), tweight:900 });
+      add({ type:"pill", x:Math.round(w*0.12),y:Math.round(h*0.52), w:Math.round(w*0.34),h:Math.round(h*0.095), r:999, fill: pal.accent, text:(spec.ctaText||"Get 30% Off"), tcolor:"#0b1020", tsize:Math.round(h*0.035), tweight:900 });
       add({ type:"chip", x:Math.round(w*0.12),y:Math.round(h*0.65), text:"Use code: NEXORA", size:Math.round(h*0.03), color: pal.muted });
-      add({ type:"shape", x:Math.round(w*0.70),y:Math.round(h*0.40),w:Math.round(w*0.18),h:Math.round(w*0.18), r:40, fill: pal.surface, stroke:"rgba(255,255,255,0.14)" });
+      add({ type:"shape", x:Math.round(w*0.70),y:Math.round(h*0.40),w:Math.round(w*0.18),h:Math.round(w*0.18), r:40, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.14)" });
     }
 
     if(layout==="minimalQuote"){
-      add({ type:"shape", x:Math.round(w*0.10),y:Math.round(h*0.12),w:Math.round(w*0.80),h:Math.round(h*0.76), r:46, fill: pal.surface, stroke: pal.strokeSoft });
+      add({ type:"shape", x:Math.round(w*0.10),y:Math.round(h*0.12),w:Math.round(w*0.80),h:Math.round(h*0.76), r:46, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.12)" });
       add({ type:"text", x:Math.round(w*0.16),y:Math.round(h*0.22), text:"“"+(tagline||"Create something memorable.")+"”", size:Math.round(h*0.06), weight:800, color: pal.ink, italic:true });
       add({ type:"text", x:Math.round(w*0.16),y:Math.round(h*0.52), text:"— "+brand, size:Math.round(h*0.035), weight:700, color: pal.muted });
-      add({ type:"pill", x:Math.round(w*0.16),y:Math.round(h*0.66), w:Math.round(w*0.30),h:Math.round(h*0.08), r:999, fill: "rgba(255,255,255,0.06)", stroke:"rgba(255,255,255,0.16)", text:"Learn More", tcolor: pal.ink, tsize:Math.round(h*0.03), tweight:800 });
+      add({ type:"pill", x:Math.round(w*0.16),y:Math.round(h*0.66), w:Math.round(w*0.30),h:Math.round(h*0.08), r:999, fill: "rgba(255,255,255,0.06)", stroke:"rgba(255,255,255,0.16)", text:(spec.ctaText||"Learn More"), tcolor: pal.ink, tsize:Math.round(h*0.03), tweight:800 });
       add({ type:"dots", x:Math.round(w*0.74),y:Math.round(h*0.74), w:Math.round(w*0.14),h:Math.round(h*0.14), color:"rgba(255,255,255,0.14)" });
     }
 
@@ -239,7 +349,7 @@
         for(let c=0;c<2;c++){
           const x=startX + c*(boxW+Math.round(w*0.04));
           const y=startY + r*(boxH+Math.round(h*0.03));
-          add({ type:"shape", x,y,w:boxW,h:boxH, r:28, fill: pal.surface, stroke: pal.strokeSoft });
+          add({ type:"shape", x,y,w:boxW,h:boxH, r:28, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.12)" });
           add({ type:"dot", x:x+22,y:y+22, r:8, fill: (c===0?pal.accent:pal.accent2) });
           add({ type:"text", x:x+44,y:y+16, text: pick(["Clean layout","Bold title","Smart spacing","Premium palette","Strong CTA","Easy edit"], (s+r*7+c*3)), size:Math.round(h*0.03), weight:800, color: pal.ink });
           add({ type:"text", x:x+44,y:y+50, text: pick(["Optimized typography","Designed for scroll","Balanced hierarchy","Readable and modern","Looks expensive","Canva-style"], (s+r*11+c*5)), size:Math.round(h*0.025), weight:600, color: pal.muted });
@@ -252,17 +362,17 @@
       add({ type:"text", x:Math.round(w*0.10),y:Math.round(h*0.18), text:"0"+num, size:Math.round(h*0.26), weight:900, color:"rgba(255,255,255,0.10)", letter:-6 });
       add({ type:"text", x:Math.round(w*0.10),y:Math.round(h*0.34), text: brand, size:Math.round(h*0.06), weight:900, color: pal.ink });
       add({ type:"text", x:Math.round(w*0.10),y:Math.round(h*0.44), text: tagline, size:Math.round(h*0.04), weight:700, color: pal.muted });
-      add({ type:"pill", x:Math.round(w*0.10),y:Math.round(h*0.60), w:Math.round(w*0.34),h:Math.round(h*0.09), r:999, fill: pal.accent, text:"Join Now", tcolor:"#0b1020", tsize:Math.round(h*0.034), tweight:900 });
+      add({ type:"pill", x:Math.round(w*0.10),y:Math.round(h*0.60), w:Math.round(w*0.34),h:Math.round(h*0.09), r:999, fill: pal.accent, text:(spec.ctaText||"Join Now"), tcolor:"#0b1020", tsize:Math.round(h*0.034), tweight:900 });
       add({ type:"shape", x:Math.round(w*0.62),y:Math.round(h*0.20),w:Math.round(w*0.28),h:Math.round(w*0.28), r:46, fill:"rgba(255,255,255,0.03)", stroke:"rgba(255,255,255,0.14)" });
     }
 
     if(layout==="photoCard"){
-      add({ type:"shape", x:Math.round(w*0.08),y:Math.round(h*0.12),w:Math.round(w*0.84),h:Math.round(h*0.76), r:50, fill: pal.surface, stroke: pal.strokeSoft });
-      add({ type:"photo", src: smartPhotoSrc(s+37, pal, brand), x:Math.round(w*0.58),y:Math.round(h*0.18),w:Math.round(w*0.30),h:Math.round(h*0.40), r:42, stroke: pal.strokeHard });
+      add({ type:"shape", x:Math.round(w*0.08),y:Math.round(h*0.12),w:Math.round(w*0.84),h:Math.round(h*0.76), r:50, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.12)" });
+      add({ type:"photo", src: smartPhotoSrc(s+37, pal, brand), x:Math.round(w*0.58),y:Math.round(h*0.18),w:Math.round(w*0.30),h:Math.round(h*0.40), r:42, stroke:"rgba(255,255,255,0.18)" });
       add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.22), text: brand, size:Math.round(h*0.06), weight:900, color: pal.ink });
       add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.31), text: pick(["Grow your brand","Creative studio","Premium design","New launch","Build momentum","Meet your goals"], s), size:Math.round(h*0.075), weight:900, color: pal.ink, letter:-1 });
       add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.44), text: tagline, size:Math.round(h*0.032), weight:650, color: pal.muted });
-      add({ type:"pill", x:Math.round(w*0.14),y:Math.round(h*0.60), w:Math.round(w*0.30),h:Math.round(h*0.085), r:999, fill: pal.accent2, text:"Shop Now", tcolor:"#0b1020", tsize:Math.round(h*0.032), tweight:900 });
+      add({ type:"pill", x:Math.round(w*0.14),y:Math.round(h*0.60), w:Math.round(w*0.30),h:Math.round(h*0.085), r:999, fill: pal.accent2, text:(spec.ctaText||"Shop Now"), tcolor:"#0b1020", tsize:Math.round(h*0.032), tweight:900 });
       add({ type:"chip", x:Math.round(w*0.14),y:Math.round(h*0.71), text:"@"+brand.replace(/\s+/g,"").toLowerCase(), size:Math.round(h*0.028), color: pal.muted });
     }
 
@@ -272,10 +382,10 @@
   function generateOne(category, prompt, style, idx){
     const meta = CATEGORIES[category] || CATEGORIES["Instagram Post"];
     const seed = (hash(category+"|"+style+"|"+prompt) + idx*1013) >>> 0;
-    const styleMeta = resolveStyle(style, seed);
-    const pal = styleMeta.pal;
+    const intent = classifyIntent(prompt, category, style);
+    const pal = paletteForStyle(style, seed, intent);
     const b = brandFromPrompt(prompt);
-    const arch = archetype(seed);
+    const arch = archetypeWithIntent(seed, intent);
 
     const titleByCategory = {
       "Instagram Post": "Instagram Post #"+(idx+1),
@@ -294,6 +404,8 @@
       w: meta.w, h: meta.h, pal,
       brand: b.brand || "Nexora",
       tagline: b.tagline || "Premium templates, fast.",
+      ctaText: pickCTA(intent, seed),
+      intent,
       seed
     });
 
