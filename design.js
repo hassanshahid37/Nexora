@@ -418,52 +418,47 @@ if(typeof window !== "undefined"){
 }
 
 
-// === AE-4: Quality Uplift (Copy & Hierarchy Intelligence) ===
-function ae4EnhanceTemplate(t, index){
-  const headlineVariants = [
-    "Discover What Matters",
-    "Designed for Modern Brands",
-    "Built to Stand Out",
-    "Simple. Bold. Effective.",
-    "Create Impact Instantly",
-    "Designed to Convert"
-  ];
+// === Phase AD-1: Visual Intelligence / Layout Sophistication ===
+// Goal: make layouts feel art-directed, not templated.
 
-  const subVariants = [
-    "Clean layout with strong visual balance.",
-    "Premium spacing and modern hierarchy.",
-    "Optimized for attention and clarity.",
-    "Crafted for high engagement.",
-    "Minimal design with maximum impact."
-  ];
+function ad1EnhanceLayout(t, index){
+  const intent =
+    (t.headline && t.headline.length > 20) ? "headline-heavy" :
+    (t.cta && t.cta.length > 8) ? "promo" :
+    "minimal";
 
-  const ctaVariants = [
-    "Shop Now",
-    "Get Started",
-    "Learn More",
-    "Explore",
-    "View Collection",
-    "Join Today"
-  ];
+  // Dominant element logic
+  t.visualIntent = intent;
 
-  if (!t.headline || t.headline.length < 6) {
-    t.headline = headlineVariants[index % headlineVariants.length];
+  if (!t.layoutHint) {
+    t.layoutHint =
+      intent === "headline-heavy" ? "poster-hero" :
+      intent === "promo" ? "cta-focus" :
+      "minimal-center";
   }
 
-  if (!t.subhead || t.subhead.length < 10) {
-    t.subhead = subVariants[index % subVariants.length];
-  }
+  // Controlled asymmetry
+  t.spacing = {
+    padding:
+      intent === "headline-heavy" ? 28 :
+      intent === "promo" ? 20 : 36,
+    offsetX: index % 2 === 0 ? 0 : 6,
+    offsetY: index % 3 === 0 ? 4 : 0,
+  };
 
-  t.cta = ctaVariants[index % ctaVariants.length];
-
-  t.hierarchy = {
-    headlineWeight: index % 2 === 0 ? "bold" : "semibold",
-    emphasis: index % 3 === 0 ? "headline" : "visual"
+  // Emphasis rules
+  t.emphasis = {
+    primary:
+      intent === "headline-heavy" ? "headline" :
+      intent === "promo" ? "cta" : "visual",
+    secondary:
+      intent === "headline-heavy" ? "visual" :
+      intent === "promo" ? "headline" : "headline",
   };
 
   return t;
 }
 
 if (Array.isArray(window.templates)) {
-  window.templates = window.templates.map((t, i) => ae4EnhanceTemplate(t, i));
+  window.templates = window.templates.map((t, i) => ad1EnhanceLayout(t, i));
 }
