@@ -1,11 +1,3 @@
-// === NEXORA INTEGRITY GUARD (AC→AD→AE) ===
-// Do NOT replace core logic. Merge-only zone.
-window.__NEXORA_INTEGRITY__ = window.__NEXORA_INTEGRITY__ || {
-  version: 'AC-AD-AE-locked',
-  noSilentFallback: true,
-  noShrink: true,
-};
-
 /* Nexora – design.js
    Visual template generator (client-side fallback + preview layouts)
    No external deps. Exposes window.NexoraDesign.
@@ -199,7 +191,11 @@ window.__NEXORA_INTEGRITY__ = window.__NEXORA_INTEGRITY__ || {
 
   function generateOne(category, prompt, style, idx){
     const meta = CATEGORIES[category] || CATEGORIES["Instagram Post"];
-    const seed = (hash(category+"|"+style+"|"+prompt) + idx*1013) >>> 0;
+    const __vs = (typeof window!=="undefined" ? (window.__NEXORA_VARIATION_SALT__||0) : 0);
+    const __ls = (typeof window!=="undefined" ? (window.__NEXORA_LAYOUT_SALT__||0) : 0);
+    const __ss = (typeof window!=="undefined" ? (window.__NEXORA_STYLE_SALT__||0) : 0);
+    const __salt = (__vs + (__ls*131) + (__ss*977)) >>> 0;
+    const seed = (hash(category+"|"+style+"|"+prompt) + (__salt*7919) + idx*1013) >>> 0;
     const pal = pick(PALETTES, seed);
     const b = brandFromPrompt(prompt);
     const arch = archetype(seed);
@@ -238,6 +234,9 @@ window.__NEXORA_INTEGRITY__ = window.__NEXORA_INTEGRITY__ || {
   }
 
   function generateTemplates(opts){
+    if(typeof window!=="undefined"){
+      window.__NEXORA_VARIATION_SALT__ = ((window.__NEXORA_VARIATION_SALT__||0) + 1) >>> 0;
+    }
     const category = opts?.category || "Instagram Post";
     const prompt = opts?.prompt || "";
     const style = opts?.style || "Dark Premium";
@@ -472,4 +471,39 @@ if (Array.isArray(window.templates)) {
 }
 
 
-// === END NEXORA INTEGRITY GUARD ===
+// === Phase AD-Layout/Style Buttons: make New Layout / New Style actually regenerate (logic-only) ===
+(function(){
+  if(typeof window === "undefined") return;
+  if(window.__NEXORA_LAYOUT_STYLE_BRIDGE__) return;
+  window.__NEXORA_LAYOUT_STYLE_BRIDGE__ = true;
+
+  const bump = (k)=>{
+    window[k] = ((window[k]||0) + 1) >>> 0;
+  };
+
+  function reseed(){
+    try{
+      if(typeof window.seedTemplates === "function"){
+        const n = Number(document.getElementById("count")?.value || 24);
+        window.seedTemplates(n);
+      }
+    }catch(e){}
+  }
+
+  const layoutBtn = document.getElementById("newLayoutBtn");
+  if(layoutBtn){
+    layoutBtn.addEventListener("click", ()=>{
+      bump("__NEXORA_LAYOUT_SALT__");
+      reseed();
+    }, {capture:false});
+  }
+
+  const styleBtn = document.getElementById("newStyleBtn");
+  if(styleBtn){
+    styleBtn.addEventListener("click", ()=>{
+      bump("__NEXORA_STYLE_SALT__");
+      reseed();
+    }, {capture:false});
+  }
+})();
+
