@@ -2,7 +2,45 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "OPENAI_API_KEY missing" });
+  if (!apiKey) return res.status(500).json({ error: "OPENAI_API_KEY missing" });// === Phase AE-3: Two-stage generation (copy-only mode) ===
+// When mode === "copy", we ONLY generate copy fields (title/description/cta/badge).
+// Visual layout is produced client-side (design.js) for instant rendering.
+if (mode === "copy") {
+  try {
+    const { prompt = "", count = 4, category = "Instagram Post", style = "Dark Premium" } = req.body || {};
+    const n = clamp(safeInt(count, 4), 1, 50);
+
+    const OpenAI = (await import("openai")).default;
+    const client = new OpenAI({ apiKey });
+
+    const completion = await client.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      messages: [
+        {
+          role: "system",
+          content: "You write concise marketing copy. Respond ONLY with valid JSON. No extra text."
+        },
+        {
+          role: "user",
+          content:
+            `Generate ${n} concise copy variants for ${category} in style ${style}.` +
+            `\nPrompt: ${prompt}` +
+            `\nReturn STRICT JSON ONLY:\n{\n  \"templates\":[\n    {\n      \"title\":\"...\",\n      \"description\":\"...\",\n      \"cta\":\"...\",\n      \"badge\":\"...\"\n    }\n  ]\n}`
+        }
+      ]
+    });
+
+    const raw = completion?.choices?.[0]?.message?.content || "";
+    const parsed = extractJson(raw) || {};
+    const templates = Array.isArray(parsed.templates) ? parsed.templates : [];
+    return res.status(200).json({ success: true, mode: "copy", templates });
+  } catch (e) {
+    return res.status(200).json({ success: false, mode: "copy", templates: [], error: "copy_generation_failed" });
+  }
+}
+
+
 
   // --- helpers ---
   const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
@@ -202,6 +240,9 @@ export default async function handler(req, res) {
       style = "Dark Premium",
       notes = ""
     } = req.body || {};
+
+  const mode = String((req.body||{}).mode || "full");
+
 
     const safeCount = clamp(safeInt(count, 24), 1, 200);
     const safePrompt = (String(prompt).trim() || `Generate premium ${category} templates in ${style} style.`);
