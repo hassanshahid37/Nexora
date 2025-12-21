@@ -189,7 +189,99 @@
     return elements;
   }
 
-  function generateOne(category, prompt, style, idx){
+  
+
+  // === Phase AC: Asset Intelligence (AC-1 + AC-2.1) ===
+  // Adds asset zones + injects persistent visual placeholders into template.elements
+  function phaseAC_apply(meta, arch, seed, elements, category){
+    try {
+      const w = meta.w, h = meta.h;
+      const layoutStyle = ["poster","split","centered"][seed % 3];
+
+      // define zones in canvas coordinates
+      const zones = {
+        hero:    { x: 0,   y: 0,   w: w,       h: Math.round(h*0.38) },
+        product: { x: 0,   y: 0,   w: w,       h: Math.round(h*0.22) },
+        textSafe:{ x: 0,   y: 0,   w: w,       h: h },
+        accent:  { x: 0,   y: 0,   w: Math.round(w*0.42), h: Math.round(h*0.02) }
+      };
+
+      // layout-specific placement
+      if(layoutStyle==="poster"){
+        zones.hero = { x: Math.round(w*0.06), y: Math.round(h*0.10), w: Math.round(w*0.88), h: Math.round(h*0.34) };
+        zones.product = { x: Math.round(w*0.62), y: Math.round(h*0.58), w: Math.round(w*0.30), h: Math.round(h*0.28) };
+        zones.textSafe = { x: Math.round(w*0.06), y: Math.round(h*0.48), w: Math.round(w*0.54), h: Math.round(h*0.44) };
+        zones.accent = { x: Math.round(w*0.06), y: Math.round(h*0.46), w: Math.round(w*0.38), h: Math.round(h*0.016) };
+      } else if(layoutStyle==="split"){
+        zones.hero = { x: Math.round(w*0.56), y: Math.round(h*0.12), w: Math.round(w*0.38), h: Math.round(h*0.58) };
+        zones.product = { x: Math.round(w*0.56), y: Math.round(h*0.74), w: Math.round(w*0.38), h: Math.round(h*0.16) };
+        zones.textSafe = { x: Math.round(w*0.06), y: Math.round(h*0.14), w: Math.round(w*0.46), h: Math.round(h*0.76) };
+        zones.accent = { x: Math.round(w*0.06), y: Math.round(h*0.12), w: Math.round(w*0.34), h: Math.round(h*0.016) };
+      } else {
+        // centered
+        zones.hero = { x: Math.round(w*0.12), y: Math.round(h*0.10), w: Math.round(w*0.76), h: Math.round(h*0.36) };
+        zones.product = { x: Math.round(w*0.34), y: Math.round(h*0.62), w: Math.round(w*0.32), h: Math.round(h*0.22) };
+        zones.textSafe = { x: Math.round(w*0.12), y: Math.round(h*0.48), w: Math.round(w*0.76), h: Math.round(h*0.52) };
+        zones.accent = { x: Math.round(w*0.30), y: Math.round(h*0.46), w: Math.round(w*0.40), h: Math.round(h*0.016) };
+      }
+
+      // attach metadata for future phases
+      const assetZones = {
+        hero:    { type:"photo", role:"hero",    ...zones.hero },
+        product: { type:"photo", role:"product", ...zones.product },
+        textSafe:{ type:"text",  role:"textSafe",...zones.textSafe },
+        accent:  { type:"shape", role:"accent",  ...zones.accent },
+        layoutStyle
+      };
+
+      // --- Persistent visuals (this is AC-2.1 fix) ---
+      // We inject placeholders into elements[] so renderPreview draws them every time,
+      // avoiding being wiped by container.innerHTML="" on rerender.
+
+      // Prevent duplicates across rerenders
+      const hasAC = elements.some(e => e && e._ac === true);
+      if(!hasAC){
+        // Accent bar (always visible)
+        elements.unshift({
+          _ac:true, type:"shape",
+          x: assetZones.accent.x, y: assetZones.accent.y,
+          w: assetZones.accent.w, h: assetZones.accent.h,
+          fill: "rgba(74,158,255,0.85)", r: 10, z: -5
+        });
+
+        // Hero photo block
+        elements.unshift({
+          _ac:true, type:"photo",
+          x: assetZones.hero.x, y: assetZones.hero.y,
+          w: assetZones.hero.w, h: assetZones.hero.h,
+          r: 18, z: -6,
+          src: `ac-hero-${seed}`
+        });
+
+        // Product photo block (smaller)
+        elements.unshift({
+          _ac:true, type:"photo",
+          x: assetZones.product.x, y: assetZones.product.y,
+          w: assetZones.product.w, h: assetZones.product.h,
+          r: 16, z: -4,
+          src: `ac-product-${seed}`
+        });
+
+        // Soft overlay behind textSafe zone for readability
+        elements.unshift({
+          _ac:true, type:"shape",
+          x: assetZones.textSafe.x, y: assetZones.textSafe.y,
+          w: assetZones.textSafe.w, h: assetZones.textSafe.h,
+          fill: "rgba(10,14,22,0.10)", r: 18, z: -7
+        });
+      }
+
+      return assetZones;
+    } catch(e) {
+      return null;
+    }
+  }
+function generateOne(category, prompt, style, idx){
     const meta = CATEGORIES[category] || CATEGORIES["Instagram Post"];
     const seed = (hash(category+"|"+style+"|"+prompt) + idx*1013) >>> 0;
     const pal = pick(PALETTES, seed);
@@ -216,6 +308,9 @@
       seed
     });
 
+    const assetZones = phaseAC_apply(meta, arch, seed, elements, category);
+
+
     return {
       id: "tpl_"+seed.toString(16)+"_"+idx,
       title: titleByCategory[category] || (category+" #"+(idx+1)),
@@ -225,7 +320,8 @@
       ratio: meta.ratio,
       canvas: { w: meta.w, h: meta.h },
       palette: pal,
-      elements
+      elements,
+      assetZones
     };
   }
 
@@ -416,40 +512,3 @@ function applySceneBuilder(template){
 if(typeof window !== "undefined"){
   window.__NEXORA_PHASE_AB_SCENE__ = applySceneBuilder;
 }
-
-
-// === Phase AC-2: Visual Asset Rendering ===
-function applyAssetRendering(template, container){
-  if(!template || !template.assetZones) return;
-
-  const hero = document.createElement("div");
-  hero.style.height = "120px";
-  hero.style.borderRadius = "12px";
-  hero.style.marginBottom = "10px";
-  hero.style.background = "linear-gradient(135deg,#1f3c88,#4a9eff)";
-
-  const product = document.createElement("div");
-  product.style.height = "70px";
-  product.style.borderRadius = "10px";
-  product.style.marginBottom = "8px";
-  product.style.background = "linear-gradient(135deg,#0f2027,#203a43,#2c5364)";
-
-  const accent = document.createElement("div");
-  accent.style.height = "6px";
-  accent.style.width = "40%";
-  accent.style.borderRadius = "4px";
-  accent.style.background = "#4a9eff";
-
-  container.prepend(accent);
-  container.prepend(product);
-  container.prepend(hero);
-}
-
-document.addEventListener("DOMContentLoaded", ()=>{
-  const cards = document.querySelectorAll(".template-card");
-  cards.forEach((card, i)=>{
-    if(window.templates && window.templates[i]){
-      applyAssetRendering(window.templates[i], card);
-    }
-  });
-});
