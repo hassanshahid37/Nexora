@@ -2,14 +2,13 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
 
   const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return res.status(500).json({ error: "OPENAI_API_KEY missing" });// === Phase AE-3: Two-stage generation (copy-only mode) ===
-// When mode === "copy", we ONLY generate copy fields (title/description/cta/badge).
-// Visual layout is produced client-side (design.js) for instant rendering.
+  if (!apiKey) return res.status(500).json({ error: "OPENAI_API_KEY missing" });// === Phase AE-3.1: Two-stage generation (copy-only mode, never-500) ===
+// In copy mode we only generate copy fields. Any failure must return 200 with empty templates.
 if (mode === "copy") {
-  try {
-    const { prompt = "", count = 4, category = "Instagram Post", style = "Dark Premium" } = req.body || {};
-    const n = clamp(safeInt(count, 4), 1, 50);
+  const { prompt = "", count = 4, category = "Instagram Post", style = "Dark Premium" } = req.body || {};
+  const n = clamp(safeInt(count, 4), 1, 50);
 
+  try {
     const OpenAI = (await import("openai")).default;
     const client = new OpenAI({ apiKey });
 
@@ -17,17 +16,45 @@ if (mode === "copy") {
       model: "gpt-4o-mini",
       temperature: 0.7,
       messages: [
-        {
-          role: "system",
-          content: "You write concise marketing copy. Respond ONLY with valid JSON. No extra text."
-        },
-        {
-          role: "user",
-          content:
-            `Generate ${n} concise copy variants for ${category} in style ${style}.` +
-            `\nPrompt: ${prompt}` +
-            `\nReturn STRICT JSON ONLY:\n{\n  \"templates\":[\n    {\n      \"title\":\"...\",\n      \"description\":\"...\",\n      \"cta\":\"...\",\n      \"badge\":\"...\"\n    }\n  ]\n}`
+        { role: "system", content: "You write concise marketing copy. Respond ONLY with valid JSON. No extra text." },
+        { role: "user", content:
+          `Generate ${n} concise copy variants for ${category} in style ${style}.
+` +
+          `Prompt: ${prompt}
+` +
+          `Return STRICT JSON ONLY:
+{
+  "templates":[
+    {
+      "title":"...",
+      "description":"...",
+      "cta":"...",
+      "badge":"..."
+    }
+  ]
+}`
         }
+      ]
+    });
+
+    const raw = completion?.choices?.[0]?.message?.content || "";
+    const parsed = extractJson(raw) || {};
+    const templates = Array.isArray(parsed.templates) ? parsed.templates : [];
+
+    // Normalize fields to strings and cap length (safety)
+    const norm = templates.slice(0, n).map(t => ({
+      title: t?.title ? String(t.title).slice(0, 80) : "",
+      description: t?.description ? String(t.description).slice(0, 140) : "",
+      cta: t?.cta ? String(t.cta).slice(0, 24) : "",
+      badge: t?.badge ? String(t.badge).slice(0, 24) : ""
+    }));
+
+    return res.status(200).json({ success: true, mode: "copy", templates: norm });
+  } catch (e) {
+    // Never fail the request; frontend already rendered instant templates.
+    return res.status(200).json({ success: true, mode: "copy", templates: [], warning: "copy_generation_failed" });
+  }
+}
       ]
     });
 
