@@ -418,23 +418,31 @@ if(typeof window !== "undefined"){
 }
 
 
-// === Phase AD: Visual Styling Intelligence ===
-function applyVisualStyle(elements, seed){
-  const palettes = [
-    {bg:"linear-gradient(135deg,#0f2027,#203a43,#2c5364)", accent:"#4a9eff"},
-    {bg:"linear-gradient(135deg,#1f1c2c,#928dab)", accent:"#ff6a00"},
-    {bg:"linear-gradient(135deg,#141e30,#243b55)", accent:"#00ffd5"},
-  ];
-  const p = palettes[seed % palettes.length];
-
-  elements.forEach(el=>{
-    if(el.type==="shape" && el.fill){
-      el.fill = p.accent;
+// === Phase AE: Progressive Rendering & Speed ===
+// Render templates in chunks to improve perceived speed
+function progressiveRender(templates, renderFn, chunkSize = 4, delay = 40) {
+  let index = 0;
+  function next() {
+    const slice = templates.slice(index, index + chunkSize);
+    slice.forEach(t => renderFn(t));
+    index += chunkSize;
+    if (index < templates.length) {
+      requestAnimationFrame(() => setTimeout(next, delay));
     }
-    if(el.type==="photo"){
-      el.overlay = "rgba(0,0,0,0.25)";
-    }
-  });
+  }
+  next();
+}
 
-  return { background:p.bg, accent:p.accent };
+// Wrap existing renderTemplates if present
+if (typeof window.renderTemplates === "function") {
+  const _renderTemplates = window.renderTemplates;
+  window.renderTemplates = function(templates) {
+    const container = document.querySelector("#templates");
+    if (!container) return _renderTemplates(templates);
+
+    container.innerHTML = "";
+    progressiveRender(templates, t => {
+      _renderTemplates([t]);
+    });
+  };
 }
