@@ -32,29 +32,77 @@
     { name:"Mono Luxe", bg:"#0b0c10", bg2:"#1a1d29", ink:"#f6f7fb", muted:"#b4bbcb", accent:"#e5e7eb", accent2:"#60a5fa" }
   ];
 
-  function brandFromPrompt(prompt){
-    const p=(prompt||"").trim();
-    if(!p) return { brand:"Nexora", tagline:"Premium templates, fast.", keywords:["premium","clean","modern"] };
-    const words=p.replace(/\s+/g," ").split(" ").filter(Boolean);
-    const brand = words.slice(0,3).join(" ");
-    const tagline = words.slice(3,9).join(" ") || "Designed for your next post.";
-    return { brand, tagline, keywords: words.slice(0,10) };
+  
+  function brandFromPrompt(prompt,intent,seed,category){
+    const s = seedRand(seed);
+    const raw = String(prompt||"").trim();
+    const cleaned = raw.replace(/[_\-]+/g," ").replace(/\s+/g," ").trim();
+    const words = cleaned.toLowerCase().split(/\s+/).filter(Boolean);
+
+    const stop = new Set(["a","an","the","to","of","for","and","or","with","in","on","at","by","from","we","i","you","your","our","their","need","needed","want","wants","looking","hire","hiring","staff","job","jobs","apply","sale","discount","offer","premium"]);
+    const keep = [];
+    for(const w of words){
+      const w2 = w.replace(/[^a-z0-9]/g,"");
+      if(!w2) continue;
+      if(stop.has(w2)) continue;
+      if(w2.length<=2) continue;
+      keep.push(w2);
+    }
+    const top = keep.slice(0,6);
+    const titleCase = (t)=> String(t||"").split(/\s+/).map(x=>x?x[0].toUpperCase()+x.slice(1):"").join(" ");
+
+    // headline (acts like "brand" in layouts)
+    let headline = top.length ? titleCase(top.slice(0,4).join(" ")) : "New Collection";
+    if(headline.length>22) headline = titleCase(top.slice(0,3).join(" "));
+    if(headline.length>22) headline = (headline.slice(0,21)+"…");
+
+    // subhead/tagline
+    const cat = String(category||"");
+    const slideMode = cat.toLowerCase().indexOf("presentation")>=0;
+    let sub = "";
+    if(intent==="hire"){
+      sub = pick([
+        "Join our team • Apply today",
+        "Hiring now • Send your CV",
+        "New openings • Start this week",
+        "We’re growing • Apply now"
+      ], s);
+    } else if(intent==="sale"){
+      sub = pick([
+        "Limited time • Up to 50% off",
+        "Today only • Don’t miss out",
+        "Exclusive deals • Shop now",
+        "Flash offer • Save big"
+      ], s);
+    } else if(intent==="event"){
+      sub = pick([
+        "Save the date • Limited seats",
+        "Register now • Be there",
+        "Live session • Reserve your spot",
+        "Don’t miss it • Join us"
+      ], s);
+    } else {
+      sub = pick([
+        "Premium design with clear hierarchy",
+        "Modern look • Clean layout",
+        "Bold visuals • Strong message",
+        "Simple, sharp, and readable"
+      ], s);
+    }
+
+    // if slide, make it more "deck-like"
+    if(slideMode){
+      sub = pick([
+        "Executive summary • Key insights",
+        "Overview • Objectives • Next steps",
+        "Clear story • Clean structure",
+        "Agenda • Highlights • Results"
+      ], s);
+    }
+
+    return { brand: headline, tagline: sub };
   }
-function headlineFromPrompt(prompt, intent, brand){
-  const p = String(prompt||"").trim();
-  if(!p) return (brand?.name || "New Collection");
-  const t = intent?.type || "";
-  if(t==="hiring") return "We’re Hiring";
-  if(t==="promo") return "Limited Offer";
-  if(t==="event") return "Join the Event";
-  if(t==="business") return "Business Plan";
-  const words = p.replace(/[\n\r]+/g," ").replace(/[^\w\s&'-]/g,"").split(/\s+/).filter(Boolean);
-  return words.slice(0, Math.min(6, words.length)).join(" ");
-}
 
-
-
-  // Phase H: Smart inline "photo" blocks (no external URLs, so no 404s)
   function smartPhotoSrc(seed, pal, label){
     const a = pal?.accent || "#4f8cff";
     const b = pal?.accent2 || "#22c55e";
@@ -164,196 +212,43 @@ function headlineFromPrompt(prompt, intent, brand){
   }
 
   
-  // Phase AD-5: Creative Divergence Engine
-  // Deterministic 4-way "lens" that forces varied creative interpretations per batch.
-  function lensForIndex(intent, idx){
-    const lenses = ["branding","urgency","info","cta"];
-    return lenses[(idx|0) % lenses.length];
-  }
+  
+  function archetypeWithIntent(seed,intent,category){
+    const s = seedRand(seed);
+    const isSlide = (String(category||"").toLowerCase().indexOf("presentation")>=0);
+    const key = (intent==="sale"||intent==="event"||intent==="hire") ? intent : "generic";
 
-  function archetypeWithLens(seed, intent, lens){
-    const base = [
-      { name:"Split Hero", layout:"splitHero" },
-      { name:"Badge Promo", layout:"badgePromo" },
-      { name:"Minimal Quote", layout:"minimalQuote" },
-      { name:"Feature Grid", layout:"featureGrid" },
-      { name:"Big Number", layout:"bigNumber" },
-      { name:"Photo Card", layout:"photoCard" }
+    const mk = (layout,label,weights)=>({layout,name:label,w:weights});
+
+    const ig = [
+      mk("badgePromo","Badge Promo",{sale:1.4,event:1.1,hire:1.15,generic:1.0}),
+      mk("photoCard","Photo Card",{sale:1.0,event:1.15,hire:0.95,generic:1.1}),
+      mk("splitHero","Split Hero",{sale:1.0,event:1.25,hire:1.05,generic:1.15}),
+      mk("featureGrid","Feature Grid",{sale:0.9,event:1.1,hire:1.1,generic:1.2}),
+      mk("minimalQuote","Minimal Quote",{sale:0.6,event:0.9,hire:0.8,generic:1.1}),
+      mk("bigNumber","Big Number",{sale:1.2,event:0.8,hire:0.95,generic:0.9}),
+      // AC-3 additions
+      mk("collagePoster","Collage Poster",{sale:1.1,event:1.2,hire:1.0,generic:1.15}),
+      mk("editorialStack","Editorial Stack",{sale:0.9,event:1.05,hire:1.05,generic:1.1}),
     ];
 
-    const t = intent?.type || "generic";
-    const l = (lens || "branding").toLowerCase();
-
-    // Force four distinct archetypes for the first 4 templates by lens.
-    const forcedByType = {
-      hiring:   { branding:"photoCard", urgency:"bigNumber",  info:"featureGrid", cta:"badgePromo" },
-      promo:    { branding:"splitHero", urgency:"bigNumber",  info:"featureGrid", cta:"badgePromo" },
-      announcement:{ branding:"splitHero", urgency:"bigNumber", info:"photoCard",  cta:"badgePromo" },
-      quote:    { branding:"photoCard", urgency:"splitHero",  info:"featureGrid", cta:"minimalQuote" },
-      generic:  { branding:"photoCard", urgency:"bigNumber",  info:"featureGrid", cta:"splitHero" }
-    };
-
-    const forcedLayout = (forcedByType[t] || forcedByType.generic)[l];
-    const forced = base.find(a=>a.layout===forcedLayout);
-    if(forced) return forced;
-
-    // Fallback to weighted intent selection if ever needed.
-    return archetypeWithIntent(seed, intent);
-  }
-
-  function pickCTAForLens(intent, seed, lens){
-    const l = (lens||"").toLowerCase();
-    const base = pickCTA(intent, seed);
-    if(intent?.ctaMode === "hiring"){
-      if(l==="urgency") return "Apply Now";
-      if(l==="info") return "View Roles";
-      if(l==="cta") return "Send CV";
-      return base;
-    }
-
-
-  // Phase AD-6: Intent Intensity Control (logic-only; no UI)
-  // Ensures a single prompt yields calm → balanced → bold → aggressive executions deterministically.
-  function baselineIntensityShift(prompt){
-    const p = (prompt||"").toLowerCase();
-    let score = 0;
-    // urgency / action boosts
-    if(/\b(now|today|urgent|limited|hurry|sale|discount|offer|act|apply|join|vote|donate|register|subscribe|buy)\b/.test(p)) score += 2;
-    if(/\b(free|win|save|best|new|launch|exclusive)\b/.test(p)) score += 1;
-    // calm / abstract dampeners
-    if(/\b(love|peace|calm|mindful|quiet|relax|freely|freedom|hope|dream|kindness)\b/.test(p)) score -= 2;
-    if(/\b(quote|poem|thought|message)\b/.test(p)) score -= 1;
-    // map to shift (-1..+1)
-    if(score >= 3) return 1;
-    if(score <= -2) return -1;
-    return 0;
-  }
-
-  function intensityForIndex(prompt, idx){
-    const levels = ["calm","balanced","bold","aggressive"];
-    const shift = baselineIntensityShift(prompt);
-    const raw = ((idx|0) % 4 + 4 + shift) % 4;
-    const label = levels[raw] || "balanced";
-    const scaleMap = { calm:0.92, balanced:1.00, bold:1.14, aggressive:1.28 };
-    const weightMap = { calm:0, balanced:0, bold:50, aggressive:100 };
-    return { label, scale: scaleMap[label] || 1.0, weightBoost: weightMap[label] || 0 };
-  }
-
-  function boostCTAText(cta, intensity){
-    const t = (cta||"").trim();
-    const lvl = intensity?.label || "balanced";
-    if(!t) return t;
-    // Keep intent-specific CTAs as-is, but strengthen generic soft CTAs.
-    const soft = /^(discover|learn more|view|explore)$/i.test(t);
-    if(lvl==="calm") return t;
-    if(lvl==="balanced") return t;
-    if(lvl==="bold"){
-      if(soft) return "Get Started";
-      if(/^shop now$/i.test(t)) return "Shop Now";
-      if(/^send cv$/i.test(t)) return "Send CV";
-      return t;
-    }
-    if(lvl==="aggressive"){
-      if(soft) return "Act Now";
-      if(/^get started$/i.test(t)) return "Start Now";
-      if(/^apply now$/i.test(t)) return "Apply Now";
-      if(/^limited time$/i.test(t)) return "Limited Time";
-      return t;
-    }
-    return t;
-  }
-
-  function applyIntensityToElements(elements, intensity){
-    if(!elements || !elements.length) return elements;
-    const s = intensity?.scale || 1.0;
-    const wb = intensity?.weightBoost || 0;
-
-    // Identify headline candidates: text elements with largest size.
-    const textEls = elements.filter(e=>e && e.type==="text" && typeof e.size==="number");
-    let maxSize = 0;
-    for(const e of textEls) maxSize = Math.max(maxSize, e.size||0);
-
-    const headlineThreshold = maxSize * 0.86; // top tier
-    const subThreshold = maxSize * 0.62; // second tier
-
-    for(const e of elements){
-      if(!e) continue;
-
-      if(e.type==="text"){
-        const baseSize = (typeof e.size==="number") ? e.size : null;
-        if(baseSize!=null){
-          // Headline scales strongest, subhead moderate, body mild.
-          let mult = 1.0;
-          if(baseSize >= headlineThreshold) mult = 1.0 + (s-1.0)*1.15;
-          else if(baseSize >= subThreshold) mult = 1.0 + (s-1.0)*0.75;
-          else mult = 1.0 + (s-1.0)*0.35;
-
-          e.size = Math.round(baseSize * mult);
-        }
-        if(typeof e.weight==="number"){
-          // Only boost for bold/aggressive; keep calm clean.
-          e.weight = Math.min(950, Math.round(e.weight + wb));
-        }
-      }
-
-      // CTA containers often use pill/chip/badge types with tsize
-      if((e.type==="pill" || e.type==="chip" || e.type==="badge") && typeof e.tsize==="number"){
-        const mult = 1.0 + (s-1.0)*0.70;
-        e.tsize = Math.round(e.tsize * mult);
-        if(typeof e.tweight==="number"){
-          e.tweight = Math.min(950, Math.round(e.tweight + wb));
-        }
-        if(typeof e.text==="string"){
-          e.text = boostCTAText(e.text, intensity);
-        }
-      }
-    }
-    return elements;
-  }
-    if(intent?.ctaMode === "promo"){
-      if(l==="urgency") return "Limited Time";
-      if(l==="info") return "See Details";
-      if(l==="cta") return "Shop Now";
-      return base;
-    }
-    return base;
-  }
-function chooseCoverFirstArchetype(idx, intent, style, seed){
-  const pack = [
-    { name:"Deck Cover", layout:"deckCover", tags:["cover","hero","premium"] },
-    { name:"Section Divider", layout:"deckSection", tags:["section","title","divider"] },
-    { name:"Content Slide", layout:"deckContent", tags:["content","editorial","bullets"] },
-    { name:"Chart Slide", layout:"deckChart", tags:["chart","report","data"] }
-  ];
-  if(idx < pack.length) return pack[idx];
-  return archetypeWithIntent(seed + idx*997, intent, style);
-}
-
-function archetypeWithIntent(seed, intent){
-    // Keep existing archetypes but weight them by intent.
-    const base = [
-      { name:"Split Hero", layout:"splitHero" },
-      { name:"Badge Promo", layout:"badgePromo" },
-      { name:"Minimal Quote", layout:"minimalQuote" },
-      { name:"Feature Grid", layout:"featureGrid" },
-      { name:"Big Number", layout:"bigNumber" },
-      { name:"Photo Card", layout:"photoCard" }
+    const slides = [
+      mk("deckCover","Business Deck Cover",{sale:0.7,event:0.9,hire:0.75,generic:1.2}),
+      mk("execSummary","Executive Summary",{sale:0.6,event:0.9,hire:0.7,generic:1.15}),
+      mk("objectiveList","Overview & Objectives",{sale:0.6,event:0.9,hire:0.75,generic:1.15}),
+      mk("chartSlide","Financial Analysis",{sale:0.55,event:0.8,hire:0.7,generic:1.1}),
     ];
 
-    const t = intent?.type || "generic";
-    const s = (seed ^ hash("intent|"+t)) >>> 0;
+    const pool = isSlide ? slides : ig;
 
-    const weights = {
-      generic:     { splitHero:18, badgePromo:14, minimalQuote:10, featureGrid:14, bigNumber:12, photoCard:12 },
-      promo:       { splitHero:12, badgePromo:22, minimalQuote:6,  featureGrid:12, bigNumber:22, photoCard:10 },
-      hiring:      { splitHero:20, badgePromo:6,  minimalQuote:8,  featureGrid:22, bigNumber:10, photoCard:14 },
-      announcement:{ splitHero:18, badgePromo:10, minimalQuote:10, featureGrid:16, bigNumber:10, photoCard:18 },
-      quote:       { splitHero:10, badgePromo:6,  minimalQuote:30, featureGrid:10, bigNumber:10, photoCard:12 }
-    };
-
-    const w = weights[t] || weights.generic;
-    const wlist = base.map(a=>({ w: w[a.layout] ?? 10, v: a }));
-    return weightedPick(wlist, s);
+    let tot=0;
+    for(const p of pool) tot += (p.w[key]||1);
+    let r = s()*tot;
+    for(const p of pool){
+      r -= (p.w[key]||1);
+      if(r<=0) return p;
+    }
+    return pool[Math.floor(s()*pool.length)];
   }
 
   function normalizeStyleName(style){
@@ -480,184 +375,24 @@ function archetypeWithIntent(seed, intent){
     return pick(archetypes, seed);
   }
 
-  function visualSystem(seed, pal, intent){
-  const t = intent?.type || "generic";
-  const modes = ["diagonalSplit","cornerBlob","ribbonBand","softCircles","gridLines"];
-  const bias = (t==="promo"||t==="event") ? [0,2,1,3,4] :
-               (t==="hiring"||t==="business") ? [0,2,4,1,3] :
-               (t==="story"||t==="creative") ? [3,1,2,0,4] :
-               [1,3,0,2,4];
-  const mode = modes[bias[seed % bias.length] % modes.length];
-  const accent2 = pal.accent2 || pal.accent;
-  return {
-    mode,
-    accent2,
-    glass: (seed>>>0)%3===0,
-    noise: (seed>>>0)%4===0,
-    titleWeight: (t==="promo"||t==="event") ? 900 : 800,
-    titleUpper: (t==="promo"||t==="event") ? true : false
-  };
-}
+  function buildElements(layout, spec){
+    const { w,h,pal,brand,tagline,seed,prompt,intent,category,ctaText } = spec;
+    const copy = brandFromPrompt(prompt||brand||"", intent||"generic", seed, category);
+    const brand2 = copy.brand || brand;
+    const tagline2 = copy.tagline || tagline;
 
-function addBackgroundSystem(add, w, h, pal, sys, seed){
-  const s = seed>>>0;
-  const soft = "rgba(255,255,255,0.06)";
-  const line = "rgba(255,255,255,0.12)";
-  const deep = "rgba(0,0,0,0.14)";
-
-  if(sys.mode==="diagonalSplit"){
-    add({ type:"shape", x:0, y:0, w:Math.round(w*0.62), h, r:48, fill: pal.bg2, opacity:0.92 });
-    add({ type:"shape", x:Math.round(w*0.52), y:Math.round(h*0.06), w:Math.round(w*0.46), h:Math.round(h*0.42), r:42, fill: soft, stroke: line });
-    add({ type:"shape", x:Math.round(w*0.52), y:Math.round(h*0.52), w:Math.round(w*0.40), h:Math.round(h*0.38), r:42, fill: "rgba(255,255,255,0.04)", stroke: "rgba(255,255,255,0.10)" });
-    add({ type:"shape", x:Math.round(w*0.05), y:Math.round(h*0.74), w:Math.round(w*0.52), h:Math.round(h*0.22), r:52, fill: deep });
-    return;
-  }
-
-  if(sys.mode==="cornerBlob"){
-    add({ type:"shape", x:Math.round(w*-0.12), y:Math.round(h*-0.10), w:Math.round(w*0.62), h:Math.round(h*0.54), r:120, fill: pal.accent, opacity:0.20 });
-    add({ type:"shape", x:Math.round(w*0.56), y:Math.round(h*0.58), w:Math.round(w*0.52), h:Math.round(h*0.46), r:140, fill: sys.accent2, opacity:0.18 });
-    add({ type:"shape", x:Math.round(w*0.08), y:Math.round(h*0.72), w:Math.round(w*0.84), h:Math.round(h*0.22), r:64, fill: deep });
-    return;
-  }
-
-  if(sys.mode==="ribbonBand"){
-    add({ type:"shape", x:Math.round(w*0.06), y:Math.round(h*0.10), w:Math.round(w*0.88), h:Math.round(h*0.20), r:64, fill: pal.accent, opacity:0.22 });
-    add({ type:"shape", x:Math.round(w*0.10), y:Math.round(h*0.34), w:Math.round(w*0.80), h:Math.round(h*0.12), r:64, fill: sys.accent2, opacity:0.16 });
-    add({ type:"shape", x:Math.round(w*0.10), y:Math.round(h*0.50), w:Math.round(w*0.62), h:Math.round(h*0.10), r:64, fill: soft, stroke: line });
-    add({ type:"shape", x:Math.round(w*0.10), y:Math.round(h*0.64), w:Math.round(w*0.74), h:Math.round(h*0.10), r:64, fill: "rgba(255,255,255,0.04)", stroke: "rgba(255,255,255,0.10)" });
-    return;
-  }
-
-  if(sys.mode==="softCircles"){
-    const r1 = Math.round(Math.min(w,h)*(0.42 + ((s%7)/20)));
-    const r2 = Math.round(Math.min(w,h)*(0.30 + (((s>>>3)%7)/22)));
-    add({ type:"shape", x:Math.round(w*0.10), y:Math.round(h*0.08), w:r1, h:r1, r:999, fill: pal.accent, opacity:0.14 });
-    add({ type:"shape", x:Math.round(w*0.56), y:Math.round(h*0.42), w:r2, h:r2, r:999, fill: sys.accent2, opacity:0.12 });
-    add({ type:"shape", x:Math.round(w*0.08), y:Math.round(h*0.72), w:Math.round(w*0.84), h:Math.round(h*0.22), r:64, fill: deep });
-    return;
-  }
-
-  for(let i=0;i<6;i++){
-    add({ type:"shape", x:Math.round(w*(0.08 + i*0.14)), y:Math.round(h*0.08),
-          w:Math.round(w*0.006), h:Math.round(h*0.84), r:999, fill:"rgba(255,255,255,0.05)" });
-  }
-  add({ type:"shape", x:Math.round(w*0.08), y:Math.round(h*0.78), w:Math.round(w*0.84), h:Math.round(h*0.18), r:64, fill: deep });
-}
-
-function buildElements(layout, spec){
-    const { w,h,pal,brand,tagline,seed,sys } = spec;
     const elements = [];
     const s = seed;
 
     const add = (el)=>{ elements.push(el); return el; };
     add({ type:"bg", x:0,y:0,w,h, fill: pal.bg, fill2: pal.bg2, style:"radial" });
-    addBackgroundSystem(add, w, h, pal, sys || visualSystem(seed, pal, {}), seed);
-
-// --- AC-2: Deck / Poster compositions (cover-first) ---
-if(layout==="deckCover"){
-  const title = (spec.title || brand || "Nexora");
-  const sub = (spec.subtitle || tagline || "").trim();
-  const big = Math.round(h*0.11);
-  const small = Math.round(h*0.034);
-
-  add({ type:"shape", x:Math.round(w*0.07), y:Math.round(h*0.10), w:Math.round(w*0.86), h:Math.round(h*0.74),
-        r:64, fill:"rgba(255,255,255,0.05)", stroke:"rgba(255,255,255,0.14)" });
-
-  add({ type:"shape", x:Math.round(w*0.56), y:Math.round(h*0.18), w:Math.round(w*0.33), h:Math.round(h*0.44),
-        r:48, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.12)" });
-
-  add({ type:"text", x:Math.round(w*0.12), y:Math.round(h*0.24), text:(sys?.titleUpper? String(title).toUpperCase(): String(title)),
-        size: big, weight: (sys?.titleWeight||900), color: pal.ink, letter:-1 });
-
-  add({ type:"text", x:Math.round(w*0.12), y:Math.round(h*0.40), text: (sub || "Premium design system"),
-        size: Math.round(h*0.040), weight: 650, color: pal.muted, maxw: Math.round(w*0.42) });
-
-  add({ type:"pill", x:Math.round(w*0.12), y:Math.round(h*0.60), w:Math.round(w*0.34), h:Math.round(h*0.085), r:999,
-        fill: pal.accent, text:(spec.cta||"Get Started"), tcolor:"#0b1020", tsize: Math.round(h*0.034), tweight: 900 });
-
-  add({ type:"text", x:Math.round(w*0.12), y:Math.round(h*0.72), text:(spec.footer||"Designed with Nexora"),
-        size: small, weight: 700, color: "rgba(255,255,255,0.70)", letter: 1 });
-}
-
-if(layout==="deckSection"){
-  const section = (spec.section || spec.title || "Overview");
-  add({ type:"shape", x:Math.round(w*0.08), y:Math.round(h*0.16), w:Math.round(w*0.84), h:Math.round(h*0.50),
-        r:72, fill:"rgba(255,255,255,0.05)", stroke:"rgba(255,255,255,0.14)" });
-
-  add({ type:"shape", x:Math.round(w*0.08), y:Math.round(h*0.16), w:Math.round(w*0.84), h:Math.round(h*0.14),
-        r:72, fill: pal.accent, opacity:0.22 });
-
-  add({ type:"text", x:Math.round(w*0.12), y:Math.round(h*0.30), text: (sys?.titleUpper? String(section).toUpperCase(): String(section)),
-        size: Math.round(h*0.10), weight: (sys?.titleWeight||900), color: pal.ink, letter:-0.5 });
-
-  add({ type:"text", x:Math.round(w*0.12), y:Math.round(h*0.46), text: (spec.subtitle || "Key points, objectives, and outcomes"),
-        size: Math.round(h*0.038), weight: 650, color: pal.muted, maxw: Math.round(w*0.70) });
-
-  const n = String(((seed>>>0)%9)+1);
-  add({ type:"shape", x:Math.round(w*0.78), y:Math.round(h*0.44), w:Math.round(w*0.10), h:Math.round(w*0.10),
-        r:999, fill:"rgba(255,255,255,0.10)", stroke:"rgba(255,255,255,0.16)" });
-  add({ type:"text", x:Math.round(w*0.81), y:Math.round(h*0.51), text: n,
-        size: Math.round(h*0.060), weight: 900, color: pal.ink });
-}
-
-if(layout==="deckContent"){
-  const head = (spec.title || "Key Takeaways");
-  add({ type:"shape", x:Math.round(w*0.08), y:Math.round(h*0.14), w:Math.round(w*0.84), h:Math.round(h*0.70),
-        r:64, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.14)" });
-
-  add({ type:"shape", x:Math.round(w*0.58), y:Math.round(h*0.22), w:Math.round(w*0.30), h:Math.round(h*0.42),
-        r:46, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.12)" });
-
-  add({ type:"text", x:Math.round(w*0.12), y:Math.round(h*0.26), text: (sys?.titleUpper? String(head).toUpperCase(): String(head)),
-        size: Math.round(h*0.070), weight: 900, color: pal.ink, letter:-0.5 });
-
-  const bullets = (spec.bullets && Array.isArray(spec.bullets) && spec.bullets.length)
-    ? spec.bullets
-    : [
-      "Clear headline + supporting copy",
-      "Strong hierarchy and spacing",
-      "Cohesive palette + accents"
-    ];
-
-  let y = Math.round(h*0.38);
-  for(let i=0;i<Math.min(4, bullets.length);i++){
-    add({ type:"shape", x:Math.round(w*0.12), y:y-12, w:14, h:14, r:999, fill: pal.accent, opacity:0.85 });
-    add({ type:"text", x:Math.round(w*0.15), y:y, text: String(bullets[i]),
-          size: Math.round(h*0.036), weight: 650, color: "rgba(255,255,255,0.82)", maxw: Math.round(w*0.40) });
-    y += Math.round(h*0.085);
-  }
-
-  add({ type:"pill", x:Math.round(w*0.12), y:Math.round(h*0.70), w:Math.round(w*0.26), h:Math.round(h*0.080), r:999,
-        fill: "rgba(255,255,255,0.10)", text:(spec.cta||"Learn More"), tcolor: pal.ink, tsize: Math.round(h*0.032), tweight: 900, stroke:"rgba(255,255,255,0.16)" });
-}
-
-if(layout==="deckChart"){
-  const head = (spec.title || "Financial Analysis");
-  add({ type:"shape", x:Math.round(w*0.08), y:Math.round(h*0.14), w:Math.round(w*0.84), h:Math.round(h*0.70),
-        r:64, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.14)" });
-
-  add({ type:"text", x:Math.round(w*0.12), y:Math.round(h*0.26), text: (sys?.titleUpper? String(head).toUpperCase(): String(head)),
-        size: Math.round(h*0.070), weight: 900, color: pal.ink, letter:-0.5 });
-
-  const baseY = Math.round(h*0.72);
-  const left = Math.round(w*0.14);
-  const barW = Math.round(w*0.06);
-  const gap = Math.round(w*0.05);
-  for(let i=0;i<5;i++){
-    const bh = Math.round(h*(0.14 + (((seed>>> (i*3))%9)/50)));
-    add({ type:"shape", x:left + i*(barW+gap), y:baseY-bh, w:barW, h:bh, r:16, fill: (i%2===0? pal.accent : sys.accent2), opacity:0.85 });
-    add({ type:"shape", x:left + i*(barW+gap), y:baseY+10, w:barW, h:8, r:999, fill:"rgba(255,255,255,0.16)" });
-  }
-  add({ type:"text", x:Math.round(w*0.12), y:Math.round(h*0.40), text:(spec.subtitle || "Growth, revenue, and key metrics at a glance"),
-        size: Math.round(h*0.036), weight: 650, color: pal.muted, maxw: Math.round(w*0.70) });
-}
 
     if(layout==="splitHero"){
       add({ type:"shape", x:0,y:0,w:Math.round(w*0.56),h, r:48, fill: pal.bg2, opacity:0.85 });
       add({ type:"shape", x:Math.round(w*0.53),y:Math.round(h*0.1),w:Math.round(w*0.42),h:Math.round(h*0.55), r:48, stroke:"rgba(255,255,255,0.14)", fill:"rgba(255,255,255,0.04)" });
-      add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.14), text: brand.toUpperCase(), size:Math.round(h*0.055), weight:800, color: pal.ink, letter: -0.5 });
+      add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.14), text: brand2.toUpperCase(), size:Math.round(h*0.055), weight:800, color: pal.ink, letter: -0.5 });
       add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.25), text: "NEW COLLECTION", size:Math.round(h*0.03), weight:700, color: pal.muted, letter: 2 });
-      add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.33), text: tagline, size:Math.round(h*0.038), weight:600, color: pal.ink });
+      add({ type:"text", x:Math.round(w*0.07),y:Math.round(h*0.33), text: tagline2, size:Math.round(h*0.038), weight:600, color: pal.ink });
       add({ type:"pill", x:Math.round(w*0.07),y:Math.round(h*0.72), w:Math.round(w*0.28),h:Math.round(h*0.085), r:999, fill: pal.accent, text:(spec.ctaText||"Get Started"), tcolor:"#0b1020", tsize:Math.round(h*0.032), tweight:800 });
       add({ type:"chip", x:Math.round(w*0.07),y:Math.round(h*0.82), text:"Premium • Fast • Ready", size:Math.round(h*0.028), color: pal.muted });
       add({ type:"photo", src: smartPhotoSrc(s+11, pal, brand), x:Math.round(w*0.60),y:Math.round(h*0.16),w:Math.round(w*0.32),h:Math.round(h*0.38), r:40, stroke:"rgba(255,255,255,0.18)" });
@@ -667,7 +402,7 @@ if(layout==="deckChart"){
       const badgeW=Math.round(w*0.22), badgeH=Math.round(h*0.11);
       add({ type:"shape", x:Math.round(w*0.08),y:Math.round(h*0.12),w:Math.round(w*0.84),h:Math.round(h*0.56), r:52, fill:"rgba(255,255,255,0.05)", stroke:"rgba(255,255,255,0.14)" });
       add({ type:"badge", x:Math.round(w*0.73),y:Math.round(h*0.09),w:badgeW,h:badgeH, r:22, fill: pal.accent2, text:"LIMITED", tcolor:"#0b1020", tsize:Math.round(h*0.03), tweight:900 });
-      add({ type:"text", x:Math.round(w*0.12),y:Math.round(h*0.22), text: brand, size:Math.round(h*0.06), weight:900, color: pal.ink });
+      add({ type:"text", x:Math.round(w*0.12),y:Math.round(h*0.22), text: brand2, size:Math.round(h*0.06), weight:900, color: pal.ink });
       add({ type:"text", x:Math.round(w*0.12),y:Math.round(h*0.31), text: "Flash Sale", size:Math.round(h*0.09), weight:900, color: pal.ink, letter:-1 });
       add({ type:"shape", x:Math.round(w*0.12),y:Math.round(h*0.46),w:Math.round(w*0.56),h:Math.round(h*0.01), r:8, fill:"rgba(255,255,255,0.16)" });
       add({ type:"pill", x:Math.round(w*0.12),y:Math.round(h*0.52), w:Math.round(w*0.34),h:Math.round(h*0.095), r:999, fill: pal.accent, text:(spec.ctaText||"Get 30% Off"), tcolor:"#0b1020", tsize:Math.round(h*0.035), tweight:900 });
@@ -684,7 +419,7 @@ if(layout==="deckChart"){
     }
 
     if(layout==="featureGrid"){
-      add({ type:"text", x:Math.round(w*0.08),y:Math.round(h*0.12), text: brand, size:Math.round(h*0.055), weight:900, color: pal.ink });
+      add({ type:"text", x:Math.round(w*0.08),y:Math.round(h*0.12), text: brand2, size:Math.round(h*0.055), weight:900, color: pal.ink });
       add({ type:"text", x:Math.round(w*0.08),y:Math.round(h*0.20), text: "What you get", size:Math.round(h*0.035), weight:700, color: pal.muted });
       const boxW=Math.round(w*0.40), boxH=Math.round(h*0.16);
       const startX=Math.round(w*0.08), startY=Math.round(h*0.30);
@@ -703,8 +438,8 @@ if(layout==="deckChart"){
     if(layout==="bigNumber"){
       const num = String((s%9)+1);
       add({ type:"text", x:Math.round(w*0.10),y:Math.round(h*0.18), text:"0"+num, size:Math.round(h*0.26), weight:900, color:"rgba(255,255,255,0.10)", letter:-6 });
-      add({ type:"text", x:Math.round(w*0.10),y:Math.round(h*0.34), text: brand, size:Math.round(h*0.06), weight:900, color: pal.ink });
-      add({ type:"text", x:Math.round(w*0.10),y:Math.round(h*0.44), text: tagline, size:Math.round(h*0.04), weight:700, color: pal.muted });
+      add({ type:"text", x:Math.round(w*0.10),y:Math.round(h*0.34), text: brand2, size:Math.round(h*0.06), weight:900, color: pal.ink });
+      add({ type:"text", x:Math.round(w*0.10),y:Math.round(h*0.44), text: tagline2, size:Math.round(h*0.04), weight:700, color: pal.muted });
       add({ type:"pill", x:Math.round(w*0.10),y:Math.round(h*0.60), w:Math.round(w*0.34),h:Math.round(h*0.09), r:999, fill: pal.accent, text:(spec.ctaText||"Join Now"), tcolor:"#0b1020", tsize:Math.round(h*0.034), tweight:900 });
       add({ type:"shape", x:Math.round(w*0.62),y:Math.round(h*0.20),w:Math.round(w*0.28),h:Math.round(w*0.28), r:46, fill:"rgba(255,255,255,0.03)", stroke:"rgba(255,255,255,0.14)" });
     }
@@ -712,11 +447,118 @@ if(layout==="deckChart"){
     if(layout==="photoCard"){
       add({ type:"shape", x:Math.round(w*0.08),y:Math.round(h*0.12),w:Math.round(w*0.84),h:Math.round(h*0.76), r:50, fill:"rgba(255,255,255,0.04)", stroke:"rgba(255,255,255,0.12)" });
       add({ type:"photo", src: smartPhotoSrc(s+37, pal, brand), x:Math.round(w*0.58),y:Math.round(h*0.18),w:Math.round(w*0.30),h:Math.round(h*0.40), r:42, stroke:"rgba(255,255,255,0.18)" });
-      add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.22), text: brand, size:Math.round(h*0.06), weight:900, color: pal.ink });
+      add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.22), text: brand2, size:Math.round(h*0.06), weight:900, color: pal.ink });
       add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.31), text: pick(["Grow your brand","Creative studio","Premium design","New launch","Build momentum","Meet your goals"], s), size:Math.round(h*0.075), weight:900, color: pal.ink, letter:-1 });
-      add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.44), text: tagline, size:Math.round(h*0.032), weight:650, color: pal.muted });
+      add({ type:"text", x:Math.round(w*0.14),y:Math.round(h*0.44), text: tagline2, size:Math.round(h*0.032), weight:650, color: pal.muted });
       add({ type:"pill", x:Math.round(w*0.14),y:Math.round(h*0.60), w:Math.round(w*0.30),h:Math.round(h*0.085), r:999, fill: pal.accent2, text:(spec.ctaText||"Shop Now"), tcolor:"#0b1020", tsize:Math.round(h*0.032), tweight:900 });
       add({ type:"chip", x:Math.round(w*0.14),y:Math.round(h*0.71), text:"@"+brand.replace(/\s+/g,"").toLowerCase(), size:Math.round(h*0.028), color: pal.muted });
+    }
+
+    
+    // ===== AC-3: richer poster/deck compositions =====
+    if(layout==="collagePoster"){
+      addBG({ style:"radial", fill: pal.bg, fill2: pal.bg2, noise:0.10 });
+      addShape({ x:w*0.08, y:h*0.10, w:w*0.84, h:h*0.80, r:22, fill:"rgba(255,255,255,0.06)", stroke:"rgba(255,255,255,0.10)", sw:1 });
+      // layered photo collage
+      addPhoto({ x:w*0.10, y:h*0.18, w:w*0.44, h:h*0.34, r:18, src: smartPhotoSrc(seed+17, pal, (prompt||brand2||"")) });
+      addPhoto({ x:w*0.46, y:h*0.28, w:w*0.44, h:h*0.34, r:18, src: smartPhotoSrc(seed+29, pal, (prompt||brand2||"")) });
+      addShape({ x:w*0.12, y:h*0.55, w:w*0.76, h:h*0.28, r:18, fill:"linear-gradient(135deg, rgba(0,0,0,0.40), rgba(0,0,0,0.10))", stroke:"rgba(255,255,255,0.10)", sw:1 });
+      addText({ x:w*0.14, y:h*0.58, w:w*0.72, h:h*0.08, text: brand2, size: 54, weight: 800, color: pal.text, align:"left" });
+      addText({ x:w*0.14, y:h*0.67, w:w*0.68, h:h*0.06, text: tagline2, size: 22, weight: 600, color: pal.text2, align:"left" });
+      addPill({ x:w*0.14, y:h*0.75, w:w*0.26, h:h*0.065, text: (ctaText||"Get Started"), fill: pal.accent, color:"#08121f" });
+      addBadge({ x:w*0.70, y:h*0.58, w:w*0.16, h:h*0.06, text: pick(["NEW","FEATURED","TOP PICK","LIMITED"], seedRand(seed+3)), fill:"rgba(255,255,255,0.14)", color: pal.text });
+    }
+
+    if(layout==="editorialStack"){
+      addBG({ style:"radial", fill: pal.bg2, fill2: pal.bg, noise:0.08 });
+      addShape({ x:w*0.07, y:h*0.10, w:w*0.86, h:h*0.80, r:26, fill:"rgba(255,255,255,0.05)", stroke:"rgba(255,255,255,0.10)", sw:1 });
+      addShape({ x:w*0.09, y:h*0.12, w:w*0.36, h:h*0.76, r:22, fill:"linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.02))", stroke:"rgba(255,255,255,0.08)", sw:1 });
+      addText({ x:w*0.12, y:h*0.18, w:w*0.32, h:h*0.18, text: brand2, size: 46, weight: 900, color: pal.text, align:"left" });
+      addText({ x:w*0.12, y:h*0.34, w:w*0.30, h:h*0.10, text: tagline2, size: 20, weight: 600, color: pal.text2, align:"left" });
+      addChip({ x:w*0.12, y:h*0.48, w:w*0.28, h:h*0.055, text: pick(["Clean","Modern","Premium","Bold"], seedRand(seed+9)), fill:"rgba(255,255,255,0.10)", color: pal.text });
+      addChip({ x:w*0.12, y:h*0.55, w:w*0.28, h:h*0.055, text: pick(["High contrast","Readable","Structured","On-brand"], seedRand(seed+11)), fill:"rgba(255,255,255,0.08)", color: pal.text2 });
+      addPhoto({ x:w*0.48, y:h*0.14, w:w*0.43, h:h*0.46, r:24, src: smartPhotoSrc(seed+41, pal, (prompt||brand2||"")) });
+      addShape({ x:w*0.48, y:h*0.62, w:w*0.43, h:h*0.26, r:24, fill:"rgba(0,0,0,0.22)", stroke:"rgba(255,255,255,0.08)", sw:1 });
+      addText({ x:w*0.52, y:h*0.66, w:w*0.37, h:h*0.08, text: pick(["Discover more","Learn fast","Get results","Start today"], seedRand(seed+13)), size: 24, weight: 800, color: pal.text, align:"left" });
+      addPill({ x:w*0.52, y:h*0.76, w:w*0.22, h:h*0.065, text: (ctaText||"Explore"), fill: pal.accent2, color:"#08121f" });
+    }
+
+    // Slides (Presentation Slide): deck-style layouts
+    if(layout==="deckCover"){
+      addBG({ style:"radial", fill: pal.bg, fill2: pal.bg2, noise:0.06 });
+      addShape({ x:0, y:0, w:w*0.36, h:h, r:0, fill:"linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))" });
+      addText({ x:w*0.06, y:h*0.12, w:w*0.30, h:h*0.18, text: brand2.toUpperCase(), size: 54, weight: 900, color: pal.text, align:"left" });
+      addText({ x:w*0.06, y:h*0.30, w:w*0.28, h:h*0.10, text: tagline2, size: 22, weight: 600, color: pal.text2, align:"left" });
+      addBadge({ x:w*0.06, y:h*0.44, w:w*0.18, h:h*0.06, text: "PRESENTATION", fill:"rgba(255,255,255,0.12)", color: pal.text });
+      addPhoto({ x:w*0.42, y:h*0.14, w:w*0.52, h:h*0.72, r:26, src: smartPhotoSrc(seed+77, pal, (prompt||brand2||"")) });
+      addShape({ x:w*0.44, y:h*0.62, w:w*0.48, h:h*0.20, r:22, fill:"rgba(0,0,0,0.25)" });
+      addText({ x:w*0.48, y:h*0.66, w:w*0.40, h:h*0.10, text: pick(["Executive Summary","Business Plan","Project Overview","Strategy Deck"], seedRand(seed+15)), size: 28, weight: 800, color: pal.text, align:"left" });
+    }
+
+    if(layout==="objectiveList"){
+      addBG({ style:"radial", fill: pal.bg2, fill2: pal.bg, noise:0.05 });
+      addShape({ x:w*0.06, y:h*0.10, w:w*0.88, h:h*0.12, r:18, fill:"rgba(255,255,255,0.07)", stroke:"rgba(255,255,255,0.10)", sw:1 });
+      addText({ x:w*0.09, y:h*0.125, w:w*0.82, h:h*0.08, text: "OVERVIEW & OBJECTIVES", size: 26, weight: 900, color: pal.text, align:"left" });
+
+      const items = [
+        pick(["Goal","Objective","Focus","Outcome"], seedRand(seed+21)),
+        pick(["Plan","Approach","Method","Strategy"], seedRand(seed+23)),
+        pick(["Next steps","Timeline","Execution","Deliverables"], seedRand(seed+25)),
+      ];
+      for(let i=0;i<3;i++){
+        const yy = h*(0.30 + i*0.18);
+        addShape({ x:w*0.08, y:yy, w:w*0.84, h:h*0.14, r:18, fill:"rgba(255,255,255,0.05)", stroke:"rgba(255,255,255,0.08)", sw:1 });
+        addDots({ x:w*0.10, y:yy+h*0.05, w:w*0.06, h:h*0.06, n:3, color:"rgba(255,255,255,0.35)" });
+        addText({ x:w*0.18, y:yy+h*0.03, w:w*0.70, h:h*0.06, text: items[i], size: 24, weight: 800, color: pal.text, align:"left" });
+        addText({ x:w*0.18, y:yy+h*0.08, w:w*0.70, h:h*0.05, text: pick([tagline2,"Clear points • Easy to present","Concise bullets • Strong story"], seedRand(seed+27+i)), size: 18, weight: 600, color: pal.text2, align:"left" });
+      }
+    }
+
+    if(layout==="chartSlide"){
+      addBG({ style:"radial", fill: pal.bg, fill2: pal.bg2, noise:0.05 });
+      addText({ x:w*0.08, y:h*0.10, w:w*0.60, h:h*0.10, text: "FINANCIAL ANALYSIS", size: 30, weight: 900, color: pal.text, align:"left" });
+      addText({ x:w*0.08, y:h*0.18, w:w*0.60, h:h*0.06, text: tagline2, size: 18, weight: 600, color: pal.text2, align:"left" });
+
+      addShape({ x:w*0.08, y:h*0.28, w:w*0.58, h:h*0.58, r:22, fill:"rgba(255,255,255,0.05)", stroke:"rgba(255,255,255,0.10)", sw:1 });
+
+      // bars
+      const baseY = h*0.78;
+      const bw = w*0.08;
+      const gap = w*0.04;
+      const startX = w*0.14;
+      const heights = [0.22,0.36,0.28,0.44,0.32];
+      for(let i=0;i<5;i++){
+        addShape({ x:startX + i*(bw+gap), y: baseY - h*heights[i], w:bw, h:h*heights[i], r:14,
+          fill: (i%2===0?pal.accent:pal.accent2), stroke:"rgba(255,255,255,0.12)", sw:1 });
+      }
+      addPhoto({ x:w*0.70, y:h*0.30, w:w*0.22, h:h*0.22, r:22, src: smartPhotoSrc(seed+91, pal, (prompt||brand2||"")) });
+      addShape({ x:w*0.70, y:h*0.54, w:w*0.22, h:h*0.32, r:22, fill:"rgba(0,0,0,0.22)", stroke:"rgba(255,255,255,0.10)", sw:1 });
+      addText({ x:w*0.72, y:h*0.58, w:w*0.18, h:h*0.10, text: pick(["+18%","$24K","+42%","3.2x"], seedRand(seed+31)), size: 44, weight: 900, color: pal.text, align:"left" });
+      addText({ x:w*0.72, y:h*0.68, w:w*0.18, h:h*0.06, text: pick(["Growth","Revenue","ROI","Run-rate"], seedRand(seed+33)), size: 18, weight: 700, color: pal.text2, align:"left" });
+    }
+
+    if(layout==="execSummary"){
+      addBG({ style:"radial", fill: pal.bg2, fill2: pal.bg, noise:0.05 });
+      addShape({ x:w*0.06, y:h*0.10, w:w*0.88, h:h*0.80, r:24, fill:"rgba(255,255,255,0.05)", stroke:"rgba(255,255,255,0.10)", sw:1 });
+      addText({ x:w*0.10, y:h*0.14, w:w*0.60, h:h*0.10, text: "EXECUTIVE SUMMARY", size: 30, weight: 900, color: pal.text, align:"left" });
+      addText({ x:w*0.10, y:h*0.22, w:w*0.60, h:h*0.06, text: brand2, size: 22, weight: 800, color: pal.text2, align:"left" });
+
+      // bullets as clean lines
+      for(let i=0;i<4;i++){
+        const yy = h*(0.34 + i*0.12);
+        addShape({ x:w*0.10, y:yy, w:w*0.54, h:h*0.085, r:18, fill:"rgba(0,0,0,0.18)", stroke:"rgba(255,255,255,0.08)", sw:1 });
+        addDots({ x:w*0.12, y:yy+h*0.03, w:w*0.05, h:h*0.05, n:3, color:"rgba(255,255,255,0.35)" });
+        addText({ x:w*0.18, y:yy+h*0.025, w:w*0.44, h:h*0.05, text: pick(["Key insight","Market opportunity","Execution plan","Impact & results"], seedRand(seed+45+i)), size: 18, weight: 800, color: pal.text, align:"left" });
+      }
+
+      addPhoto({ x:w*0.68, y:h*0.18, w:w*0.24, h:h*0.24, r:24, src: smartPhotoSrc(seed+101, pal, (prompt||brand2||"")) });
+      addShape({ x:w*0.68, y:h*0.46, w:w*0.24, h:h*0.44, r:24, fill:"linear-gradient(180deg, rgba(255,255,255,0.06), rgba(0,0,0,0.22))", stroke:"rgba(255,255,255,0.10)", sw:1 });
+      addText({ x:w*0.71, y:h*0.52, w:w*0.18, h:h*0.08, text: pick(["Status","Summary","Highlights","Notes"], seedRand(seed+51)), size: 20, weight: 900, color: pal.text, align:"left" });
+      addText({ x:w*0.71, y:h*0.60, w:w*0.20, h:h*0.22, text: pick([
+        "• Clear structure\n• Strong visuals\n• Easy to read",
+        "• Goals\n• Plan\n• Timeline",
+        "• Data\n• Insights\n• Next steps"
+      ], seedRand(seed+53)), size: 16, weight: 700, color: pal.text2, align:"left" });
     }
 
     return elements;
@@ -724,16 +566,11 @@ if(layout==="deckChart"){
 
   function generateOne(category, prompt, style, idx){
     const meta = CATEGORIES[category] || CATEGORIES["Instagram Post"];
-
-    const baseSeed = (hash(category+"|"+style+"|"+prompt)) >>> 0;
-    const seed = (baseSeed + idx*1013) >>> 0;
-
+    const seed = (hash(category+"|"+style+"|"+prompt) + idx*1013) >>> 0;
     const intent = classifyIntent(prompt, category, style);
-    const pal = paletteForStyle(style, baseSeed, intent);
-    const sys = visualSystem(baseSeed, pal, intent);
-
+    const pal = paletteForStyle(style, seed, intent);
     const b = brandFromPrompt(prompt);
-    const arch = chooseCoverFirstArchetype(idx, intent, style, baseSeed);
+    const arch = archetypeWithIntent(seed, intent);
 
     const titleByCategory = {
       "Instagram Post": "Instagram Post #"+(idx+1),
@@ -752,11 +589,12 @@ if(layout==="deckChart"){
       w: meta.w, h: meta.h, pal,
       brand: b.brand || "Nexora",
       tagline: b.tagline || "Premium templates, fast.",
-      ctaText: boostCTAText(pickCTAForLens(intent, seed, lens), intensity),
+      ctaText: pickCTA(intent, seed),
+      prompt,
+      category,
       intent,
       seed
     });
-    applyIntensityToElements(elements, intensity);
 
     return {
       id: "tpl_"+seed.toString(16)+"_"+idx,
