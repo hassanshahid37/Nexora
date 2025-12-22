@@ -663,7 +663,47 @@ const state = {
   }
 
   // Init content
-  function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add your text here…"){
+  
+  // --- Nexora: load generated templates from index (handoff) ---
+  function getDraftTemplatePayload(){
+    // draft can be:
+    //  A) { template: {meta, template:{elements,canvas}} }   (index handoff wrapper)
+    //  B) { template: {elements,canvas} }                   (direct)
+    //  C) legacy shapes
+    const t = draft?.template || null;
+    if(!t || typeof t !== "object") return null;
+    if(t.elements && Array.isArray(t.elements)) return t;              // direct
+    if(t.template && t.template.elements && Array.isArray(t.template.elements)) return t.template; // wrapped
+    return null;
+  }
+
+  function normalizeEditorElements(arr){
+    // Ensure every element has required geometry + id + type
+    const out = [];
+    for(const raw of (arr||[])){
+      if(!raw || typeof raw !== "object") continue;
+      const el = { ...raw };
+      el.id = String(el.id || uid());
+      el.type = String(el.type || el.kind || el.element || "shape");
+      // geometry defaults
+      el.x = Number.isFinite(el.x) ? el.x : 0;
+      el.y = Number.isFinite(el.y) ? el.y : 0;
+      el.w = Number.isFinite(el.w) ? el.w : (Number.isFinite(el.width) ? el.width : 200);
+      el.h = Number.isFinite(el.h) ? el.h : (Number.isFinite(el.height) ? el.height : 120);
+      // z
+      if(!Number.isFinite(el.zIndex) && Number.isFinite(el.z)) el.zIndex = el.z;
+      // text fallback
+      if(typeof el.text === "string" && typeof el.title !== "string") el.title = el.text;
+      if(typeof el.subtitle === "string" && typeof el.sub !== "string") el.sub = el.subtitle;
+      if(typeof el.sub !== "string") el.sub = "";
+      if(typeof el.title !== "string") el.title = "";
+      out.push(el);
+    }
+    // stable ordering by zIndex then y then x
+    out.sort((a,b)=> (Number(a.zIndex||0)-Number(b.zIndex||0)) || (a.y-b.y) || (a.x-b.x));
+    return out;
+  }
+function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add your text here…"){
     const id = uid();
     state.elements.push({ id, x, y, w, h, title, sub });
     snapshot();
@@ -673,6 +713,29 @@ const state = {
   }
 
   function loadAutosaveOrSeed(){
+    // 0) If we arrived from Generator, load that template first (ignore autosave)
+    const incoming = getDraftTemplatePayload();
+    if(incoming?.elements?.length){
+      // document size
+      if(incoming.canvas && Number.isFinite(incoming.canvas.w) && Number.isFinite(incoming.canvas.h)){
+        docW = Math.max(200, Math.floor(incoming.canvas.w));
+        docH = Math.max(200, Math.floor(incoming.canvas.h));
+      }
+      // normalize + load
+      state.elements = normalizeEditorElements(incoming.elements);
+
+      // Clear selection and render
+      snapshot();
+      state.selectedIds.clear();
+      renderAll();
+      updateUI();
+
+      // Mark that we loaded a generated template (optional)
+      try{ localStorage.setItem("nexora_editor_loaded_v1", String(Date.now())); }catch(e){}
+      $("#autosavePill").textContent = "Autosave ON";
+      return;
+    }
+
     let saved = null;
     try{ saved = JSON.parse(localStorage.getItem("templify_autosave")||"null"); }catch(e){}
     if(saved?.elements?.length){
@@ -684,6 +747,7 @@ const state = {
       $("#autosavePill").textContent = "Autosave ON";
       return;
     }
+
     // Seed
     addElement(90, 92, 320, 150, draft?.meta?.notes ? draft.meta.notes.slice(0,32) : "Luxury Template", "Drag, resize, duplicate…");
     addElement(470, 210, 360, 170, "Modern Card", "Click elements to edit properties.");
@@ -707,7 +771,88 @@ const state = {
       div.style.top = el.y + "px";
       div.style.width = el.w + "px";
       div.style.height = el.h + "px";
-      div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
+
+      div.style.zIndex = String(el.zIndex ?? el.z ?? 0);
+
+      const t = String(el.type || "card");
+      // reset visuals
+      div.style.background = "";
+      div.style.backgroundImage = "";
+      div.style.backgroundSize = "";
+      div.style.backgroundPosition = "";
+      div.style.border = "";
+      div.style.borderRadius = "";
+      div.style.boxShadow = "";
+      div.style.color = "";
+      div.style.display = "";
+      div.style.alignItems = "";
+      div.style.justifyContent = "";
+      div.style.textAlign = "";
+      div.style.padding = "";
+
+      if(t === "background"){
+        div.innerHTML = "";
+        div.style.left = (Number.isFinite(el.x) ? el.x : 0) + "px";
+        div.style.top  = (Number.isFinite(el.y) ? el.y : 0) + "px";
+        div.style.width  = (Number.isFinite(el.w) ? el.w : docW) + "px";
+        div.style.height = (Number.isFinite(el.h) ? el.h : docH) + "px";
+        div.style.background = el.gradient || el.fill || el.color || "linear-gradient(135deg,#0a1433,#061022)";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
+      } else if(t === "image"){
+        div.innerHTML = "";
+        const src = el.src || el.url || "";
+        if(src) div.style.backgroundImage = `url("${String(src).replace(/"/g,'%22')}")`;
+        div.style.backgroundSize = "cover";
+        div.style.backgroundPosition = "center";
+        div.style.backgroundColor = el.fill || "rgba(255,255,255,0.06)";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
+        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
+      } else if(t === "shape"){
+        div.innerHTML = "";
+        div.style.background = el.gradient || el.fill || el.color || "rgba(255,255,255,0.06)";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
+        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
+        if(Number.isFinite(el.opacity)) div.style.opacity = String(el.opacity);
+      } else if(t === "heading" || t === "text"){
+        const txt = el.text ?? el.title ?? "";
+        const sub = el.sub ?? el.subtitle ?? "";
+        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize: (t==='heading'?44:22)}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:(t==='heading'?800:500)}; line-height:${Number.isFinite(el.lineHeight)?el.lineHeight:1.1}; letter-spacing:${Number.isFinite(el.letterSpacing)?el.letterSpacing:0}px;">${escapeHtml(txt)}</div>` +
+                        (sub ? `<div style="margin-top:10px; font-size:${Math.max(14, Math.round((Number.isFinite(el.fontSize)?el.fontSize:22)*0.55))}px; opacity:0.85;">${escapeHtml(sub)}</div>` : "");
+        div.style.background = el.fill || "transparent";
+        div.style.color = el.color || "#eaf0ff";
+        div.style.padding = (Number.isFinite(el.padding)? el.padding : 18) + "px";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
+      } else if(t === "badge"){
+        const txt = el.text ?? el.title ?? "BADGE";
+        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize:14}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:700}; letter-spacing:${Number.isFinite(el.letterSpacing)?el.letterSpacing:1.2}px; text-transform:uppercase;">${escapeHtml(txt)}</div>`;
+        div.style.background = el.fill || "rgba(255,255,255,0.10)";
+        div.style.color = el.color || "#eaf0ff";
+        div.style.display = "flex";
+        div.style.alignItems = "center";
+        div.style.justifyContent = "center";
+        div.style.textAlign = "center";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 999) + "px";
+        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
+        if(Number.isFinite(el.opacity)) div.style.opacity = String(el.opacity);
+      } else if(t === "cta"){
+        const txt = el.text ?? el.title ?? "Shop Now";
+        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize:16}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:800};">${escapeHtml(txt)}</div>`;
+        div.style.background = el.fill || "#0b5fff";
+        div.style.color = el.color || "#ffffff";
+        div.style.display = "flex";
+        div.style.alignItems = "center";
+        div.style.justifyContent = "center";
+        div.style.textAlign = "center";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 999) + "px";
+      } else {
+        // Default: existing card behavior
+        div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
+      }
+
+      if(el.shadow){
+        div.style.boxShadow = String(el.shadow);
+      }
+
       if(state.selectedIds.has(el.id)) div.classList.add("selected");
       canvas.appendChild(div);
       wireElement(div);
@@ -886,7 +1031,88 @@ function escapeHtml(str){
       div.style.top = el.y + "px";
       div.style.width = el.w + "px";
       div.style.height = el.h + "px";
-      div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
+
+      div.style.zIndex = String(el.zIndex ?? el.z ?? 0);
+
+      const t = String(el.type || "card");
+      // reset visuals
+      div.style.background = "";
+      div.style.backgroundImage = "";
+      div.style.backgroundSize = "";
+      div.style.backgroundPosition = "";
+      div.style.border = "";
+      div.style.borderRadius = "";
+      div.style.boxShadow = "";
+      div.style.color = "";
+      div.style.display = "";
+      div.style.alignItems = "";
+      div.style.justifyContent = "";
+      div.style.textAlign = "";
+      div.style.padding = "";
+
+      if(t === "background"){
+        div.innerHTML = "";
+        div.style.left = (Number.isFinite(el.x) ? el.x : 0) + "px";
+        div.style.top  = (Number.isFinite(el.y) ? el.y : 0) + "px";
+        div.style.width  = (Number.isFinite(el.w) ? el.w : docW) + "px";
+        div.style.height = (Number.isFinite(el.h) ? el.h : docH) + "px";
+        div.style.background = el.gradient || el.fill || el.color || "linear-gradient(135deg,#0a1433,#061022)";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
+      } else if(t === "image"){
+        div.innerHTML = "";
+        const src = el.src || el.url || "";
+        if(src) div.style.backgroundImage = `url("${String(src).replace(/"/g,'%22')}")`;
+        div.style.backgroundSize = "cover";
+        div.style.backgroundPosition = "center";
+        div.style.backgroundColor = el.fill || "rgba(255,255,255,0.06)";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
+        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
+      } else if(t === "shape"){
+        div.innerHTML = "";
+        div.style.background = el.gradient || el.fill || el.color || "rgba(255,255,255,0.06)";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
+        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
+        if(Number.isFinite(el.opacity)) div.style.opacity = String(el.opacity);
+      } else if(t === "heading" || t === "text"){
+        const txt = el.text ?? el.title ?? "";
+        const sub = el.sub ?? el.subtitle ?? "";
+        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize: (t==='heading'?44:22)}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:(t==='heading'?800:500)}; line-height:${Number.isFinite(el.lineHeight)?el.lineHeight:1.1}; letter-spacing:${Number.isFinite(el.letterSpacing)?el.letterSpacing:0}px;">${escapeHtml(txt)}</div>` +
+                        (sub ? `<div style="margin-top:10px; font-size:${Math.max(14, Math.round((Number.isFinite(el.fontSize)?el.fontSize:22)*0.55))}px; opacity:0.85;">${escapeHtml(sub)}</div>` : "");
+        div.style.background = el.fill || "transparent";
+        div.style.color = el.color || "#eaf0ff";
+        div.style.padding = (Number.isFinite(el.padding)? el.padding : 18) + "px";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
+      } else if(t === "badge"){
+        const txt = el.text ?? el.title ?? "BADGE";
+        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize:14}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:700}; letter-spacing:${Number.isFinite(el.letterSpacing)?el.letterSpacing:1.2}px; text-transform:uppercase;">${escapeHtml(txt)}</div>`;
+        div.style.background = el.fill || "rgba(255,255,255,0.10)";
+        div.style.color = el.color || "#eaf0ff";
+        div.style.display = "flex";
+        div.style.alignItems = "center";
+        div.style.justifyContent = "center";
+        div.style.textAlign = "center";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 999) + "px";
+        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
+        if(Number.isFinite(el.opacity)) div.style.opacity = String(el.opacity);
+      } else if(t === "cta"){
+        const txt = el.text ?? el.title ?? "Shop Now";
+        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize:16}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:800};">${escapeHtml(txt)}</div>`;
+        div.style.background = el.fill || "#0b5fff";
+        div.style.color = el.color || "#ffffff";
+        div.style.display = "flex";
+        div.style.alignItems = "center";
+        div.style.justifyContent = "center";
+        div.style.textAlign = "center";
+        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 999) + "px";
+      } else {
+        // Default: existing card behavior
+        div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
+      }
+
+      if(el.shadow){
+        div.style.boxShadow = String(el.shadow);
+      }
+
       if(state.selectedIds.has(el.id)) div.classList.add("selected");
       canvas.appendChild(div);
       wireElement(div);
