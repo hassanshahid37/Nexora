@@ -577,9 +577,17 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   }catch(e){}
 
   // 2) Current: selected template saved by index
+  function nexoraHasElements(obj){
+    if(!obj || typeof obj !== "object") return false;
+    if(Array.isArray(obj.elements) && obj.elements.length) return true;
+    if(obj.template && Array.isArray(obj.template.elements) && obj.template.elements.length) return true;
+    return false;
+  }
   try{
     const t = JSON.parse(localStorage.getItem("nexora_selected_template_v1")||"null");
-    if(t && typeof t === "object"){
+    // Only treat this as a draft if it contains real editor elements.
+    // Otherwise, fall through to templify_draft (which has the full payload).
+    if(nexoraHasElements(t)){
       draft = { template: t, prompt: draftPrompt, notes: draftNotes };
     }
   }catch(e){}
@@ -721,6 +729,18 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
         docW = Math.max(200, Math.floor(incoming.canvas.w));
         docH = Math.max(200, Math.floor(incoming.canvas.h));
       }
+
+      // Fit canvas to available editor viewport (scale the stage, not the design)
+      try{
+        const wrap = document.querySelector(".canvasWrap");
+        if(wrap){
+          const pad = 24;
+          const aw = Math.max(200, wrap.clientWidth - pad*2);
+          const ah = Math.max(200, wrap.clientHeight - pad*2);
+          const fit = Math.min(1, aw / docW, ah / docH);
+          zoom = Math.max(0.1, Math.min(2, fit));
+        }
+      }catch(e){}
       // normalize + load
       state.elements = normalizeEditorElements(incoming.elements);
 
