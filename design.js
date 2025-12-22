@@ -1,4 +1,5 @@
 
+
 /* Nexora – design.js
    Visual template generator (client-side fallback + preview layouts)
    No external deps. Exposes window.NexoraDesign.
@@ -592,6 +593,147 @@
     return elements;
   }
 
+  // --- Canonicalize to editor-friendly schema (so index.html won't strip visuals) ---
+  // We output elements with: {id,type,x,y,w,h,title,sub,fill,stroke,src,fontSize,fontWeight,color,radius,opacity,background}
+  function canonicalizeElements(elements, spec){
+    const out = [];
+    const uid = () => (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16)));
+    const W = Number(spec?.w || 980), H = Number(spec?.h || 620);
+
+    const isHeading = (e) => {
+      const wt = Number(e?.weight ?? e?.tweight ?? e?.fontWeight ?? 0);
+      const sz = Number(e?.size ?? e?.tsize ?? e?.fontSize ?? 0);
+      return (wt >= 850) || (sz >= Math.max(40, Math.round(H*0.07)));
+    };
+
+    const guessCTA = (e) => {
+      const wt = Number(e?.tweight ?? e?.weight ?? e?.fontWeight ?? 0);
+      const sz = Number(e?.tsize ?? e?.size ?? e?.fontSize ?? 0);
+      const ww = Number(e?.w ?? 0), hh = Number(e?.h ?? 0);
+      const nearBottom = Number(e?.y ?? 0) > H*0.55;
+      const big = ww > W*0.22 && hh > H*0.055;
+      return (wt >= 750 && (sz >= H*0.03) && (big || nearBottom));
+    };
+
+    for(const e of (Array.isArray(elements)?elements:[])){
+      const t = String(e?.type || "card").toLowerCase();
+      const base = {
+        id: e?.id || uid(),
+        x: Math.round(Number(e?.x ?? 80)),
+        y: Math.round(Number(e?.y ?? 80)),
+        w: Math.round(Number(e?.w ?? e?.width ?? 320)),
+        h: Math.round(Number(e?.h ?? e?.height ?? 120)),
+        title: "",
+        sub: "",
+        fill: e?.fill ?? e?.background ?? null,
+        stroke: e?.stroke ?? null,
+        src: e?.src ?? null,
+        fontSize: e?.fontSize ?? e?.size ?? e?.tsize ?? null,
+        fontWeight: e?.fontWeight ?? e?.weight ?? e?.tweight ?? null,
+        color: e?.color ?? e?.tcolor ?? null,
+        radius: e?.radius ?? e?.r ?? null,
+        opacity: e?.opacity ?? null
+      };
+
+      if(t === "bg" || t === "background"){
+        out.push({
+          ...base,
+          type: "background",
+          title: "BG",
+          fill: e?.fill2 ? `radial-gradient(120% 90% at 20% 10%, ${e.fill2}, ${e.fill || e.fill2})` : (e?.fill ?? base.fill),
+          sub: ""
+        });
+        continue;
+      }
+
+      if(t === "photo" || t === "image"){
+        out.push({
+          ...base,
+          type: "image",
+          title: e?.label ? String(e.label).slice(0,32) : "IMAGE",
+          sub: "",
+          radius: base.radius ?? 18
+        });
+        continue;
+      }
+
+      if(t === "text"){
+        const txt = String(e?.text ?? e?.title ?? "").trim();
+        out.push({
+          ...base,
+          type: isHeading(e) ? "heading" : "text",
+          title: txt || (isHeading(e) ? "Premium Headline" : "Body text"),
+          sub: isHeading(e) ? "" : "",
+          fill: null,
+          stroke: null,
+          src: null,
+          radius: 0
+        });
+        continue;
+      }
+
+      if(t === "pill" || t === "cta" || t === "button"){
+        const txt = String(e?.text ?? e?.title ?? "Get Started").trim();
+        out.push({
+          ...base,
+          type: guessCTA(e) ? "cta" : "badge",
+          title: txt || "Get Started",
+          sub: "",
+          fill: e?.fill ?? base.fill ?? "linear-gradient(135deg, rgba(11,95,255,.95), rgba(136,71,255,.85))",
+          background: e?.fill ?? base.fill ?? null,
+          radius: base.radius ?? 999
+        });
+        continue;
+      }
+
+      if(t === "badge" || t === "chip"){
+        const txt = String(e?.text ?? e?.title ?? "NEW").trim();
+        out.push({
+          ...base,
+          type: "badge",
+          title: txt || "NEW",
+          sub: "",
+          fill: e?.fill ?? base.fill ?? "rgba(0,0,0,.18)",
+          radius: base.radius ?? 999
+        });
+        continue;
+      }
+
+      if(t === "shape" || t === "card" || t === "dot" || t === "dots"){
+        out.push({
+          ...base,
+          type: "shape",
+          title: "SHAPE",
+          sub: "",
+          fill: e?.fill ?? base.fill ?? "rgba(255,255,255,.10)",
+          radius: base.radius ?? 18
+        });
+        continue;
+      }
+
+      // default passthrough
+      out.push({
+        ...base,
+        type: t,
+        title: String(e?.title ?? e?.text ?? "").trim() || t.toUpperCase(),
+        sub: String(e?.sub ?? e?.subtitle ?? "").trim()
+      });
+    }
+
+    // Ensure stable z-order: background first, then shapes/images, then text/cta/badges
+    const order = (el) => {
+      const tt = String(el.type||"");
+      if(tt==="background") return 0;
+      if(tt==="shape" || tt==="image") return 1;
+      if(tt==="badge") return 2;
+      if(tt==="heading") return 3;
+      if(tt==="text") return 4;
+      if(tt==="cta") return 5;
+      return 6;
+    };
+    out.sort((a,b)=>order(a)-order(b));
+    return out;
+  }
   function generateOne(category, prompt, style, idx){
     const meta = CATEGORIES[category] || CATEGORIES["Instagram Post"];
     const seed = (hash(category+"|"+style+"|"+prompt) + idx*1013) >>> 0;
@@ -638,7 +780,9 @@
       smallprint: cm.smallprint
     };
 
-    const elements = buildElements(arch.layout, spec);
+    const rawElements = buildElements(arch.layout, spec);
+    const elements = canonicalizeElements(rawElements, spec);
+    const bg = (elements.find(e => String(e.type||"").toLowerCase()==="background")?.fill) || pal.bg || null;
 
     return {
       id: "tpl_"+seed.toString(16),
@@ -649,7 +793,7 @@
       vibe: intent.type || "generic",
       cta: ctaText,
       canvas: { w: meta.w, h: meta.h },
-      bg: pal.bg,
+      bg: bg,
       elements
     };
   }
