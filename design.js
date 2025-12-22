@@ -41,6 +41,108 @@
     return { brand, tagline, keywords: words.slice(0,10) };
   }
 
+  // Phase AC-V1: prompt → content model (headline/subhead/badges/features)
+  function contentModel(prompt, category, intent, seed){
+    const p = String(prompt||"").trim();
+    const words = p.replace(/[^\w\s%$-]/g," ").split(/\s+/).filter(Boolean);
+    const first = (words[0]||"").slice(0,20);
+    const brandGuess = words.slice(0,3).join(" ").trim() || "Nexora";
+
+    const cm = {
+      headline: "",
+      subhead: "",
+      kicker: "",
+      badge: "",
+      features: [],
+      eventName: "",
+      eventMeta: "",
+      dateLabel: "",
+      location: "",
+      speakers: [],
+      smallprint: ""
+    };
+
+    const it = intent?.type || "generic";
+    const cat = String(category||"");
+    const s = seed>>>0;
+
+    // Headline
+    if(it==="promo"){
+      cm.kicker = pick(["LIMITED TIME","FLASH DEAL","WEEKEND SALE","NEW DROP"], s^hash("k"));
+      cm.badge  = pick(["% OFF","SALE","DEAL","HOT"], s^hash("b"));
+      cm.headline = p ? titleish(p, 38) : pick(["New Collection","Premium Drop","Big Savings"], s);
+      cm.subhead  = pick(["Premium quality • Fast delivery","Limited stock • Don’t miss out","Shop the best picks today"], s^hash("s"));
+      cm.features = pick([
+        ["Free delivery","Easy returns","Top rated"],
+        ["Best price","New arrivals","Limited stock"],
+        ["Premium materials","Modern design","Exclusive offer"]
+      ], s^hash("f"));
+    } else if(it==="hiring"){
+      cm.kicker = pick(["WE’RE HIRING","JOIN OUR TEAM","NOW HIRING"], s^hash("k"));
+      cm.badge  = pick(["FULL‑TIME","REMOTE","APPLY"], s^hash("b"));
+      cm.headline = pick(["Designer","Developer","Marketing Lead","Sales Executive"], s^hash("h")) + " Needed";
+      cm.subhead  = p ? titleish(p, 60) : "Build something great with us. Apply today.";
+      cm.features = pick([
+        ["Competitive pay","Growth","Great team"],
+        ["Remote friendly","Flexible hours","Fast career"],
+        ["Health benefits","Learning budget","Mentorship"]
+      ], s^hash("f"));
+      cm.smallprint = "Send CV • careers@" + brandGuess.toLowerCase().replace(/\s+/g,"") + ".com";
+    } else if(it==="announcement"){
+      cm.kicker = pick(["ANNOUNCEMENT","SAVE THE DATE","YOU’RE INVITED"], s^hash("k"));
+      cm.badge  = pick(["LIVE","EVENT","NEW"], s^hash("b"));
+      cm.eventName = p ? titleish(p, 44) : "Special Event";
+      cm.eventMeta = pick(["Talks • Networking • Q&A","Workshop • Live Demo • Gifts","Community • Speakers • Updates"], s^hash("m"));
+      cm.dateLabel = pick(["SAT • 7 PM","FRI • 6:30 PM","SUN • 5 PM"], s^hash("d"));
+      cm.location = pick(["Downtown Hall","Online • Zoom","Main Auditorium"], s^hash("l"));
+      cm.speakers = pick([
+        ["Keynote • Guest Speaker","Panel • Q&A","Networking"],
+        ["Live demo","Workshop session","Open Q&A"],
+        ["Meet the team","Product updates","Community stories"]
+      ], s^hash("sp"));
+      cm.headline = cm.eventName;
+      cm.subhead = cm.eventMeta + " • " + cm.location;
+    } else if(it==="quote"){
+      cm.kicker = pick(["DAILY MOTIVATION","QUOTE","MINDSET"], s^hash("k"));
+      cm.headline = p ? titleish(p, 70) : pick(["Discipline beats motivation.","Start now.","Stay consistent."], s);
+      cm.subhead  = pick(["Save this • Share • Repeat","One step every day","Build the habit"], s^hash("s"));
+      cm.badge = pick(["INSPIRE","FOCUS","GROW"], s^hash("b"));
+    } else {
+      cm.kicker = pick(["NEW","FEATURED","PREMIUM"], s^hash("k"));
+      cm.badge = pick(["QUALITY","MODERN","PRO"], s^hash("b"));
+      cm.headline = p ? titleish(p, 46) : "Designed to impress.";
+      cm.subhead  = pick(["Clean layouts • Strong hierarchy","Canva‑level posters • Ready fast","Made for socials • Built for brands"], s^hash("s"));
+      cm.features = pick([
+        ["Clean grid","Strong contrast","Modern shapes"],
+        ["Photo zones","Text safe area","Premium accents"],
+        ["Balanced spacing","Readable type","Export ready"]
+      ], s^hash("f"));
+    }
+
+    // Category hinting
+    if(cat.toLowerCase().includes("youtube")){
+      cm.kicker = cm.kicker || "WATCH THIS";
+      cm.subhead = cm.subhead || "Click to see the full story";
+      cm.badge = cm.badge || "NEW";
+    }
+    if(cat.toLowerCase().includes("logo")){
+      cm.headline = brandGuess;
+      cm.subhead = cm.subhead || "Brand identity • Clean mark";
+      cm.features = [];
+    }
+
+    return cm;
+  }
+
+  function titleish(text, maxLen){
+    const s = String(text||"").trim().replace(/[\r\n]+/g," ");
+    if(!s) return "";
+    // keep some natural casing but avoid huge strings
+    const t = s.length > maxLen ? (s.slice(0, maxLen).replace(/\s+\S*$/,"")) : s;
+    return t;
+  }
+
+
 
   // Phase H: Smart inline "photo" blocks (no external URLs, so no 404s)
   function smartPhotoSrc(seed, pal, label){
@@ -135,6 +237,7 @@
       // corporate promos should be less loud
       intent.energy="medium";
     }
+    intent.category = category || "";
     return intent;
   }
 
@@ -152,28 +255,45 @@
   }
 
   function archetypeWithIntent(seed, intent){
-    // Keep existing archetypes but weight them by intent.
+    // Phase AC-V1: richer poster-first archetypes (still logic-only, no UI changes).
     const base = [
+      { name:"Poster Hero", layout:"posterHero" },
+      { name:"Product Poster", layout:"productPoster" },
+      { name:"Event Flyer", layout:"eventFlyer" },
       { name:"Split Hero", layout:"splitHero" },
       { name:"Badge Promo", layout:"badgePromo" },
-      { name:"Minimal Quote", layout:"minimalQuote" },
       { name:"Feature Grid", layout:"featureGrid" },
+      { name:"Photo Card", layout:"photoCard" },
+      { name:"Minimal Quote", layout:"minimalQuote" },
       { name:"Big Number", layout:"bigNumber" },
-      { name:"Photo Card", layout:"photoCard" }
+      { name:"YouTube Bold", layout:"youtubeBold" }
     ];
 
     const t = intent?.type || "generic";
-    const s = (seed ^ hash("intent|"+t)) >>> 0;
+    const cat = (intent?.category || "").toLowerCase();
+    const s = (seed ^ hash("intent|"+t+"|"+cat)) >>> 0;
 
+    // Layout weighting: bias toward poster compositions for print/social, thumbnail-heavy for YouTube.
     const weights = {
-      generic:     { splitHero:18, badgePromo:14, minimalQuote:10, featureGrid:14, bigNumber:12, photoCard:12 },
-      promo:       { splitHero:12, badgePromo:22, minimalQuote:6,  featureGrid:12, bigNumber:22, photoCard:10 },
-      hiring:      { splitHero:20, badgePromo:6,  minimalQuote:8,  featureGrid:22, bigNumber:10, photoCard:14 },
-      announcement:{ splitHero:18, badgePromo:10, minimalQuote:10, featureGrid:16, bigNumber:10, photoCard:18 },
-      quote:       { splitHero:10, badgePromo:6,  minimalQuote:30, featureGrid:10, bigNumber:10, photoCard:12 }
+      generic:     { posterHero:22, productPoster:18, eventFlyer:12, splitHero:16, badgePromo:12, featureGrid:12, photoCard:14, minimalQuote:10, bigNumber:10, youtubeBold:10 },
+      promo:       { posterHero:16, productPoster:26, eventFlyer:10, splitHero:12, badgePromo:22, featureGrid:12, photoCard:12, minimalQuote:6,  bigNumber:22, youtubeBold:10 },
+      hiring:      { posterHero:18, productPoster:10, eventFlyer:12, splitHero:18, badgePromo:6,  featureGrid:24, photoCard:16, minimalQuote:8,  bigNumber:10, youtubeBold:8  },
+      announcement:{ posterHero:18, productPoster:12, eventFlyer:24, splitHero:16, badgePromo:10, featureGrid:16, photoCard:18, minimalQuote:10, bigNumber:10, youtubeBold:10 },
+      quote:       { posterHero:14, productPoster:6,  eventFlyer:6,  splitHero:10, badgePromo:6,  featureGrid:10, photoCard:12, minimalQuote:34, bigNumber:10, youtubeBold:6  }
     };
 
-    const w = weights[t] || weights.generic;
+    // Category overrides (gentle)
+    const w = { ...(weights[t] || weights.generic) };
+    if(cat.includes("youtube")){
+      w.youtubeBold += 18; w.posterHero -= 6; w.productPoster -= 6;
+    }
+    if(cat.includes("logo")){
+      w.minimalQuote += 10; w.posterHero -= 10; w.productPoster -= 8;
+    }
+    if(cat.includes("business card")){
+      w.featureGrid += 10; w.posterHero -= 10; w.productPoster -= 10;
+    }
+
     const wlist = base.map(a=>({ w: w[a.layout] ?? 10, v: a }));
     return weightedPick(wlist, s);
   }
@@ -310,6 +430,98 @@
     const add = (el)=>{ elements.push(el); return el; };
     add({ type:"bg", x:0,y:0,w,h, fill: pal.bg, fill2: pal.bg2, style:"radial" });
 
+    // Phase AC-V1: poster-first layouts (Canva-level compositions)
+    const M = Math.round(Math.min(w,h) * 0.06); // safe margin
+    const glass = !!pal.__glass;
+
+    const tHeadline = String(spec.headline || tagline || brand || "New");
+    const tSub = String(spec.subhead || spec.subtitle || "Designed • Clean • Modern");
+    const tKicker = String(spec.kicker || "").trim();
+    const tCTA = String(spec.ctaText || "Learn More");
+
+    const photoLabel = (brand||"Nexora").toString().slice(0,18);
+    const photoSrcA = smartPhotoSrc((s^hash("A"))>>>0, pal, photoLabel);
+    const photoSrcB = smartPhotoSrc((s^hash("B"))>>>0, pal, (tHeadline.split(" ")[0]||photoLabel));
+
+    if(layout==="posterHero"){
+      // Full-bleed hero photo with gradient overlay + strong typography.
+      add({ type:"photo", src: photoSrcA, x:0,y:0,w,h, r:0, opacity:1 });
+      add({ type:"shape", x:0,y:0,w,h, r:0, fill:"linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.60))", opacity:1 });
+      add({ type:"shape", x:M,y:Math.round(h*0.10),w:Math.round(w*0.56),h:Math.round(h*0.62), r:44,
+            fill: glass ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.20)",
+            stroke:"rgba(255,255,255,0.18)" , opacity: glass ? 1 : 0.95 });
+      if(tKicker){
+        add({ type:"chip", x:M+24,y:Math.round(h*0.12), text:tKicker.toUpperCase(), size:Math.round(h*0.028), color: pal.muted });
+      }
+      add({ type:"text", x:M+24,y:Math.round(h*0.20), text:tHeadline, size:Math.round(h*0.070), weight:900, color: pal.ink, letter:-0.8 });
+      add({ type:"text", x:M+24,y:Math.round(h*0.33), text:tSub, size:Math.round(h*0.040), weight:600, color: "rgba(255,255,255,0.88)" });
+      add({ type:"pill", x:M+24,y:Math.round(h*0.54), w:Math.round(w*0.26),h:Math.round(h*0.085), r:999,
+            fill: pal.accent, text:tCTA, tcolor:"#071423", tsize:Math.round(h*0.032), tweight:800 });
+      add({ type:"chip", x:M+24,y:Math.round(h*0.64), text:(spec.smallprint||"@"+(brand||"nexora").toString().replace(/\s+/g,"").toLowerCase()), size:Math.round(h*0.028), color:"rgba(255,255,255,0.72)" });
+    }
+
+    if(layout==="productPoster"){
+      // Product/offer: split photo + info stack + price/badge
+      add({ type:"shape", x:0,y:0,w,h, r:0, fill: pal.bg, fill2: pal.bg2, style:"radial" });
+      add({ type:"shape", x:M,y:M,w:Math.round(w*0.56),h:Math.round(h-2*M), r:46, fill: glass?"rgba(255,255,255,0.06)":"rgba(255,255,255,0.05)", stroke:"rgba(255,255,255,0.16)" });
+      add({ type:"photo", src: photoSrcB, x:Math.round(w*0.60),y:Math.round(h*0.12),w:Math.round(w*0.32),h:Math.round(h*0.46), r:40, stroke:"rgba(255,255,255,0.18)" });
+      add({ type:"badge", x:Math.round(w*0.63),y:Math.round(h*0.62),w:Math.round(w*0.26),h:Math.round(h*0.13), r:999,
+            fill: pal.accent2, text:(spec.badge||"LIMITED"), tcolor:"#0b1020", tsize:Math.round(h*0.032), tweight:900 });
+      add({ type:"text", x:M+28,y:M+28, text:(brand||"Nexora").toUpperCase(), size:Math.round(h*0.032), weight:800, color: pal.muted, letter:2 });
+      add({ type:"text", x:M+28,y:Math.round(h*0.20), text:tHeadline, size:Math.round(h*0.064), weight:900, color: pal.ink, letter:-0.7 });
+      add({ type:"text", x:M+28,y:Math.round(h*0.32), text:tSub, size:Math.round(h*0.038), weight:600, color:"rgba(255,255,255,0.86)" });
+      // feature bullets
+      const feats = Array.isArray(spec.features) ? spec.features.slice(0,3) : [];
+      let fy = Math.round(h*0.44);
+      for(const f of feats){
+        add({ type:"chip", x:M+28,y:fy, text:"• "+String(f), size:Math.round(h*0.030), color:"rgba(255,255,255,0.78)" });
+        fy += Math.round(h*0.05);
+      }
+      add({ type:"pill", x:M+28,y:Math.round(h*0.74), w:Math.round(w*0.30),h:Math.round(h*0.090), r:999,
+            fill: pal.accent, text:tCTA, tcolor:"#0b1020", tsize:Math.round(h*0.034), tweight:900 });
+    }
+
+    if(layout==="eventFlyer"){
+      // Event: date/time/location emphasis + speaker blocks
+      add({ type:"shape", x:0,y:0,w,h, r:0, fill: pal.bg, fill2: pal.bg2, style:"radial" });
+      add({ type:"shape", x:M,y:M,w:Math.round(w-2*M),h:Math.round(h-2*M), r:52, fill:"rgba(255,255,255,0.05)", stroke:"rgba(255,255,255,0.16)" });
+      add({ type:"shape", x:M,y:M,w:Math.round(w-2*M),h:Math.round(h*0.22), r:52, fill:"rgba(0,0,0,0.16)" });
+      add({ type:"text", x:M+26,y:M+26, text:(spec.eventName||tHeadline), size:Math.round(h*0.060), weight:900, color: pal.ink, letter:-0.6 });
+      add({ type:"text", x:M+26,y:Math.round(h*0.18), text:(spec.eventMeta||tSub), size:Math.round(h*0.034), weight:600, color:"rgba(255,255,255,0.84)" });
+
+      // date card
+      add({ type:"card", x:M+26,y:Math.round(h*0.30),w:Math.round(w*0.34),h:Math.round(h*0.20), r:34,
+            fill: glass?"rgba(255,255,255,0.08)":"rgba(255,255,255,0.06)", stroke:"rgba(255,255,255,0.16)" });
+      add({ type:"text", x:M+50,y:Math.round(h*0.33), text:(spec.dateLabel||"SAT, 7 PM"), size:Math.round(h*0.050), weight:900, color: pal.ink });
+      add({ type:"text", x:M+50,y:Math.round(h*0.40), text:(spec.location||"Downtown • RSVP Required"), size:Math.round(h*0.030), weight:600, color:"rgba(255,255,255,0.78)" });
+
+      // right photo / atmosphere
+      add({ type:"photo", src: photoSrcA, x:Math.round(w*0.56),y:Math.round(h*0.30),w:Math.round(w*0.34),h:Math.round(h*0.34), r:40, stroke:"rgba(255,255,255,0.18)" });
+
+      // speakers/agenda chips
+      const sp = Array.isArray(spec.speakers) ? spec.speakers.slice(0,3) : [];
+      let syy = Math.round(h*0.68);
+      for(const spt of sp){
+        add({ type:"shape", x:M+26,y:syy,w:Math.round(w*0.44),h:Math.round(h*0.075), r:24, fill:"rgba(0,0,0,0.16)", stroke:"rgba(255,255,255,0.12)" });
+        add({ type:"text", x:M+46,y:syy+Math.round(h*0.018), text:String(spt), size:Math.round(h*0.030), weight:700, color:"rgba(255,255,255,0.88)" });
+        syy += Math.round(h*0.09);
+      }
+
+      add({ type:"pill", x:Math.round(w*0.62),y:Math.round(h*0.74), w:Math.round(w*0.26),h:Math.round(h*0.090), r:999,
+            fill: pal.accent, text:tCTA, tcolor:"#0b1020", tsize:Math.round(h*0.034), tweight:900 });
+    }
+
+    if(layout==="youtubeBold"){
+      // Thumbnail: heavy contrast, big headline, subtle brand bar
+      add({ type:"photo", src: photoSrcA, x:0,y:0,w,h, r:0, opacity:1 });
+      add({ type:"shape", x:0,y:0,w,h, r:0, fill:"linear-gradient(90deg, rgba(0,0,0,0.70), rgba(0,0,0,0.05))", opacity:1 });
+      add({ type:"shape", x:Math.round(w*0.05),y:Math.round(h*0.08),w:Math.round(w*0.38),h:Math.round(h*0.12), r:26, fill:"rgba(255,255,255,0.08)", stroke:"rgba(255,255,255,0.18)" });
+      add({ type:"text", x:Math.round(w*0.08),y:Math.round(h*0.105), text:(brand||"Nexora").toUpperCase(), size:Math.round(h*0.050), weight:900, color: pal.ink, letter:1.4 });
+      add({ type:"text", x:Math.round(w*0.06),y:Math.round(h*0.30), text:tHeadline.toUpperCase(), size:Math.round(h*0.120), weight:900, color:"#ffffff", letter:-1.1 });
+      add({ type:"text", x:Math.round(w*0.06),y:Math.round(h*0.66), text:tSub, size:Math.round(h*0.050), weight:700, color:"rgba(255,255,255,0.88)" });
+    }
+
+
     if(layout==="splitHero"){
       add({ type:"shape", x:0,y:0,w:Math.round(w*0.56),h, r:48, fill: pal.bg2, opacity:0.85 });
       add({ type:"shape", x:Math.round(w*0.53),y:Math.round(h*0.1),w:Math.round(w*0.42),h:Math.round(h*0.55), r:48, stroke:"rgba(255,255,255,0.14)", fill:"rgba(255,255,255,0.04)" });
@@ -383,9 +595,12 @@
   function generateOne(category, prompt, style, idx){
     const meta = CATEGORIES[category] || CATEGORIES["Instagram Post"];
     const seed = (hash(category+"|"+style+"|"+prompt) + idx*1013) >>> 0;
+
     const intent = classifyIntent(prompt, category, style);
     const pal = paletteForStyle(style, seed, intent);
     const b = brandFromPrompt(prompt);
+
+    const cm = contentModel(prompt, category, intent, seed);
     const arch = archetypeWithIntent(seed, intent);
 
     const titleByCategory = {
@@ -400,25 +615,41 @@
       "Poster": "Poster #"+(idx+1)
     };
 
-    const subtitle = (style||"Dark Premium") + " • " + arch.name;
-    const elements = buildElements(arch.layout, {
-      w: meta.w, h: meta.h, pal,
-      brand: b.brand || "Nexora",
-      tagline: b.tagline || "Premium templates, fast.",
-      ctaText: pickCTA(intent, seed),
-      intent,
-      seed
-    });
+    const ctaText = pickCTA(intent, seed);
+
+    const spec = {
+      w: meta.w, h: meta.h,
+      pal,
+      brand: b.brand,
+      tagline: b.tagline,
+      seed,
+      ctaText,
+      // AC-V1 content model
+      headline: cm.headline,
+      subhead: cm.subhead,
+      kicker: cm.kicker,
+      badge: cm.badge,
+      features: cm.features,
+      eventName: cm.eventName,
+      eventMeta: cm.eventMeta,
+      dateLabel: cm.dateLabel,
+      location: cm.location,
+      speakers: cm.speakers,
+      smallprint: cm.smallprint
+    };
+
+    const elements = buildElements(arch.layout, spec);
 
     return {
-      id: "tpl_"+seed.toString(16)+"_"+idx,
+      id: "tpl_"+seed.toString(16),
       title: titleByCategory[category] || (category+" #"+(idx+1)),
-      subtitle,
+      description: normalizeStyleName(style)+" • "+arch.name+" • "+(intent.type||"generic"),
       category,
-      style: style || "Dark Premium",
-      ratio: meta.ratio,
+      style,
+      vibe: intent.type || "generic",
+      cta: ctaText,
       canvas: { w: meta.w, h: meta.h },
-      palette: pal,
+      bg: pal.bg,
       elements
     };
   }
