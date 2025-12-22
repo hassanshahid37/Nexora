@@ -682,18 +682,3 @@ function applyIntentScene(template, intent) {
     generateOne = wrapped;
   }
 })();
-
-
-// AD-4: Poster Dominance & Boundary Breaking
-export function applyDominance(layout, variantIndex){
-  const modes = ['headline','cta','badge','image'];
-  const mode = modes[variantIndex % modes.length];
-  layout.meta = layout.meta || {};
-  layout.meta.dominant = mode;
-  layout.meta.edgeBreak = true;
-  (layout.elements||[]).forEach(el=>{
-    if(el.role===mode || el.type===mode){ el.scale = (el.scale||1)*1.6; el.z = 10; el.edge = true; }
-    else { el.scale = (el.scale||1)*0.85; }
-  });
-  return layout;
-}
