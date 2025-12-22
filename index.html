@@ -224,7 +224,21 @@
 
 </style>
     
+
+<script>
+/* NEXORA_SESSION_RESTORE_V1 */
+(function(){
+  try{
+    var key='nexora_generation_state_v1';
+    var saved=sessionStorage.getItem(key);
+    if(saved){
+      window.__NEXORA_RESTORE__=JSON.parse(saved);
+    }
+  }catch(e){}
+})();
+</script>
 </head>
+
 
 <body data-theme="dark">
   <div class="wrap">
