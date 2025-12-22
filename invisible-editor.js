@@ -1,79 +1,56 @@
 
-// invisible-editor.js — Phase AD-IE1
-// Invisible Editor = Brain layer (fast, deterministic)
-// NO UI, NO rendering, NO visuals
+// invisible-editor.js — Editor Handoff Fix (AD-H1)
+// Ensures generated templates are injected into Manual Editor
+// No UI / HTML / CSS changes
 
 (function () {
-  if (window.__NEXORA_INVISIBLE_EDITOR_V2__) return;
-  window.__NEXORA_INVISIBLE_EDITOR_V2__ = true;
+  if (window.__NEXORA_EDITOR_HANDOFF__) return;
+  window.__NEXORA_EDITOR_HANDOFF__ = true;
 
-  // Global cache for decided intelligence
-  window.NEXORA_INTEL = {
-    intent: null,
-    archetype: null,
-    palette: null,
-    copy: null,
-    seed: null
-  };
+  const STORAGE_KEY = "NEXORA_LAST_TEMPLATES";
 
-  // Simple intent classifier (fast)
-  function classifyIntent(prompt = "") {
-    const p = prompt.toLowerCase();
-    if (/(sale|discount|offer|%|deal|limited)/.test(p)) return "promo";
-    if (/(hiring|job|career|apply|vacancy)/.test(p)) return "hiring";
-    if (/(event|launch|webinar|meetup|conference)/.test(p)) return "announcement";
-    if (p.split(" ").length <= 5) return "quote";
-    return "generic";
-  }
-
-  function decideArchetype(intent) {
-    const map = {
-      promo: "badgePromo",
-      hiring: "featureGrid",
-      announcement: "eventFlyer",
-      quote: "minimalQuote",
-      generic: "splitHero"
-    };
-    return map[intent] || "splitHero";
-  }
-
-  function decidePalette(style = "") {
-    if (/neon/i.test(style)) return "neon";
-    if (/corporate/i.test(style)) return "corporate";
-    if (/light/i.test(style)) return "light";
-    return "dark";
-  }
-
-  function buildCopy(prompt = "") {
-    const words = prompt.split(" ").filter(Boolean);
-    return {
-      headline: words.slice(0, 6).join(" ") || "New Design",
-      subhead: words.slice(6, 14).join(" ") || "Designed to impress",
-      cta: "Learn More"
+  // Capture templates at generation time
+  const originalRender = window.renderTemplates;
+  if (typeof originalRender === "function") {
+    window.renderTemplates = function (templates) {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(templates || []));
+      } catch (e) {}
+      return originalRender.apply(this, arguments);
     };
   }
 
-  // Main hook — called once per Generate
-  window.NEXORA_RUN_INTELLIGENCE = function ({ prompt = "", style = "" } = {}) {
-    const seed = Math.abs(
-      Array.from(prompt).reduce((a, c) => a + c.charCodeAt(0), 0)
-    );
+  // When editor loads, inject last generated template
+  function injectIntoEditor() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const templates = JSON.parse(raw);
+      if (!templates || !templates.length) return;
 
-    const intent = classifyIntent(prompt);
-    const archetype = decideArchetype(intent);
-    const palette = decidePalette(style);
-    const copy = buildCopy(prompt);
+      // Prefer first template
+      const tpl = templates[0];
 
-    window.NEXORA_INTEL = {
-      intent,
-      archetype,
-      palette,
-      copy,
-      seed
-    };
+      // Common editor loaders
+      if (typeof window.loadTemplate === "function") {
+        window.loadTemplate(tpl);
+        console.log("[Nexora] Template injected via loadTemplate");
+        return;
+      }
+      if (typeof window.setCanvasFromTemplate === "function") {
+        window.setCanvasFromTemplate(tpl);
+        console.log("[Nexora] Template injected via setCanvasFromTemplate");
+        return;
+      }
 
-    console.log("[Nexora IE] Intelligence resolved:", window.NEXORA_INTEL);
-    return window.NEXORA_INTEL;
-  };
+      // Fallback: expose for manual trigger
+      window.__NEXORA_PENDING_TEMPLATE__ = tpl;
+      console.log("[Nexora] Template ready for editor (pending)");
+    } catch (e) {}
+  }
 
+  // Run on editor pages
+  if (location.pathname.includes("editor")) {
+    window.addEventListener("load", injectIntoEditor);
+  }
 })();
