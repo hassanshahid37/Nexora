@@ -1,29 +1,37 @@
 // Nexora / Templify – Serverless template intent generator
 // HARD SAFE VERSION: never calls OpenAI, never throws, never returns 500.
 
- async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(200).json({ success: true, templates: [] });
-  }
-
-  let body = {};
+export default async function handler(req, res) {
   try {
-    body = req.body && typeof req.body === "object" ? req.body : JSON.parse(req.body || "{}");
-  } catch {
-    body = {};
+    if (req.method !== "POST") {
+      return res.status(200).json({ success: true, templates: [] });
+    }
+  
+    let body = {};
+    try {
+      body = req.body && typeof req.body === "object" ? req.body : JSON.parse(req.body || "{}");
+    } catch {
+      body = {};
+    }
+  
+    const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    const category = typeof body.category === "string" ? body.category : "Instagram Post";
+    const style = typeof body.style === "string" ? body.style : "Dark Premium";
+    const count = clampInt(body.count, 4, 1, 200);
+  
+    const templates = makeFallbackTemplates({ prompt, category, style, count });
+  
+    return res.status(200).json({
+      success: true,
+      templates
+    });
+  } catch (err) {
+    try {
+      return res.status(200).json({ success: true, templates: [], error: "server_safe_fallback" });
+    } catch {
+      // no-op
+    }
   }
-
-  const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-  const category = typeof body.category === "string" ? body.category : "Instagram Post";
-  const style = typeof body.style === "string" ? body.style : "Dark Premium";
-  const count = clampInt(body.count, 4, 1, 200);
-
-  const templates = makeFallbackTemplates({ prompt, category, style, count });
-
-  return res.status(200).json({
-    success: true,
-    templates
-  });
 }
 
 function clampInt(v, def, min, max) {
