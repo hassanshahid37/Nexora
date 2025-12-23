@@ -673,9 +673,6 @@
       div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(template); });
       grid.appendChild(div);
     }
-
-    // Persist seeded state too (useful if user opens editor then comes back).
-    saveHomeState();
   }
 
 function toEditorTemplate(tpl){
@@ -731,9 +728,6 @@ function toEditorTemplate(tpl){
   }
 
 function openEditorWith(payload){
-      try{ saveHomeState(); }catch(_e){}
-    // Persist homepage grid + scroll so Back from editor restores exactly.
-    saveHomeState();
     // payload can be {cat,style,i} OR a full template object
     const cat = payload?.category || payload?.cat || $("#cat").value;
     const style = payload?.style || $("#style").value;
@@ -767,67 +761,156 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
       template: tpl,
       createdAt: Date.now()
     }));
+
+    // allow homepage to restore when user comes back from editor
+    try{ sessionStorage.setItem("nexora_restore_home_v1","1"); }catch(_){}
+    try{ saveHomeState && saveHomeState(); }catch(_){}
     window.location.href = "editor.html";
   }
 
   // Keep latest generated templates (for tile click -> editor)
   let __lastTemplates = [];
 
-  // --- Home session persistence (Back from editor should not reset templates) ---
-  const HOME_STATE_KEY = 'nexora_home_state_v1';
+  // --- Homepage state persistence (restore after returning from editor) ---
+  const HOME_STATE_KEY = "nexora_home_state_v1";
+
+  function getNavType(){
+    try{
+      const nav = performance.getEntriesByType && performance.getEntriesByType("navigation");
+      if(nav && nav[0] && nav[0].type) return nav[0].type;
+    }catch(_){}
+    try{
+      if(performance && performance.navigation){
+        const t = performance.navigation.type;
+        if(t === 1) return "reload";
+        if(t === 2) return "back_forward";
+      }
+    }catch(_){}
+    return "navigate";
+  }
 
   function saveHomeState(){
     try{
-      sessionStorage.setItem(HOME_STATE_KEY, JSON.stringify({
+      const catEl = document.getElementById("cat");
+      const countEl = document.getElementById("count");
+      const styleEl = document.getElementById("style");
+      const promptEl = document.getElementById("prompt");
+      const notesEl = document.getElementById("notes");
+      const state = {
         v: 1,
         ts: Date.now(),
         scrollY: window.scrollY || 0,
+        settings: {
+          cat: catEl ? catEl.value : "",
+          count: countEl ? (Number(countEl.value||1) || 1) : 1,
+          style: styleEl ? styleEl.value : "",
+          prompt: promptEl ? (promptEl.value||"") : "",
+          notes: notesEl ? (notesEl.value||"") : ""
+        },
         templates: Array.isArray(__lastTemplates) ? __lastTemplates : []
-      }));
-    }catch(e){ /* ignore */ }
+      };
+      sessionStorage.setItem(HOME_STATE_KEY, JSON.stringify(state));
+    }catch(_){}
   }
 
-  function restoreHomeState(){
+  function loadHomeState(){
     try{
       const raw = sessionStorage.getItem(HOME_STATE_KEY);
-      if(!raw) return false;
+      if(!raw) return null;
       const st = JSON.parse(raw);
-      if(!st || !Array.isArray(st.templates) || st.templates.length===0) return false;
-      // If the tab was kept open for a very long time, prefer a fresh default.
-      if(st.ts && (Date.now() - st.ts) > 1000*60*60*12) return false;
-
-      __lastTemplates = st.templates;
-      const grid = document.getElementById('grid');
-      grid.innerHTML = '';
-      __lastTemplates.forEach((t,i)=>{
-        const tile = document.createElement('div');
-        tile.className = 'tile';
-        tile.innerHTML = `
-          <div class="thumb" style="height:120px;border-radius:16px;overflow:hidden;"></div>
-          <div class="tTitle">${t.title || ('Template '+(i+1))}</div>
-          <div class="tMeta">${t.style || ''} • ${t.layout || ''} • ${t.kind || ''}</div>
-        `;
-        const thumb = tile.querySelector('.thumb');
-        drawThumb(thumb, t);
-        tile.addEventListener('click', ()=> openEditorWith(t));
-        grid.appendChild(tile);
-      });
-      requestAnimationFrame(()=>{
-        try{ window.scrollTo(0, st.scrollY || 0); }catch(e){}
-      });
-      return true;
-    }catch(e){ return false; }
+      if(!st || !Array.isArray(st.templates) || !st.settings) return null;
+      return st;
+    }catch(_){ return null; }
   }
+
+  function clearHomeState(){
+    try{ sessionStorage.removeItem(HOME_STATE_KEY); }catch(_){}
+    try{ sessionStorage.removeItem("nexora_restore_home_v1"); }catch(_){}
+  }
+
+  function renderTemplatesFromList(list){
+    const grid = document.getElementById("grid");
+    if(!grid) return;
+
+    grid.innerHTML = "";
+    __lastTemplates = [];
+
+    (list||[]).forEach((t)=>{
+      if(!t) return;
+      const div = document.createElement("div");
+      div.className = "tpl";
+      div.tabIndex = 0;
+
+      const title = (t.title || t.name || "Template");
+      const desc = (t.description || ((t.style||"")+" • Canva-style")).trim();
+
+      div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${escapeHtml(title)}</b><span>${escapeHtml(desc)}</span>`;
+
+      const thumb = div.querySelector(".thumb");
+      try{ if(thumb && typeof drawThumb==="function") drawThumb(thumb, t, t.bg); }catch(_){}
+
+      __lastTemplates.push(t);
+      div.addEventListener("click", ()=>openEditorWith(t));
+      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
+      grid.appendChild(div);
+    });
+
+    window.NEXORA = window.NEXORA || {};
+    window.NEXORA.lastTemplates = __lastTemplates;
+  }
+
+  function tryRestoreHome(){
+    // only restore when we explicitly came back from editor; refresh should reset
+    const navType = getNavType();
+    if(navType === "reload"){ clearHomeState(); return false; }
+
+    try{
+      const flag = sessionStorage.getItem("nexora_restore_home_v1");
+      if(!flag) return false;
+
+      const st = loadHomeState();
+      if(!st) { sessionStorage.removeItem("nexora_restore_home_v1"); return false; }
+
+      const catEl = document.getElementById("cat");
+      const countEl = document.getElementById("count");
+      const styleEl = document.getElementById("style");
+      const promptEl = document.getElementById("prompt");
+      const notesEl = document.getElementById("notes");
+
+      if(catEl && st.settings.cat) catEl.value = st.settings.cat;
+      if(countEl && st.settings.count) countEl.value = String(st.settings.count);
+      if(styleEl && st.settings.style) styleEl.value = st.settings.style;
+      if(promptEl) promptEl.value = st.settings.prompt || "";
+      if(notesEl) notesEl.value = st.settings.notes || "";
+
+      renderTemplatesFromList(st.templates);
+
+      requestAnimationFrame(()=>{ try{ window.scrollTo(0, st.scrollY||0); }catch(_){} });
+
+      sessionStorage.removeItem("nexora_restore_home_v1");
+      return true;
+    }catch(_){
+      try{ sessionStorage.removeItem("nexora_restore_home_v1"); }catch(__){}
+      return false;
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s||"")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#39;");
+  }
+
 
   $("#openEditor").addEventListener("click", (ev)=>{
     ev.preventDefault();
-    // If user didn't click a preview tile, open the latest generated template #1
-    const first = (Array.isArray(__lastTemplates) && __lastTemplates.length ? __lastTemplates[0] : null);
-    if(!first){
-      alert("Generate templates first (or click any preview to open it)");
-      return;
-    }
-    openEditorWith(first);
+    // If user didn't click a preview tile, open the latest generated template #1 (fallback to seeded)
+    const first = (Array.isArray(__lastTemplates) && __lastTemplates.length ? __lastTemplates[0] : null)
+      || (Array.isArray(seedTemplates) ? seedTemplates[0] : null);
+    openEditorWith(first || {cat:$("#cat").value, style:$("#style").value, i:1});
   });
   $("#themeBtn").addEventListener("click", toggleTheme);
 
@@ -847,11 +930,12 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
   // restore theme + initial previews
   const saved = localStorage.getItem("templify_theme");
   if(saved==="light"||saved==="dark") setTheme(saved);
-  // If coming back from editor, restore the exact grid; otherwise show seeded previews.
-  if(!restoreHomeState()) seedTemplates(12);
+  seedTemplates(12);
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+    tryRestoreHome();
+
   const btn = document.getElementById("generateBtn");
   if (!btn) {
     alert("Generate button not found. UI mismatch.");
@@ -876,6 +960,8 @@ currentStyle = "Dark Premium";
 // 1) Show high-quality client-side templates immediately (design.js).
 // 2) In background, fetch AI copy-only improvements and merge into existing templates.
 seedTemplates(payload.count);
+        try{ saveHomeState(); }catch(_){}
+
 statusEl.textContent = "Generating (instant)…";
 
       
@@ -995,7 +1081,6 @@ if(Array.isArray(__lastTemplates) && __lastTemplates.length){
 
       __lastTemplates = normalized;
       window.NEXORA.lastTemplates = __lastTemplates;
-      saveHomeState();
       grid.innerHTML = "";
 
       __lastTemplates.forEach((t) => {
