@@ -588,7 +588,7 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   if(!draft){
     try{ draft = JSON.parse(localStorage.getItem("templify_draft")||"null"); }catch(e){}
   }
-const title = (draft?.template?.category || draft?.meta?.cat) ? `${(draft.template?.category || draft.meta.cat)} • ${(draft?.meta?.style || draft?.template?.style || "Style")}` : "Untitled";
+const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "Style"}` : "Untitled";
   $("#docTitle").textContent = title;
 
   // State
@@ -597,7 +597,28 @@ const title = (draft?.template?.category || draft?.meta?.cat) ? `${(draft.templa
   const gridOverlay = $("#gridOverlay");
   let zoom = 1;
   let gridOn = true;
+  let autoFitZoom = true; // keep canvas comfortably inside stage (Canva-like)
   let docW = 980, docH = 620, docBg = "";
+
+  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+
+  function fitZoomToStage(force=false){
+    if(!force && !autoFitZoom) return;
+    // stage is the center viewport; leave some padding so doc is smaller than background
+    const r = stage.getBoundingClientRect();
+    const pad = 46; // visual breathing room
+    const availW = Math.max(200, r.width - pad*2);
+    const availH = Math.max(200, r.height - pad*2);
+
+    const zW = availW / Math.max(1, docW);
+    const zH = availH / Math.max(1, docH);
+    const next = clamp(Math.min(zW, zH) * 0.96, 0.08, 1.25);
+
+    if(Number.isFinite(next) && Math.abs(next - zoom) > 0.001){
+      zoom = next;
+      try{ $("#zoomPill").textContent = Math.round(zoom*100) + "%"; }catch(_){}
+    }
+  }
 const state = {
     elements: [],
     selectedIds: new Set(),
@@ -608,21 +629,13 @@ const state = {
 
   // Load a generated template (if provided by index)
   try{
-    const tpl = ensureTemplateModel(draft?.template || null);
-    if(tpl?.elements && Array.isArray(tpl.elements)){
-      // Document size
-      docW = Number(tpl?.canvas?.w || tpl?.canvas?.width || docW) || docW;
-      docH = Number(tpl?.canvas?.h || tpl?.canvas?.height || docH) || docH;
-
-      // Elements
-      state.elements = tpl.elements.map(e => ({
+    if(draft?.template?.elements && Array.isArray(draft.template.elements)){
+      state.elements = draft.template.elements.map(e => ({
         id: e.id || uid(),
-        type: String(e.type || "text"),
         x: Number(e.x ?? 80), y: Number(e.y ?? 80),
         w: Number(e.w ?? 420), h: Number(e.h ?? 120),
         title: String(e.title ?? e.text ?? "TEXT"),
-        sub: String(e.sub ?? e.subtitle ?? ""),
-        n: e.n || null
+        sub: String(e.sub ?? e.subtitle ?? "")
       }));
     }
   }catch(e){}
@@ -735,6 +748,7 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
       // Clear selection and render
       snapshot();
       state.selectedIds.clear();
+      fitZoomToStage(true);
       renderAll();
       updateUI();
 
@@ -749,6 +763,7 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
     if(saved?.elements?.length){
       state.elements = saved.elements;
       snapshot();
+      fitZoomToStage(true);
       renderAll();
       state.selectedIds.clear();
       updateUI();
@@ -759,6 +774,9 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
     // Seed
     addElement(90, 92, 320, 150, draft?.meta?.notes ? draft.meta.notes.slice(0,32) : "Luxury Template", "Drag, resize, duplicate…");
     addElement(470, 210, 360, 170, "Modern Card", "Click elements to edit properties.");
+    fitZoomToStage(true);
+    renderAll();
+    updateUI();
   }
 
   // Render
@@ -958,61 +976,13 @@ function escapeHtml(str){
   }
 
   // Panels tabs content
-  
-  // --- Phase 1: Unified category specs (keep in sync with index.html) ---
-  const CATEGORY_SPECS = {
-    "Instagram Post":      { aspect:[1,1],    base:[1080,1080], desc:"1080×1080 modern layout" },
-    "Story":               { aspect:[9,16],   base:[1080,1920], desc:"1080×1920 vertical" },
-    "YouTube Thumbnail":   { aspect:[16,9],   base:[1280,720],  desc:"Bold headline + image zone" },
-    "Flyer":               { aspect:[3,4],    base:[1080,1440], desc:"A4 / Letter ready for print" },
-    "Poster":              { aspect:[3,4],    base:[1080,1440], desc:"Poster layout (print-friendly)" },
-    "Business Card":       { aspect:[7,4],    base:[1050,600],  desc:"Clean premium brand card" },
-    "Logo":                { aspect:[1,1],    base:[1024,1024], desc:"Logo mark / lockup" },
-    "Presentation Slide":  { aspect:[16,9],   base:[1920,1080], desc:"16:9 slide" },
-    "Resume":              { aspect:[85,110], base:[850,1100],  desc:"Letter/A4 resume" },
-  };
-
-  function getCategorySpec(cat){
-    return CATEGORY_SPECS[String(cat||"").trim()] || CATEGORY_SPECS["Instagram Post"];
-  }
-
-  function ensureTemplateModel(tpl){
-    if(!tpl || !tpl.elements) return tpl;
-    const cat = tpl.category || (tpl?.design?.category) || "Instagram Post";
-    const spec = getCategorySpec(cat);
-
-    const cw = Number(tpl?.canvas?.w || tpl?.canvas?.width || 0) || spec.base[0];
-    const ch = Number(tpl?.canvas?.h || tpl?.canvas?.height || 0) || spec.base[1];
-
-    tpl.category = cat;
-    tpl.design = tpl.design || {};
-    tpl.design.category = cat;
-    tpl.design.aspect = tpl.design.aspect || `${spec.aspect[0]}:${spec.aspect[1]}`;
-    tpl.design.bounds = tpl.design.bounds || { w: 1, h: spec.aspect[1]/spec.aspect[0] };
-
-    tpl.canvas = { w: cw, h: ch };
-
-    const safeEls = Array.isArray(tpl.elements) ? tpl.elements : [];
-    safeEls.forEach((e)=>{
-      if(!e) return;
-      const x = Number(e.x||0), y = Number(e.y||0), w = Number(e.w||0), h = Number(e.h||0);
-      e.n = e.n || { x: cw ? x/cw : 0, y: ch ? y/ch : 0, w: cw ? w/cw : 0, h: ch ? h/ch : 0 };
-    });
-
-    return tpl;
-  }
-
-const leftData = {
+  const leftData = {
     templates: [
-      { t:"Instagram Post", d: getCategorySpec("Instagram Post").desc },
-      { t:"YouTube Thumbnail", d: getCategorySpec("YouTube Thumbnail").desc },
-      { t:"Flyer", d: getCategorySpec("Flyer").desc },
-      { t:"Business Card", d: getCategorySpec("Business Card").desc },
-      { t:"Logo", d: getCategorySpec("Logo").desc },
-      { t:"Presentation Slide", d: getCategorySpec("Presentation Slide").desc },
-      { t:"Resume", d: getCategorySpec("Resume").desc },
-      { t:"Poster", d: getCategorySpec("Poster").desc },
-      { t:"Story", d: getCategorySpec("Story").desc },
+      { t:"Instagram Post", d:"1080×1080 modern layout" },
+      { t:"YouTube Thumbnail", d:"Bold headline + image zone" },
+      { t:"Flyer", d:"A4 / Letter ready for print" },
+      { t:"Business Card", d:"Clean premium brand card" },
+      { t:"Story", d:"1080×1920 vertical" },
     ],
     layers: [],
     assets: [
@@ -1216,8 +1186,8 @@ const leftData = {
   $("#undoBtn").addEventListener("click", undo);
   $("#redoBtn").addEventListener("click", redo);
 
-  $("#zoomInBtn").addEventListener("click", ()=> setZoom(zoom * 1.1));
-  $("#zoomOutBtn").addEventListener("click", ()=> setZoom(zoom / 1.1));
+  $("#zoomInBtn").addEventListener("click", ()=> setZoom(zoom * 1.1, true));
+  $("#zoomOutBtn").addEventListener("click", ()=> setZoom(zoom / 1.1, true));
 
   $("#toggleGridBtn").addEventListener("click", ()=>{
     gridOn = !gridOn;
@@ -1274,9 +1244,9 @@ const leftData = {
 
   $("#applyDocBtn")?.addEventListener("click", applyDoc);
   $("#resetDocBtn")?.addEventListener("click", ()=>{
-    $("#docW").value = docW;
-    $("#docH").value = docH;
-    $("#docBg").value = docBg || "";
+    $("#docW").value = 980;
+    $("#docH").value = 620;
+    $("#docBg").value = "";
     applyDoc();
   });
 
@@ -1455,7 +1425,7 @@ const leftData = {
 
 
   // Keyboard shortcuts
-  window.addEventListener("resize", ()=>{ try{ fitZoomToView(); }catch(_){} });
+  window.addEventListener("resize", ()=>{ try{ fitZoomToStage(false); renderAll(); updateUI(); }catch(_){} });
   window.addEventListener("keydown", (e)=>{
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const ctrl = isMac ? e.metaKey : e.ctrlKey;
@@ -1515,26 +1485,20 @@ const leftData = {
     scheduleAutosave();
   }
 
-  function setZoom(z){
-    zoom = Math.max(0.35, Math.min(2.2, z));
+  function setZoom(z, user=false){
+    if(user) autoFitZoom = false;
+    zoom = clamp(Number(z)||1, 0.08, 2.2);
+    try{ $("#zoomPill").textContent = Math.round(zoom*100) + "%"; }catch(_){}
     renderAll();
     updateUI();
   }
 
   function fitZoomToView(){
-    try{
-      const wrap = document.querySelector(".canvasWrap");
-      if(!wrap) return;
-      const pad = 80;
-      const availW = Math.max(120, wrap.clientWidth - pad);
-      const availH = Math.max(120, wrap.clientHeight - pad);
-      const baseW = Math.max(1, Number(state.docW)||1080);
-      const baseH = Math.max(1, Number(state.docH)||1080);
-      let z = Math.min(availW/baseW, availH/baseH);
-      if(!isFinite(z) || z<=0) return;
-      z = z * 0.92;
-      setZoom(z);
-    }catch(_){}
+    // public helper: re-enable auto-fit and fit canvas into view
+    autoFitZoom = true;
+    fitZoomToStage(true);
+    renderAll();
+    updateUI();
   }
 
 
