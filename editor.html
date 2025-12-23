@@ -741,6 +741,8 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
       if(incoming.canvas && Number.isFinite(incoming.canvas.w) && Number.isFinite(incoming.canvas.h)){
         docW = Math.max(200, Math.floor(incoming.canvas.w));
         docH = Math.max(200, Math.floor(incoming.canvas.h));
+        baseCanvas.w = docW; baseCanvas.h = docH;
+        try{ localStorage.setItem("templify_canvas_size", JSON.stringify({w:docW,h:docH})); }catch(e){}
       }
       // normalize + load
       state.elements = normalizeEditorElements(incoming.elements);
@@ -1022,10 +1024,15 @@ function escapeHtml(str){
   }
 
   function resizeCanvas(w,h){
-    // simple: change canvas size by modifying base dims used in renderAll
-    // We'll store in state as special element? Keep lightweight: store in localStorage
+    // Change document canvas size. Keep doc dims in sync so auto-fit zoom is correct.
     localStorage.setItem("templify_canvas_size", JSON.stringify({w,h}));
     baseCanvas.w = w; baseCanvas.h = h;
+    docW = w; docH = h;
+
+    // Re-fit into view after size change (Canva-like)
+    autoFitZoom = true;
+    try{ fitZoomToStage(true); }catch(e){}
+
     snapshot();
     renderAll();
     scheduleAutosave();
@@ -1035,7 +1042,7 @@ function escapeHtml(str){
   function loadCanvasSize(){
     try{
       const s = JSON.parse(localStorage.getItem("templify_canvas_size")||"null");
-      if(s?.w && s?.h){ baseCanvas.w = s.w; baseCanvas.h = s.h; }
+      if(s?.w && s?.h){ baseCanvas.w = s.w; baseCanvas.h = s.h; docW = baseCanvas.w; docH = baseCanvas.h; }
     }catch(e){}
   }
 
@@ -1568,41 +1575,13 @@ function escapeHtml(str){
 
   // Boot
   loadCanvasSize();
+  // ensure zoom uses correct doc dimensions
+  docW = baseCanvas.w; docH = baseCanvas.h;
   snapshot(); // initial empty
   loadAutosaveOrSeed();
   refreshLeft();
   updateUI();
 })();
 </script>
-
-<script>
-(function(){
-  function resetZoom(){
-    const canvas = document.getElementById('canvas');
-    if(!canvas) return;
-
-    // Remove any scale transforms applied by editor
-    canvas.style.transform = 'scale(1)';
-    canvas.style.transformOrigin = '0 0';
-
-    // Also reset parent wrappers if scaled
-    let p = canvas.parentElement;
-    while(p){
-      if(p.style && p.style.transform){
-        p.style.transform = 'scale(1)';
-        p.style.transformOrigin = '0 0';
-      }
-      p = p.parentElement;
-    }
-  }
-
-  // Run after template open
-  resetZoom();
-  setTimeout(resetZoom, 100);
-  setTimeout(resetZoom, 300);
-  setTimeout(resetZoom, 600);
-})();
-</script>
-
 </body>
 </html>
