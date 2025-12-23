@@ -731,6 +731,7 @@ function toEditorTemplate(tpl){
   }
 
 function openEditorWith(payload){
+      try{ saveHomeState(); }catch(_e){}
     // Persist homepage grid + scroll so Back from editor restores exactly.
     saveHomeState();
     // payload can be {cat,style,i} OR a full template object
