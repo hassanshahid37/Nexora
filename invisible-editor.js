@@ -8,6 +8,10 @@
 // No UI / HTML / CSS changes.
 
 (function () {
+  // === Editor Working Canvas Normalization ===
+  const EDITOR_CANVAS_W = 1200;
+  const EDITOR_CANVAS_H = 800;
+
   if (window.__NEXORA_EDITOR_HANDOFF_H3__) return;
   window.__NEXORA_EDITOR_HANDOFF_H3__ = true;
 
@@ -70,13 +74,27 @@
       };
     });
 
+    
+    const origCanvas = tpl.canvas || { w: 1080, h: 1080 };
+    const sx = EDITOR_CANVAS_W / origCanvas.w;
+    const sy = EDITOR_CANVAS_H / origCanvas.h;
+    const scale = Math.min(sx, sy);
+
+    out.forEach(e => {
+      e.x *= scale; e.y *= scale;
+      e.w *= scale; e.h *= scale;
+    });
+
     return {
       title: tpl.title || tpl.headline || "Untitled",
       description: tpl.description || tpl.subtitle || "",
       bg: tpl.bg || null,
-      canvas: tpl.canvas || { w: 1080, h: 1080 },
+      canvas: { w: EDITOR_CANVAS_W, h: EDITOR_CANVAS_H },
+      __origCanvas: origCanvas,
+      __scale: scale,
       elements: out
     };
+
   }
 
   function currentSettings() {
