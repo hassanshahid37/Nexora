@@ -733,6 +733,12 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
       // Mark that we loaded a generated template (optional)
       try{ localStorage.setItem("nexora_editor_loaded_v1", String(Date.now())); }catch(e){}
       $("#autosavePill").textContent = "Autosave ON";
+
+      // Fit after DOM/layout settles (fixes "huge until F12" behavior)
+      try{
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{ try{ fitZoomToView(); }catch(_){} }));
+      }catch(_){}
+
       return;
     }
 
@@ -745,6 +751,12 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
       state.selectedIds.clear();
       updateUI();
       $("#autosavePill").textContent = "Autosave ON";
+
+      // Fit after DOM/layout settles (fixes "huge until F12" behavior)
+      try{
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{ try{ fitZoomToView(); }catch(_){} }));
+      }catch(_){}
+
       return;
     }
 
@@ -1472,8 +1484,8 @@ function escapeHtml(str){
       const pad = 80;
       const availW = Math.max(120, wrap.clientWidth - pad);
       const availH = Math.max(120, wrap.clientHeight - pad);
-      const baseW = Math.max(1, Number(state.docW)||1080);
-      const baseH = Math.max(1, Number(state.docH)||1080);
+      const baseW = Math.max(1, Number(docW)||1080);
+      const baseH = Math.max(1, Number(docH)||1080);
       let z = Math.min(availW/baseW, availH/baseH);
       if(!isFinite(z) || z<=0) return;
       z = z * 0.92;
