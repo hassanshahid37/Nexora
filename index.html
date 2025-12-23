@@ -333,58 +333,7 @@
     setTheme(cur === "dark" ? "light" : "dark");
   }
 
-  
-  // --- Phase 1: Unified category specs (single source of truth) ---
-  const CATEGORY_SPECS = {
-    "Instagram Post":      { aspect:[1,1],    base:[1080,1080], desc:"1080×1080 modern layout" },
-    "Story":               { aspect:[9,16],   base:[1080,1920], desc:"1080×1920 vertical" },
-    "YouTube Thumbnail":   { aspect:[16,9],   base:[1280,720],  desc:"Bold headline + image zone" },
-    "Flyer":               { aspect:[3,4],    base:[1080,1440], desc:"A4 / Letter ready for print" },
-    "Poster":              { aspect:[3,4],    base:[1080,1440], desc:"Poster layout (print-friendly)" },
-    "Business Card":       { aspect:[7,4],    base:[1050,600],  desc:"Clean premium brand card" },
-    "Logo":                { aspect:[1,1],    base:[1024,1024], desc:"Logo mark / lockup" },
-    "Presentation Slide":  { aspect:[16,9],   base:[1920,1080], desc:"16:9 slide" },
-    "Resume":              { aspect:[85,110], base:[850,1100],  desc:"Letter/A4 resume" },
-  };
-
-  function getCategorySpec(cat){
-    return CATEGORY_SPECS[String(cat||"").trim()] || CATEGORY_SPECS["Instagram Post"];
-  }
-
-  function ensureTemplateModel(tpl){
-    if(!tpl || !tpl.elements) return tpl;
-    const cat = tpl.category || "Instagram Post";
-    const spec = getCategorySpec(cat);
-
-    const cw = Number(tpl?.canvas?.w || tpl?.canvas?.width || 0) || spec.base[0];
-    const ch = Number(tpl?.canvas?.h || tpl?.canvas?.height || 0) || spec.base[1];
-
-    // logical bounds (normalized coordinate system for future phases)
-    tpl.design = tpl.design || {};
-    tpl.design.category = cat;
-    tpl.design.aspect = tpl.design.aspect || `${spec.aspect[0]}:${spec.aspect[1]}`;
-    tpl.design.bounds = tpl.design.bounds || { w: 1, h: spec.aspect[1]/spec.aspect[0] }; // logical units
-
-    // keep pixel canvas for current renderer (no visual regression)
-    tpl.canvas = { w: cw, h: ch };
-
-    // add normalized coords for every element (Phase 1 foundation)
-    const safeEls = Array.isArray(tpl.elements) ? tpl.elements : [];
-    safeEls.forEach((e)=>{
-      if(!e) return;
-      const x = Number(e.x||0), y = Number(e.y||0), w = Number(e.w||0), h = Number(e.h||0);
-      e.n = e.n || {
-        x: cw ? x/cw : 0,
-        y: ch ? y/ch : 0,
-        w: cw ? w/cw : 0,
-        h: ch ? h/ch : 0,
-      };
-    });
-
-    return tpl;
-  }
-
-// Phase G (Generator-side invisible editor helpers)
+  // Phase G (Generator-side invisible editor helpers)
   // Ensures prompt meaningfully maps into template elements BEFORE rendering/opening editor.
   function applyPromptToTemplate(tpl, prompt){
     if(!tpl || !prompt) return tpl;
@@ -656,7 +605,7 @@
           const thumb = div.querySelector(".thumb");
           if(thumb) drawThumb(thumb, t, t.bg);
 
-          __lastTemplates.push(ensureTemplateModel(t));
+          __lastTemplates.push(t);
           div.addEventListener("click", ()=>openEditorWith(t));
           div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
           grid.appendChild(div);
@@ -718,7 +667,7 @@
         canvas: { w: 980, h: 620 },
         elements
       };
-      __lastTemplates.push(ensureTemplateModel(template));
+      __lastTemplates.push(template);
 
       div.addEventListener("click", ()=>openEditorWith(template));
       div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(template); });
@@ -766,7 +715,7 @@ function toEditorTemplate(tpl){
       return { id, type, x, y, w, h, title, sub };
     });
 
-    const out = {
+    return {
       id: tpl.id || `tpl_${Date.now()}`,
       title: tpl.title || "Template",
       description: tpl.description || tpl.subtitle || "",
@@ -776,8 +725,6 @@ function toEditorTemplate(tpl){
       canvas: tpl.canvas || { w: W, h: H },
       elements: outEls
     };
-
-    return ensureTemplateModel(out);
   }
 
 function openEditorWith(payload){
@@ -785,11 +732,9 @@ function openEditorWith(payload){
     const cat = payload?.category || payload?.cat || $("#cat").value;
     const style = payload?.style || $("#style").value;
 let tpl = payload?.elements ? toEditorTemplate(payload) : null;
-    if(tpl) tpl = ensureTemplateModel(tpl);
     // If called with settings-only payload (e.g., Open Editor button), default to latest generated template #1
     if(!tpl && Array.isArray(__lastTemplates) && __lastTemplates.length){
       tpl = toEditorTemplate(__lastTemplates[(payload?.i? (Number(payload.i)-1):0)] || __lastTemplates[0]);
-      if(tpl) tpl = ensureTemplateModel(tpl);
     }
 
     // keep latest settings for editor intelligence
@@ -883,38 +828,43 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
     try{ sessionStorage.removeItem("nexora_restore_home_v1"); }catch(_){}
   }
 
-  function renderTemplatesFromList(list){
-    const grid = document.getElementById("grid");
+  
+function renderTemplatesFromList(list){
+    const grid = document.getElementById("previewGrid");
     if(!grid) return;
 
     grid.innerHTML = "";
     __lastTemplates = [];
 
-    (list||[]).forEach((t)=>{
+    (list||[]).forEach((t, i)=>{
       if(!t) return;
+      const tpl = toEditorTemplate(t);
+      __lastTemplates.push(tpl);
+
       const div = document.createElement("div");
-      div.className = "tpl";
+      div.className = "tile";
       div.tabIndex = 0;
 
-      const title = (t.title || t.name || "Template");
-      const desc = (t.description || ((t.style||"")+" • Canva-style")).trim();
+      const title = (tpl.title || (tpl.category||"Template") + " #" + (i+1));
+      const desc = (tpl.description || ((tpl.style||"")+" • Canva-style")).trim();
 
       div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${escapeHtml(title)}</b><span>${escapeHtml(desc)}</span>`;
 
       const thumb = div.querySelector(".thumb");
-      try{ if(thumb && typeof drawThumb==="function") drawThumb(thumb, t, t.bg); }catch(_){}
+      if(thumb) drawThumb(thumb, tpl, tpl.bg);
 
-      __lastTemplates.push(ensureTemplateModel(t));
-      div.addEventListener("click", ()=>openEditorWith(t));
-      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
+      div.addEventListener("click", ()=>openEditorWith(tpl));
+      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(tpl); });
       grid.appendChild(div);
     });
 
+    // expose for debugging
     window.NEXORA = window.NEXORA || {};
     window.NEXORA.lastTemplates = __lastTemplates;
   }
 
-  function tryRestoreHome(){
+  function tryRestoreHome(
+){
     // only restore when we explicitly came back from editor; refresh should reset
     const navType = getNavType();
     if(navType === "reload"){ clearHomeState(); return false; }
@@ -985,11 +935,12 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
   // restore theme + initial previews
   const saved = localStorage.getItem("templify_theme");
   if(saved==="light"||saved==="dark") setTheme(saved);
-  seedTemplates(12);
+  // initial previews are rendered on DOMContentLoaded so restore can win
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
-    tryRestoreHome();
+    const restored = tryRestoreHome();
+    if(!restored){ seedTemplates(12); }
 
   const btn = document.getElementById("generateBtn");
   if (!btn) {
