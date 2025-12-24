@@ -1607,45 +1607,93 @@ function escapeHtml(str){
 
 <script>
 (function(){
-  function lockArtboard(){
-    const canvas = document.getElementById('canvas');
+  // Fix: stabilize layout AFTER fonts/assets load (DevTools was triggering this reflow)
+  const CANVAS_ID = 'canvas';
+  let scheduled = false;
+  let lastRun = 0;
+
+  function forceReflow(el){
+    // eslint-disable-next-line no-unused-expressions
+    el && el.offsetHeight;
+  }
+
+  function waitImages(root){
+    const imgs = Array.from(root.querySelectorAll('img'));
+    if(!imgs.length) return Promise.resolve();
+    return Promise.all(imgs.map(img => {
+      if(img.complete) return Promise.resolve();
+      return new Promise(res => {
+        const done = ()=>res();
+        img.addEventListener('load', done, {once:true});
+        img.addEventListener('error', done, {once:true});
+      });
+    })).then(()=>undefined);
+  }
+
+  function waitFonts(){
+    if(document.fonts && document.fonts.ready) return document.fonts.ready.catch(()=>undefined);
+    return Promise.resolve();
+  }
+
+  async function stabilize(){
+    const now = Date.now();
+    if(now - lastRun < 150) return; // throttle
+    lastRun = now;
+
+    const canvas = document.getElementById(CANVAS_ID);
     if(!canvas) return;
 
-    // try common template root selectors
-    const root =
-      canvas.querySelector('.template-root') ||
-      canvas.querySelector('.template') ||
-      canvas.querySelector('.artboard') ||
-      canvas.firstElementChild;
+    // Wait until fonts + any images inside canvas are ready
+    await waitFonts();
+    await waitImages(canvas);
 
-    if(!root) return;
+    // Let browser finalize layout across a couple frames
+    await new Promise(r => requestAnimationFrame(()=>requestAnimationFrame(r)));
 
-    // detect document size (fallback to 1080x1080)
-    let docW = 1080, docH = 1080;
-    if(root.dataset && root.dataset.w && root.dataset.h){
-      docW = parseInt(root.dataset.w,10) || docW;
-      docH = parseInt(root.dataset.h,10) || docH;
-    }
+    // Force layout + tell editor to recompute (same effect as opening/closing DevTools)
+    forceReflow(canvas);
+    window.dispatchEvent(new Event('resize'));
 
-    // HARD lock artboard size
-    root.style.width = docW + 'px';
-    root.style.height = docH + 'px';
-    root.style.minWidth = docW + 'px';
-    root.style.minHeight = docH + 'px';
-    root.style.maxWidth = docW + 'px';
-    root.style.maxHeight = docH + 'px';
-    root.style.flex = '0 0 auto';
-    root.style.alignSelf = 'center';
+    // One more pass shortly after (covers late font swap/paint)
+    setTimeout(()=>{
+      const c = document.getElementById(CANVAS_ID);
+      forceReflow(c);
+      window.dispatchEvent(new Event('resize'));
+    }, 220);
   }
 
-  function run(){
-    lockArtboard();
-    requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
+  function schedule(){
+    if(scheduled) return;
+    scheduled = true;
+    setTimeout(async ()=>{
+      scheduled = false;
+      await stabilize();
+    }, 30);
   }
 
-  run();
-  setTimeout(run, 150);
-  setTimeout(run, 400);
+  function attach(){
+    const canvas = document.getElementById(CANVAS_ID);
+    if(!canvas){ setTimeout(attach, 50); return; }
+
+    // Run once on load
+    schedule();
+
+    // Run whenever template nodes are injected/changed
+    const obs = new MutationObserver((muts)=>{
+      for(const m of muts){
+        if(m.type === 'childList' && (m.addedNodes && m.addedNodes.length)){
+          schedule();
+          break;
+        }
+      }
+    });
+    obs.observe(canvas, {childList:true, subtree:true});
+
+    // Also react to orientation/viewport changes
+    window.addEventListener('orientationchange', schedule);
+  }
+
+  attach();
 })();
 </script>
 
