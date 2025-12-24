@@ -610,8 +610,11 @@ const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "S
     const availW = Math.max(200, r.width - pad*2);
     const availH = Math.max(200, r.height - pad*2);
 
-    const zW = availW / Math.max(1, docW);
-    const zH = availH / Math.max(1, docH);
+    const docW2 = Math.max(1, (baseCanvas?.w || docW));
+    const docH2 = Math.max(1, (baseCanvas?.h || docH));
+
+    const zW = availW / docW2;
+    const zH = availH / docH2;
     const next = clamp(Math.min(zW, zH) * 0.96, 0.08, 1.25);
 
     if(Number.isFinite(next) && Math.abs(next - zoom) > 0.001){
@@ -741,6 +744,9 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
       if(incoming.canvas && Number.isFinite(incoming.canvas.w) && Number.isFinite(incoming.canvas.h)){
         docW = Math.max(200, Math.floor(incoming.canvas.w));
         docH = Math.max(200, Math.floor(incoming.canvas.h));
+        // keep baseCanvas in sync with incoming document size
+        baseCanvas.w = docW; baseCanvas.h = docH;
+        try{ localStorage.setItem("templify_canvas_size", JSON.stringify({w: baseCanvas.w, h: baseCanvas.h})); }catch(e){}
       }
       // normalize + load
       state.elements = normalizeEditorElements(incoming.elements);
@@ -1231,13 +1237,17 @@ function escapeHtml(str){
     docH = Math.max(200, Number($("#docH")?.value || 620));
     docBg = String($("#docBg")?.value || "").trim();
 
-    canvas.style.width = docW + "px";
-    canvas.style.height = docH + "px";
+    // Keep document size in ONE source of truth
+    baseCanvas.w = docW;
+    baseCanvas.h = docH;
+    try{ localStorage.setItem("templify_canvas_size", JSON.stringify({w: baseCanvas.w, h: baseCanvas.h})); }catch(e){}
+
     if(docBg){
       canvas.style.background = docBg;
     }else{
       canvas.style.background = "transparent";
     }
+    fitZoomToStage(true);
     renderAll();
     updateUI();
   }
@@ -1570,132 +1580,16 @@ function escapeHtml(str){
   loadCanvasSize();
   snapshot(); // initial empty
   loadAutosaveOrSeed();
+
+  // One extra guaranteed fit after initial layout + fonts settle (prevents the F12 resize "fix")
+  requestAnimationFrame(()=>{ try{ fitZoomToStage(true); renderAll(); updateUI(); }catch(_){} });
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(()=>{ try{ fitZoomToStage(true); renderAll(); updateUI(); }catch(_){} });
+  }
+
   refreshLeft();
   updateUI();
 })();
 </script>
-
-<script>
-(function(){
-  function resetZoom(){
-    const canvas = document.getElementById('canvas');
-    if(!canvas) return;
-
-    // Remove any scale transforms applied by editor
-    canvas.style.transform = 'scale(1)';
-    canvas.style.transformOrigin = '0 0';
-
-    // Also reset parent wrappers if scaled
-    let p = canvas.parentElement;
-    while(p){
-      if(p.style && p.style.transform){
-        p.style.transform = 'scale(1)';
-        p.style.transformOrigin = '0 0';
-      }
-      p = p.parentElement;
-    }
-  }
-
-  // Run after template open
-  resetZoom();
-  setTimeout(resetZoom, 100);
-  setTimeout(resetZoom, 300);
-  setTimeout(resetZoom, 600);
-})();
-</script>
-
-
-<script>
-(function(){
-  // Fix: stabilize layout AFTER fonts/assets load (DevTools was triggering this reflow)
-  const CANVAS_ID = 'canvas';
-  let scheduled = false;
-  let lastRun = 0;
-
-  function forceReflow(el){
-    // eslint-disable-next-line no-unused-expressions
-    el && el.offsetHeight;
-  }
-
-  function waitImages(root){
-    const imgs = Array.from(root.querySelectorAll('img'));
-    if(!imgs.length) return Promise.resolve();
-    return Promise.all(imgs.map(img => {
-      if(img.complete) return Promise.resolve();
-      return new Promise(res => {
-        const done = ()=>res();
-        img.addEventListener('load', done, {once:true});
-        img.addEventListener('error', done, {once:true});
-      });
-    })).then(()=>undefined);
-  }
-
-  function waitFonts(){
-    if(document.fonts && document.fonts.ready) return document.fonts.ready.catch(()=>undefined);
-    return Promise.resolve();
-  }
-
-  async function stabilize(){
-    const now = Date.now();
-    if(now - lastRun < 150) return; // throttle
-    lastRun = now;
-
-    const canvas = document.getElementById(CANVAS_ID);
-    if(!canvas) return;
-
-    // Wait until fonts + any images inside canvas are ready
-    await waitFonts();
-    await waitImages(canvas);
-
-    // Let browser finalize layout across a couple frames
-    await new Promise(r => requestAnimationFrame(()=>requestAnimationFrame(r)));
-
-    // Force layout + tell editor to recompute (same effect as opening/closing DevTools)
-    forceReflow(canvas);
-    window.dispatchEvent(new Event('resize'));
-
-    // One more pass shortly after (covers late font swap/paint)
-    setTimeout(()=>{
-      const c = document.getElementById(CANVAS_ID);
-      forceReflow(c);
-      window.dispatchEvent(new Event('resize'));
-    }, 220);
-  }
-
-  function schedule(){
-    if(scheduled) return;
-    scheduled = true;
-    setTimeout(async ()=>{
-      scheduled = false;
-      await stabilize();
-    }, 30);
-  }
-
-  function attach(){
-    const canvas = document.getElementById(CANVAS_ID);
-    if(!canvas){ setTimeout(attach, 50); return; }
-
-    // Run once on load
-    schedule();
-
-    // Run whenever template nodes are injected/changed
-    const obs = new MutationObserver((muts)=>{
-      for(const m of muts){
-        if(m.type === 'childList' && (m.addedNodes && m.addedNodes.length)){
-          schedule();
-          break;
-        }
-      }
-    });
-    obs.observe(canvas, {childList:true, subtree:true});
-
-    // Also react to orientation/viewport changes
-    window.addEventListener('orientationchange', schedule);
-  }
-
-  attach();
-})();
-</script>
-
 </body>
 </html>
