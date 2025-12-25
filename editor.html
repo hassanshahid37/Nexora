@@ -358,14 +358,7 @@
   position: relative;
   overflow: auto;
 }
-#canvas {
-  width: 1080px;
-  height: 1080px;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
+
 </style>
 
 </head>
@@ -618,33 +611,22 @@ const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "S
 
   function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
-  function getCanvasSize(){
-    // Single source of truth for sizing used by zoom + rendering
-    if(typeof baseCanvas === "object" && Number.isFinite(baseCanvas.w) && Number.isFinite(baseCanvas.h)){
-      return { w: baseCanvas.w, h: baseCanvas.h };
-    }
-    return { w: docW, h: docH };
-  }
-
   function fitZoomToStage(force=false){
     if(!force && !autoFitZoom) return;
-    const { w:cw, h:ch } = getCanvasSize();
-
     // stage is the center viewport; leave some padding so doc is smaller than background
     const r = stage.getBoundingClientRect();
     const pad = 46; // visual breathing room
     const availW = Math.max(200, r.width - pad*2);
     const availH = Math.max(200, r.height - pad*2);
 
-    const zW = availW / Math.max(1, cw);
-    const zH = availH / Math.max(1, ch);
+    const zW = availW / Math.max(1, docW);
+    const zH = availH / Math.max(1, docH);
     const next = clamp(Math.min(zW, zH) * 0.96, 0.08, 1.25);
 
     if(Number.isFinite(next) && Math.abs(next - zoom) > 0.001){
       zoom = next;
       try{ $("#zoomPill").textContent = Math.round(zoom*100) + "%"; }catch(_){}
     }
-  }
   }
 const state = {
     elements: [],
@@ -766,12 +748,8 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
     if(incoming?.elements?.length){
       // document size
       if(incoming.canvas && Number.isFinite(incoming.canvas.w) && Number.isFinite(incoming.canvas.h)){
-        const W = Math.max(200, Math.floor(incoming.canvas.w));
-        const H = Math.max(200, Math.floor(incoming.canvas.h));
-        docW = W; docH = H;
-        if(typeof baseCanvas === "object"){
-          baseCanvas.w = W; baseCanvas.h = H;
-        }
+        docW = Math.max(200, Math.floor(incoming.canvas.w));
+        docH = Math.max(200, Math.floor(incoming.canvas.h));
       }
       // normalize + load
       state.elements = normalizeEditorElements(incoming.elements);
@@ -851,8 +829,8 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
         div.innerHTML = "";
         div.style.left = (Number.isFinite(el.x) ? el.x : 0) + "px";
         div.style.top  = (Number.isFinite(el.y) ? el.y : 0) + "px";
-        div.style.width  = (Number.isFinite(el.w) ? el.w : baseCanvas.w) + "px";
-        div.style.height = (Number.isFinite(el.h) ? el.h : baseCanvas.h) + "px";
+        div.style.width  = (Number.isFinite(el.w) ? el.w : docW) + "px";
+        div.style.height = (Number.isFinite(el.h) ? el.h : docH) + "px";
         div.style.background = el.gradient || el.fill || el.color || "linear-gradient(135deg,#0a1433,#061022)";
         div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
       } else if(t === "image"){
@@ -1053,23 +1031,12 @@ function escapeHtml(str){
   }
 
   function resizeCanvas(w,h){
-    // change canvas size and refit zoom (stable across DevTools open/close)
-    const W = Math.max(200, Math.floor(Number(w)||980));
-    const H = Math.max(200, Math.floor(Number(h)||620));
-
-    // persist
-    localStorage.setItem("templify_canvas_size", JSON.stringify({w:W,h:H}));
-
-    // keep all sizing vars in sync
-    docW = W; docH = H;
-    if(typeof baseCanvas === "object"){
-      baseCanvas.w = W; baseCanvas.h = H;
-    }
-
+    // simple: change canvas size by modifying base dims used in renderAll
+    // We'll store in state as special element? Keep lightweight: store in localStorage
+    localStorage.setItem("templify_canvas_size", JSON.stringify({w,h}));
+    baseCanvas.w = w; baseCanvas.h = h;
     snapshot();
-    fitZoomToStage(true);
     renderAll();
-    updateUI();
     scheduleAutosave();
   }
 
@@ -1077,12 +1044,7 @@ function escapeHtml(str){
   function loadCanvasSize(){
     try{
       const s = JSON.parse(localStorage.getItem("templify_canvas_size")||"null");
-      if(s?.w && s?.h){
-        const W = Math.max(200, Math.floor(Number(s.w)||980));
-        const H = Math.max(200, Math.floor(Number(s.h)||620));
-        baseCanvas.w = W; baseCanvas.h = H;
-        docW = W; docH = H; // keep zoom math consistent
-      }
+      if(s?.w && s?.h){ baseCanvas.w = s.w; baseCanvas.h = s.h; }
     }catch(e){}
   }
 
@@ -1127,8 +1089,8 @@ function escapeHtml(str){
         div.innerHTML = "";
         div.style.left = (Number.isFinite(el.x) ? el.x : 0) + "px";
         div.style.top  = (Number.isFinite(el.y) ? el.y : 0) + "px";
-        div.style.width  = (Number.isFinite(el.w) ? el.w : baseCanvas.w) + "px";
-        div.style.height = (Number.isFinite(el.h) ? el.h : baseCanvas.h) + "px";
+        div.style.width  = (Number.isFinite(el.w) ? el.w : docW) + "px";
+        div.style.height = (Number.isFinite(el.h) ? el.h : docH) + "px";
         div.style.background = el.gradient || el.fill || el.color || "linear-gradient(135deg,#0a1433,#061022)";
         div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
       } else if(t === "image"){
@@ -1274,29 +1236,19 @@ function escapeHtml(str){
 
   // Document settings
   function applyDoc(){
-    const W = Math.max(200, Number($("#docW")?.value || 980));
-    const H = Math.max(200, Number($("#docH")?.value || 620));
-    docW = W; docH = H;
+    docW = Math.max(200, Number($("#docW")?.value || 980));
+    docH = Math.max(200, Number($("#docH")?.value || 620));
     docBg = String($("#docBg")?.value || "").trim();
 
-    // keep baseCanvas in sync (renderAll uses it)
-    if(typeof baseCanvas === "object"){
-      baseCanvas.w = W; baseCanvas.h = H;
-      try{ localStorage.setItem("templify_canvas_size", JSON.stringify({w:W,h:H})); }catch(e){}
-    }
-
-    canvas.style.width = W + "px";
-    canvas.style.height = H + "px";
+    canvas.style.width = docW + "px";
+    canvas.style.height = docH + "px";
     if(docBg){
       canvas.style.background = docBg;
     }else{
       canvas.style.background = "transparent";
     }
-    snapshot();
-    fitZoomToStage(true);
     renderAll();
     updateUI();
-    scheduleAutosave();
   }
 
   $("#applyDocBtn")?.addEventListener("click", applyDoc);
@@ -1482,18 +1434,7 @@ function escapeHtml(str){
 
 
   // Keyboard shortcuts
-  window.addEventListener("resize", ()=>{
-    // DevTools open/close can fire multiple resizes; wait a tick so layout metrics stabilize
-    try{
-      requestAnimationFrame(()=>{
-        requestAnimationFrame(()=>{
-          fitZoomToStage(true);
-          renderAll();
-          updateUI();
-        });
-      });
-    }catch(_){ }
-  });
+  window.addEventListener("resize", ()=>{ try{ fitZoomToStage(false); renderAll(); updateUI(); }catch(_){} });
   window.addEventListener("keydown", (e)=>{
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const ctrl = isMac ? e.metaKey : e.ctrlKey;
