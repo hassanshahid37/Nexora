@@ -352,6 +352,16 @@
       .tools{min-width: 1px}
     }
   </style>
+
+<style>
+html, body { height:100%; margin:0; }
+.editor-root, .editor-container, .editor-wrapper { height:100%; }
+.editor-stage, .canvas-stage, .stage {
+  position: relative;
+  min-height: 600px;
+}
+</style>
+
 </head>
 
 <body data-theme="dark">
@@ -1576,34 +1586,16 @@ function escapeHtml(str){
 </script>
 
 <script>
-(function () {
-  function forceReflow() {
-    document.body.offsetHeight;
-    window.dispatchEvent(new Event('resize'));
+(function(){
+  function fixStage(){
+    const header=document.querySelector('header,.topbar,.editor-topbar');
+    const stage=document.querySelector('.editor-stage,.canvas-stage,.stage');
+    if(!stage)return;
+    const h=header?header.offsetHeight:0;
+    stage.style.height=(window.innerHeight-h)+'px';
   }
-
-  function lockArtboard() {
-    const canvas = document.querySelector('[data-canvas], .canvas, #canvas, .editor-canvas');
-    if (!canvas) return;
-    canvas.style.width = '1080px';
-    canvas.style.height = '1080px';
-    canvas.style.maxWidth = '1080px';
-    canvas.style.maxHeight = '1080px';
-    canvas.style.transformOrigin = 'center center';
-  }
-
-  function run() {
-    lockArtboard();
-    forceReflow();
-    setTimeout(forceReflow, 50);
-    setTimeout(forceReflow, 150);
-  }
-
-  if (document.fonts && document.fonts.ready) {
-    document.fonts.ready.then(run);
-  } else {
-    window.addEventListener('load', run);
-  }
+  window.addEventListener('resize',fixStage);
+  window.addEventListener('load',()=>{setTimeout(fixStage,50);setTimeout(fixStage,150);});
 })();
 </script>
 
