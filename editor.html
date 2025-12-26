@@ -617,7 +617,7 @@ const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "S
   let zoom = 1;
   let gridOn = true;
   let autoFitZoom = true; // keep canvas comfortably inside stage (Canva-like)
-  let docW = 980, docH = 620, docBg = "";
+  let docW = 980, docH = 620, docBg = ""; // FIXED editor workspace size
 
   function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
@@ -757,9 +757,13 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
     const incoming = getDraftTemplatePayload();
     if(incoming?.elements?.length){
       // document size
+      // Option-1 RESET: ignore incoming canvas size for editor
+      // Store incoming size ONLY as export hint
       if(incoming.canvas && Number.isFinite(incoming.canvas.w) && Number.isFinite(incoming.canvas.h)){
-        docW = Math.max(200, Math.floor(incoming.canvas.w));
-        docH = Math.max(200, Math.floor(incoming.canvas.h));
+        localStorage.setItem("nexora_export_hint_v1", JSON.stringify({
+          w: incoming.canvas.w,
+          h: incoming.canvas.h
+        }));
       }
       // normalize + load
       state.elements = normalizeEditorElements(incoming.elements);
@@ -1050,7 +1054,7 @@ function escapeHtml(str){
     scheduleAutosave();
   }
 
-  const baseCanvas = { w: 980, h: 620 };
+  const baseCanvas = { w: 980, h: 620 }; // editor-owned canvas size
   function loadCanvasSize(){
     try{
       const s = JSON.parse(localStorage.getItem("templify_canvas_size")||"null");
@@ -1594,34 +1598,6 @@ function escapeHtml(str){
 })();
 </script>
 
-<script>
-(function(){
-  function resetZoom(){
-    const canvas = document.getElementById('canvas');
-    if(!canvas) return;
-
-    // Remove any scale transforms applied by editor
-    canvas.style.transform = 'scale(1)';
-    canvas.style.transformOrigin = '0 0';
-
-    // Also reset parent wrappers if scaled
-    let p = canvas.parentElement;
-    while(p){
-      if(p.style && p.style.transform){
-        p.style.transform = 'scale(1)';
-        p.style.transformOrigin = '0 0';
-      }
-      p = p.parentElement;
-    }
-  }
-
-  // Run after template open
-  resetZoom();
-  setTimeout(resetZoom, 100);
-  setTimeout(resetZoom, 300);
-  setTimeout(resetZoom, 600);
-})();
-</script>
 
 </body>
 </html>
