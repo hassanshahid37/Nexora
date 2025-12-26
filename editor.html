@@ -801,10 +801,7 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
     const kids = [...canvas.children].filter(n => n !== gridOverlay);
     kids.forEach(n => n.remove());
     gridOverlay.style.display = gridOn ? "block" : "none";
-    const leftPanel = document.querySelector('.panel.left')?.offsetWidth || 0;
-const rightPanel = document.querySelector('.panel.right')?.offsetWidth || 0;
-const offsetX = (rightPanel - leftPanel) / 2;
-canvas.style.transform = `translateX(${offsetX}px) scale(${zoom})`;
+    canvas.style.transform = `scale(${zoom})`;
     canvas.style.width = `${docW}px`;
     canvas.style.height = `${docH}px`;
 
@@ -1064,10 +1061,7 @@ function escapeHtml(str){
     const kids = [...canvas.children].filter(n => n !== gridOverlay);
     kids.forEach(n => n.remove());
     gridOverlay.style.display = gridOn ? "block" : "none";
-    const leftPanel = document.querySelector('.panel.left')?.offsetWidth || 0;
-const rightPanel = document.querySelector('.panel.right')?.offsetWidth || 0;
-const offsetX = (rightPanel - leftPanel) / 2;
-canvas.style.transform = `translateX(${offsetX}px) scale(${zoom})`;
+    canvas.style.transform = `scale(${zoom})`;
     canvas.style.width = `${baseCanvas.w}px`;
     canvas.style.height = `${baseCanvas.h}px`;
 
