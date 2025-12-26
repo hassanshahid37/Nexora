@@ -354,7 +354,24 @@
       .canvas{width: min(920px, 100%); height: 560px;}
       .tools{min-width: 1px}
     }
-  </style>
+  
+/* === CANVA-LOCK: viewport-anchored canvas (unmovable) ===
+   Canvas is centered relative to the browser viewport, not the editor layout.
+   This eliminates load/click/F12/resize jumps entirely. */
+#canvas, .canvas{
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  inset: auto !important;
+  margin: 0 !important;
+  transform: translate(-50%, -50%) !important;
+  transform-origin: center !important;
+  z-index: 50 !important;
+}
+
+</style>
 
 <style>
 .editor-stage, .stage, .canvas-stage {
@@ -804,7 +821,7 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
     const kids = [...canvas.children].filter(n => n !== gridOverlay);
     kids.forEach(n => n.remove());
     gridOverlay.style.display = gridOn ? "block" : "none";
-    canvas.style.transform = `scale(${zoom})`;
+    canvas.style.transform = "translate(-50%, -50%)";
     canvas.style.width = `${docW}px`;
     canvas.style.height = `${docH}px`;
 
@@ -1064,7 +1081,7 @@ function escapeHtml(str){
     const kids = [...canvas.children].filter(n => n !== gridOverlay);
     kids.forEach(n => n.remove());
     gridOverlay.style.display = gridOn ? "block" : "none";
-    canvas.style.transform = `scale(${zoom})`;
+    canvas.style.transform = "translate(-50%, -50%)";
     canvas.style.width = `${baseCanvas.w}px`;
     canvas.style.height = `${baseCanvas.h}px`;
 
@@ -1601,8 +1618,8 @@ function escapeHtml(str){
     if(!canvas) return;
 
     // Remove any scale transforms applied by editor
-    canvas.style.transform = 'scale(1)';
-    canvas.style.transformOrigin = '0 0';
+    canvas.style.transform = "translate(-50%, -50%)";
+    canvas.style.transformOrigin = 'center';
 
     // Also reset parent wrappers if scaled
     let p = canvas.parentElement;
