@@ -238,11 +238,14 @@
 
     /* Canvas */
     .stage{
-      position:relative;
-      overflow:auto;
-      background:transparent;
-      padding:18px;
-    }
+  position: relative;
+  overflow: auto;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
     .stage::-webkit-scrollbar{width:12px;height:12px}
     .stage::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px}
     [data-theme="light"] .stage::-webkit-scrollbar-thumb{background:rgba(10,20,60,.14)}
@@ -1592,6 +1595,32 @@ function escapeHtml(str){
 </script>
 
 <script>
+(function(){
+  function resetZoom(){
+    const canvas = document.getElementById('canvas');
+    if(!canvas) return;
+
+    // Remove any scale transforms applied by editor
+    canvas.style.transform = 'scale(1)';
+    canvas.style.transformOrigin = '0 0';
+
+    // Also reset parent wrappers if scaled
+    let p = canvas.parentElement;
+    while(p){
+      if(p.style && p.style.transform){
+        p.style.transform = 'scale(1)';
+        p.style.transformOrigin = '0 0';
+      }
+      p = p.parentElement;
+    }
+  }
+
+  // Run after template open
+  resetZoom();
+  setTimeout(resetZoom, 100);
+  setTimeout(resetZoom, 300);
+  setTimeout(resetZoom, 600);
+})();
 </script>
 
 </body>
