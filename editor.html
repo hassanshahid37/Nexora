@@ -613,11 +613,62 @@ const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "S
   // State
   const canvas = $("#canvas");
   const stage = $("#stage");
+
+  enforceCanvasContract();
   const gridOverlay = $("#gridOverlay");
   let zoom = 1;
   let gridOn = true;
   let autoFitZoom = true; // keep canvas comfortably inside stage (Canva-like)
   let docW = 980, docH = 620, docBg = "";
+
+  // Nexora Option 1 (Reset): editor always uses a stable, fixed workspace size.
+  // The original template size coming from index is treated as an *export hint* only.
+  const EDITOR_BASE = { w: 980, h: 620 };
+  let exportHint = null;
+
+  function syncDocFromBase(){
+    docW = baseCanvas.w;
+    docH = baseCanvas.h;
+    try{ $("#docW").value = docW; $("#docH").value = docH; }catch(_){}
+  }
+
+  function enforceCanvasContract(){
+    // Kill the conflicting CSS rule that forces #canvas to 1080x1080 and absolute-centered.
+    try{
+      canvas.style.position = "relative";
+      canvas.style.top = "0";
+      canvas.style.left = "0";
+      canvas.style.transform = ""; // renderAll will set the correct scale
+      canvas.style.transformOrigin = "0 0";
+    }catch(_){}
+  }
+
+  function fitElementsToCanvas(elements, fromW, fromH, toW, toH){
+    // Preserve aspect ratio: uniform scale to fit, then center.
+    const sx = toW / Math.max(1, fromW);
+    const sy = toH / Math.max(1, fromH);
+    const s  = Math.min(sx, sy);
+
+    const scaledW = fromW * s;
+    const scaledH = fromH * s;
+    const ox = Math.round((toW - scaledW) / 2);
+    const oy = Math.round((toH - scaledH) / 2);
+
+    for(const el of elements){
+      if(!el || typeof el !== "object") continue;
+      if(Number.isFinite(el.x)) el.x = Math.round(el.x * s + ox);
+      if(Number.isFinite(el.y)) el.y = Math.round(el.y * s + oy);
+      if(Number.isFinite(el.w)) el.w = Math.round(el.w * s);
+      if(Number.isFinite(el.h)) el.h = Math.round(el.h * s);
+
+      // Scale typography if present
+      if(Number.isFinite(el.fontSize)) el.fontSize = Math.max(8, Math.round(el.fontSize * s));
+      if(Number.isFinite(el.padding)) el.padding = Math.max(0, Math.round(el.padding * s));
+      if(Number.isFinite(el.radius)) el.radius = Math.max(0, Math.round(el.radius * s));
+      if(Number.isFinite(el.letterSpacing)) el.letterSpacing = Math.round(el.letterSpacing * s);
+    }
+  }
+
 
   function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
@@ -756,14 +807,28 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
     // 0) If we arrived from Generator, load that template first (ignore autosave)
     const incoming = getDraftTemplatePayload();
     if(incoming?.elements?.length){
-      // document size
+      // template size (from index) becomes export hint only — editor stays stable
       if(incoming.canvas && Number.isFinite(incoming.canvas.w) && Number.isFinite(incoming.canvas.h)){
-        docW = Math.max(200, Math.floor(incoming.canvas.w));
-        docH = Math.max(200, Math.floor(incoming.canvas.h));
+        exportHint = {
+          w: Math.max(200, Math.floor(incoming.canvas.w)),
+          h: Math.max(200, Math.floor(incoming.canvas.h)),
+          label: (draft?.meta?.cat ? String(draft.meta.cat) : "Original")
+        };
       }
-      // normalize + load
+
+      // Option 1 reset: force stable editor base size every time we load a generator template
+      try{ localStorage.removeItem("templify_canvas_size"); }catch(e){}
+      baseCanvas.w = EDITOR_BASE.w;
+      baseCanvas.h = EDITOR_BASE.h;
+      syncDocFromBase();
+// normalize + load
       state.elements = normalizeEditorElements(incoming.elements);
 
+      // If generator designed this for a different size (e.g., 1080×1080), scale it to our fixed editor base.
+      if(exportHint && Number.isFinite(exportHint.w) && Number.isFinite(exportHint.h) &&
+         (exportHint.w !== baseCanvas.w || exportHint.h !== baseCanvas.h)){
+        fitElementsToCanvas(state.elements, exportHint.w, exportHint.h, baseCanvas.w, baseCanvas.h);
+      }
       // Clear selection and render
       snapshot();
       state.selectedIds.clear();
@@ -1044,7 +1109,7 @@ function escapeHtml(str){
     // simple: change canvas size by modifying base dims used in renderAll
     // We'll store in state as special element? Keep lightweight: store in localStorage
     localStorage.setItem("templify_canvas_size", JSON.stringify({w,h}));
-    baseCanvas.w = w; baseCanvas.h = h;
+    baseCanvas.w = w; baseCanvas.h = h; syncDocFromBase();
     snapshot();
     renderAll();
     scheduleAutosave();
@@ -1052,9 +1117,18 @@ function escapeHtml(str){
 
   const baseCanvas = { w: 980, h: 620 };
   function loadCanvasSize(){
+    // Only use stored size when NOT coming from index template click.
+    // If a template was selected in index, we hard-reset to EDITOR_BASE for stable editing.
+    const fromIndex = !!(draft?.template && (draft.template.elements || (draft.template.template && draft.template.template.elements)));
+    if(fromIndex){
+      baseCanvas.w = EDITOR_BASE.w;
+      baseCanvas.h = EDITOR_BASE.h;
+      syncDocFromBase();
+      return;
+    }
     try{
       const s = JSON.parse(localStorage.getItem("templify_canvas_size")||"null");
-      if(s?.w && s?.h){ baseCanvas.w = s.w; baseCanvas.h = s.h; }
+      if(s?.w && s?.h){ baseCanvas.w = s.w; baseCanvas.h = s.h; syncDocFromBase(); }
     }catch(e){}
   }
 
@@ -1246,12 +1320,13 @@ function escapeHtml(str){
 
   // Document settings
   function applyDoc(){
-    docW = Math.max(200, Number($("#docW")?.value || 980));
-    docH = Math.max(200, Number($("#docH")?.value || 620));
+    baseCanvas.w = Math.max(200, Number($("#docW")?.value || 980));
+    baseCanvas.h = Math.max(200, Number($("#docH")?.value || 620));
+    syncDocFromBase();
     docBg = String($("#docBg")?.value || "").trim();
 
-    canvas.style.width = docW + "px";
-    canvas.style.height = docH + "px";
+    canvas.style.width = baseCanvas.w + "px";
+    canvas.style.height = baseCanvas.h + "px";
     if(docBg){
       canvas.style.background = docBg;
     }else{
@@ -1539,13 +1614,86 @@ function escapeHtml(str){
   }
 
   function exportDoc(){
+    // Ask user what size to export.
+    // Editor is always stable (EDITOR_BASE). Export can be any target size.
+    const presets = [
+      {key:"1", label:`Same as editor (${baseCanvas.w}×${baseCanvas.h})`, w: baseCanvas.w, h: baseCanvas.h},
+      ...(exportHint ? [{key:"2", label:`Original from index (${exportHint.w}×${exportHint.h})`, w: exportHint.w, h: exportHint.h}] : []),
+      {key:"3", label:"Instagram Post (1080×1080)", w:1080, h:1080},
+      {key:"4", label:"Story / Reels (1080×1920)", w:1080, h:1920},
+      {key:"5", label:"YouTube Thumbnail (1280×720)", w:1280, h:720},
+      {key:"6", label:"A4 Print (2480×3508)", w:2480, h:3508},
+      {key:"7", label:"Custom (type WxH)", w:null, h:null},
+    ];
+
+    const menu = presets.map(p=>`${p.key}) ${p.label}`).join("\n");
+    let ans = window.prompt(`Export size:\n${menu}\n\nEnter a number (1-7) or type WxH like 1080x1080`, exportHint ? "2" : "1");
+    if(ans == null) return;
+    ans = String(ans).trim().toLowerCase();
+
+    let target = null;
+
+    // number choice
+    const choice = presets.find(p=>p.key === ans);
+    if(choice && choice.w && choice.h){
+      target = { w: choice.w, h: choice.h };
+    }else if(choice && choice.key === "7"){
+      // custom
+      const custom = window.prompt("Enter custom size as WxH (example: 1080x1080)", `${baseCanvas.w}x${baseCanvas.h}`);
+      if(custom == null) return;
+      ans = String(custom).trim().toLowerCase();
+    }
+
+    if(!target){
+      const mm = ans.match(/^(\d{2,5})\s*[x×]\s*(\d{2,5})$/i);
+      if(mm){
+        target = { w: Math.max(200, parseInt(mm[1],10)), h: Math.max(200, parseInt(mm[2],10)) };
+      }
+    }
+    if(!target){
+      alert("Invalid size. Export cancelled.");
+      return;
+    }
+
+    // Scale elements from editor-base to target size (non-destructive)
+    const sx = target.w / Math.max(1, baseCanvas.w);
+    const sy = target.h / Math.max(1, baseCanvas.h);
+
+    const outElements = state.elements.map(e=>{
+      const el = JSON.parse(JSON.stringify(e||{}));
+      // geometry
+      if(Number.isFinite(el.x)) el.x = Math.round(el.x * sx);
+      if(Number.isFinite(el.y)) el.y = Math.round(el.y * sy);
+      if(Number.isFinite(el.w)) el.w = Math.round(el.w * sx);
+      if(Number.isFinite(el.h)) el.h = Math.round(el.h * sy);
+
+      // typography + radii (use average scale so it feels consistent)
+      const sAvg = (sx + sy) / 2;
+      if(Number.isFinite(el.fontSize)) el.fontSize = Math.max(8, Math.round(el.fontSize * sAvg));
+      if(Number.isFinite(el.padding)) el.padding = Math.max(0, Math.round(el.padding * sAvg));
+      if(Number.isFinite(el.radius)) el.radius = Math.max(0, Math.round(el.radius * sAvg));
+      if(Number.isFinite(el.letterSpacing)) el.letterSpacing = Math.round(el.letterSpacing * sAvg);
+
+      return el;
+    });
+
     const payload = {
-      v: 1,
+      v: 2,
       exportedAt: new Date().toISOString(),
       title: $("#docTitle").textContent,
-      canvas: { w: baseCanvas.w, h: baseCanvas.h, zoom },
-      elements: state.elements
+      editorCanvas: { w: baseCanvas.w, h: baseCanvas.h, zoom },
+      exportCanvas: { w: target.w, h: target.h },
+      exportHint: exportHint || null,
+      elements: outElements
     };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "nexora_export.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
     const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -1587,39 +1735,11 @@ function escapeHtml(str){
 
   // Boot
   loadCanvasSize();
+  syncDocFromBase();
   snapshot(); // initial empty
   loadAutosaveOrSeed();
   refreshLeft();
   updateUI();
-})();
-</script>
-
-<script>
-(function(){
-  function resetZoom(){
-    const canvas = document.getElementById('canvas');
-    if(!canvas) return;
-
-    // Remove any scale transforms applied by editor
-    canvas.style.transform = 'scale(1)';
-    canvas.style.transformOrigin = '0 0';
-
-    // Also reset parent wrappers if scaled
-    let p = canvas.parentElement;
-    while(p){
-      if(p.style && p.style.transform){
-        p.style.transform = 'scale(1)';
-        p.style.transformOrigin = '0 0';
-      }
-      p = p.parentElement;
-    }
-  }
-
-  // Run after template open
-  resetZoom();
-  setTimeout(resetZoom, 100);
-  setTimeout(resetZoom, 300);
-  setTimeout(resetZoom, 600);
 })();
 </script>
 
