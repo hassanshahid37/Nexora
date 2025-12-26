@@ -1,1323 +1,578 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Ultimate Editor v1 (Phase B)</title>
+<meta charset="UTF-8">
+<title>Advanced Editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+<style>
+/* ===== GLOBAL ===== */
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: #0b0e17;
+  color: #ffffff;
+  overflow: hidden;
+  user-select: none;
+}
+* { box-sizing: border-box; }
 
-  <style>
-    :root{
-      --bg:#050712;
-      --panel:rgba(15,23,42,0.78);
-      --panel2:rgba(2,6,23,0.70);
-      --text:#f9fafb;
-      --muted:#aab0bd;
-      --border:rgba(148,163,184,0.35);
-      --chip:rgba(15,23,42,0.55);
-      --brand1:#2563eb;
-      --brand2:#7c3aed;
-      --danger:#ef4444;
-      --shadow: 0 18px 55px rgba(0,0,0,0.55);
-    }
-    :root.light{
-      --bg:rgba(255,255,255,0.65);
-      --panel:rgba(255,255,255,0.70);
-      --panel2:rgba(255,255,255,0.55);
-      --text:#0b1220;
-      --muted:#475569;
-      --border:rgba(148,163,184,0.40);
-      --chip:rgba(255,255,255,0.50);
-      --shadow: 0 18px 55px rgba(2,6,23,0.20);
-    }
+/* ===== LAYOUT GRID ===== */
+.editor-layout {
+  display: grid;
+  grid-template-columns: 80px 1fr 300px;
+  height: 100vh;
+}
 
-    *{box-sizing:border-box}
-    body{
-      margin:0;
-      font-family:"Poppins",system-ui,Segoe UI,Roboto,Arial;
-      background:var(--bg);
-      color:var(--text);
-      height:100vh;
-      overflow:hidden;
-    }
+/* ===== LEFT TOOLBAR ===== */
+.left-tools {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  padding-top: 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  border-right: 1px solid rgba(255,255,255,0.12);
+}
+.tool-btn {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 22px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.tool-btn:hover { background: rgba(255,255,255,0.2); transform: scale(1.05); }
 
-    .app{
-      height:100vh;
-      display:grid;
-      grid-template-rows:56px 1fr;
-      grid-template-columns:280px 1fr 320px;
-      grid-template-areas:
-        "top top top"
-        "left center right";
-      gap:14px;
-      padding:14px;
-    }
+/* ===== TOP BAR ===== */
+.top-bar {
+  position: fixed;
+  top: 0;
+  left: 80px;
+  right: 300px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 16px;
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+  z-index: 10;
+}
+.top-btn {
+  padding: 8px 16px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.2s;
+}
+.top-btn:hover { background: rgba(255,255,255,0.25); }
 
-    /* Top bar */
-    .topbar{
-      grid-area:top;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:10px 12px;
-      border-radius:16px;
-      background:var(--panel);
-      border:1px solid var(--border);
-      backdrop-filter: blur(14px);
-      box-shadow: var(--shadow);
-    }
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      font-weight:700;
-      font-size:14px;
-      letter-spacing:0.2px;
-    }
-    .brand-badge{
-      width:28px;height:28px;border-radius:10px;
-      background: linear-gradient(90deg,var(--brand1),var(--brand2));
-      display:grid;place-items:center;
-      box-shadow:0 10px 30px rgba(37,99,235,0.25);
-      font-size:14px;
-    }
-    .top-actions{
-      display:flex;
-      align-items:center;
-      gap:8px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-    }
+/* ===== CANVAS AREA ===== */
+.canvas-area {
+  position: relative;
+  margin-top: 60px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+}
+#designCanvas {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 0 30px rgba(0,0,0,0.25);
+  position: relative;
+}
 
-    .btn{
-      border:1px solid var(--border);
-      background:var(--chip);
-      color:var(--text);
-      padding:7px 10px;
-      border-radius:999px;
-      font-size:12px;
-      cursor:pointer;
-      display:inline-flex;
-      align-items:center;
-      gap:6px;
-      user-select:none;
-      white-space:nowrap;
-    }
-    .btn.primary{
-      background: linear-gradient(90deg,var(--brand1),var(--brand2));
-      border-color: transparent;
-      color:#fff;
-      font-weight:600;
-    }
-    .btn.danger{
-      background: rgba(239,68,68,0.14);
-      border-color: rgba(239,68,68,0.45);
-      color: var(--text);
-    }
-    .btn:disabled{opacity:0.55;cursor:wait}
+/* ===== EDITABLE ELEMENTS ===== */
+.element {
+  position: absolute;
+  cursor: move;
+  user-select: none;
+  border: 1px dashed transparent;
+}
+.element.active { border: 1px dashed #4a90e2; }
 
-    /* Panels */
-    .panel{
-      background:var(--panel);
-      border:1px solid var(--border);
-      border-radius:16px;
-      backdrop-filter: blur(14px);
-      box-shadow: var(--shadow);
-      overflow:hidden;
-      display:flex;
-      flex-direction:column;
-      min-height:0;
-    }
-    .panel-header{
-      padding:12px 12px 10px;
-      border-bottom:1px solid var(--border);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:8px;
-    }
-    .panel-title{
-      font-weight:700;
-      font-size:13px;
-    }
-    .panel-sub{
-      font-size:11px;
-      color:var(--muted);
-      margin-top:2px;
-      font-weight:500;
-    }
-    .panel-body{
-      padding:12px;
-      overflow:auto;
-      min-height:0;
-    }
+/* Resize Handles */
+.resize-handle {
+  width: 12px;
+  height: 12px;
+  background: #4a90e2;
+  border-radius: 50%;
+  position: absolute;
+  cursor: nwse-resize;
+}
+.resize-handle.br { bottom: -6px; right: -6px; }
+.resize-handle.bl { bottom: -6px; left: -6px; }
+.resize-handle.tr { top: -6px; right: -6px; }
+.resize-handle.tl { top: -6px; left: -6px; }
 
-    /* Left tools */
-    .left{grid-area:left}
-    .toolgrid{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:8px;
-    }
-    .toolbtn{
-      border:1px solid var(--border);
-      background:var(--chip);
-      color:var(--text);
-      border-radius:14px;
-      padding:10px 10px;
-      cursor:pointer;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      gap:8px;
-      font-size:12px;
-      font-weight:600;
-      transition:transform 0.12s;
-      user-select:none;
-    }
-    .toolbtn:hover{transform:translateY(-1px)}
-    .toolbtn.primary{
-      background: linear-gradient(90deg,var(--brand1),var(--brand2));
-      border-color:transparent;
-      color:#fff;
-    }
+/* Rotation Handle */
+.rotate-handle {
+  width: 14px;
+  height: 14px;
+  background: #4a90e2;
+  border-radius: 50%;
+  position: absolute;
+  top: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  cursor: grab;
+}
 
-    .row{
-      display:grid;
-      grid-template-columns:1fr 1fr;
-      gap:8px;
-      margin-top:10px;
-    }
-    label{
-      display:block;
-      font-size:11px;
-      color:var(--muted);
-      margin:10px 0 4px;
-      font-weight:600;
-    }
-    input[type="text"], select, input[type="number"]{
-      width:100%;
-      padding:8px 10px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      background:var(--panel2);
-      color:var(--text);
-      font-size:12px;
-      outline:none;
-    }
-    input[type="range"]{width:100%}
-    input[type="color"]{
-      width:100%;
-      height:36px;
-      border-radius:12px;
-      border:1px solid var(--border);
-      background:transparent;
-      cursor:pointer;
-      padding:0;
-    }
-    .hint{
-      font-size:11px;color:var(--muted);
-      margin-top:8px;line-height:1.35;
-    }
+/* ===== RIGHT PANEL ===== */
+.right-panel {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(12px);
+  border-left: 1px solid rgba(255,255,255,0.12);
+  padding: 20px;
+  overflow-y: auto;
+}
+.section-title {
+  font-size: 13px;
+  opacity: 0.9;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.panel-block { margin-bottom: 20px; }
 
-    /* Center canvas */
-    .center{grid-area:center; display:flex; align-items:center; justify-content:center; min-height:0;}
-    .stage{
-      width:min(1100px,100%);
-      height:100%;
-      border-radius:16px;
-      background:rgba(2,6,23,0.25);
-      border:1px solid var(--border);
-      box-shadow: var(--shadow);
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:12px;
-      position:relative;
-      overflow:hidden;
-    }
-    .stage.light{
-      background:rgba(255,255,255,0.25);
-    }
-    canvas{
-      border-radius:14px;
-      box-shadow:0 18px 60px rgba(0,0,0,0.55);
-      max-width:100%;
-      height:auto;
-    }
-    .zoomchip{
-      position:absolute;
-      bottom:12px;
-      left:12px;
-      display:flex;
-      gap:8px;
-      align-items:center;
-      padding:8px 10px;
-      border-radius:999px;
-      background:var(--panel);
-      border:1px solid var(--border);
-      backdrop-filter: blur(14px);
-      font-size:11px;
-      color:var(--muted);
-    }
+input[type='color'],
+input[type='number'],
+input[type='range'],
+select {
+  width: 100%;
+  padding: 6px;
+  border-radius: 6px;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.25);
+  color: white;
+  margin-bottom: 10px;
+}
 
-    /* Right properties */
-    .right{grid-area:right}
-    .section{
-      padding:10px 0 0;
-      border-top:1px solid rgba(148,163,184,0.18);
-      margin-top:10px;
-    }
-    .section:first-child{border-top:none;margin-top:0;padding-top:0}
-    .inline{
-      display:flex; gap:8px; align-items:center;
-    }
-    .mini{
-      font-size:11px;color:var(--muted);
-    }
-    .layer-item{
-      display:flex;align-items:center;justify-content:space-between;
-      gap:8px;
-      padding:10px 10px;
-      border:1px solid var(--border);
-      border-radius:14px;
-      background:var(--panel2);
-      cursor:pointer;
-      margin-bottom:8px;
-    }
-    .layer-item.active{
-      outline:2px solid rgba(37,99,235,0.55);
-      border-color: rgba(37,99,235,0.55);
-    }
-    .layer-name{
-      font-size:12px;font-weight:600;
-      overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-    }
-    .layer-actions{
-      display:flex;gap:6px;align-items:center;
-    }
-    .iconbtn{
-      width:30px;height:30px;border-radius:10px;
-      border:1px solid var(--border);
-      background:var(--chip);
-      color:var(--text);
-      cursor:pointer;
-      display:grid;place-items:center;
-      font-size:12px;
-    }
-    .footer-note{
-      padding:10px 12px;
-      border-top:1px solid var(--border);
-      font-size:11px;
-      color:var(--muted);
-      background:rgba(2,6,23,0.18);
-    }
-  
-    .layer-handle{
-      width:28px;height:28px;border-radius:10px;
-      border:1px solid var(--border);
-      background:rgba(148,163,184,0.10);
-      display:grid;place-items:center;
-      cursor:grab;
-      user-select:none;
-      font-size:12px;
-      color:var(--muted);
-    }
-    .layer-item[draggable="true"]{ user-select:none; }
-    .layer-item.dragover{
-      outline:2px dashed rgba(37,99,235,0.65);
-      outline-offset:2px;
-    }
-    .layer-badge{
-      font-size:10px;
-      padding:2px 8px;
-      border-radius:999px;
-      border:1px solid rgba(148,163,184,0.28);
-      color:var(--muted);
-      background:rgba(2,6,23,0.12);
-      white-space:nowrap;
-    }
-
-  
-    .toast{
-      position:fixed;
-      left:50%;
-      bottom:18px;
-      transform:translateX(-50%);
-      background:rgba(2,6,23,0.82);
-      color:#fff;
-      border:1px solid rgba(148,163,184,0.28);
-      padding:10px 12px;
-      border-radius:999px;
-      font-size:12px;
-      z-index:9999;
-      box-shadow:0 18px 45px rgba(0,0,0,0.45);
-      opacity:0;
-      pointer-events:none;
-      transition:opacity .2s ease, transform .2s ease;
-    }
-    :root.light .toast{
-      background:rgba(17,24,39,0.88);
-    }
-    .toast.show{
-      opacity:1;
-      transform:translateX(-50%) translateY(-6px);
-    }
-
-  </style>
+/* Shapes */
+.shape-rect {
+  width: 150px;
+  height: 100px;
+  background: #4a90e2;
+}
+.shape-circle {
+  width: 120px;
+  height: 120px;
+  background: #e24aaa;
+  border-radius: 50%;
+}
+</style>
 </head>
+
 <body>
 
-<div class="app">
-  <!-- TOP -->
-  <div class="topbar">
-    <div class="brand">
-      <div class="brand-badge">⚡</div>
-      <div>
-        Ultimate Editor <span style="opacity:.75;font-weight:600;">v1</span>
-        <div class="panel-sub">Phase B — layers • save/load • snapping • polish</div>
-      </div>
-    </div>
+<div class="editor-layout">
 
-    <div class="top-actions">
-      <a class="btn" href="index.html">⬅ Back</a>
-      <button class="btn" id="undoBtn">↩ Undo</button>
-      <button class="btn" id="redoBtn">↪ Redo</button>
-      <button class="btn" id="duplicateBtn">⎘ Duplicate</button>
-      <button class="btn danger" id="deleteBtn">🗑 Delete</button>
-      <button class="btn" id="toggleThemeBtn">🌙 Dark</button>
-      <button class="btn" id="saveBtn">💾 Save</button>
-      <button class="btn" id="loadBtn">📂 Load</button>
-      <button class="btn" id="newBtn">🆕 New</button>
-      <button class="btn primary" id="exportBtn">⬇ Export PNG</button>
-      <button class="btn" id="exportJpgBtn">⬇ Export JPG</button>
-    </div>
+  <!-- LEFT TOOLBAR -->
+  <div class="left-tools">
+    <div class="tool-btn" id="toolText">T</div>
+    <div class="tool-btn" id="toolShape">▢</div>
+    <div class="tool-btn" id="toolCircle">◯</div>
+    <div class="tool-btn" id="toolImage">🖼️</div>
   </div>
 
-  <!-- LEFT -->
-  <div class="panel left">
-    <div class="panel-header">
-      <div>
-        <div class="panel-title">Tools</div>
-        <div class="panel-sub">Add elements to your canvas</div>
-      </div>
-    </div>
-    <div class="panel-body">
-      <div class="toolgrid">
-        <button class="toolbtn primary" id="addTextBtn">✏️ Text</button>
-        <button class="toolbtn" id="addRectBtn">⬛ Rectangle</button>
-        <button class="toolbtn" id="addCircleBtn">⚪ Circle</button>
-        <button class="toolbtn" id="uploadImgBtn">🖼 Image</button>
-      </div>
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="top-btn" id="undoBtn">↶ Undo</div>
+    <div class="top-btn" id="redoBtn">↷ Redo</div>
 
-      <label>Canvas preset</label>
-      <select id="presetSelect">
-        <option value="1080x1080">Instagram Square (1080×1080)</option>
-        <option value="1080x1920">Story / TikTok (1080×1920)</option>
-        <option value="1280x720">YouTube Thumbnail (1280×720)</option>
-        <option value="1200x628">Facebook Post (1200×628)</option>
-        <option value="800x800">Logo (800×800)</option>
-        <option value="1920x600">Banner (1920×600)</option>
-        <option value="2480x3508">A4 Flyer (2480×3508)</option>
+    <select id="canvasSize" class="top-btn">
+      <option value="1080x1080">Instagram Square</option>
+      <option value="1080x1920">Story / TikTok</option>
+      <option value="1280x720">YouTube Thumbnail</option>
+      <option value="1200x630">Facebook Post</option>
+      <option value="2480x3508">A4 Flyer</option>
+    </select>
+
+    <div class="top-btn" id="saveProject">💾 Save</div>
+    <div class="top-btn" id="exportPNG">⬇ PNG</div>
+  </div>
+
+  <!-- CANVAS AREA -->
+  <div class="canvas-area">
+    <div id="designCanvas"></div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <div class="panel-block">
+      <div class="section-title">Text</div>
+      <select id="textFont">
+        <option>Poppins</option>
+        <option>Inter</option>
+        <option>Montserrat</option>
+        <option>Lato</option>
       </select>
 
-      <div class="row">
-        <div>
-          <label>Background</label>
-          <input type="color" id="bgColor" value="#020617">
-        </div>
-        <div>
-          <label>Grid</label>
-          <button class="toolbtn" id="gridBtn">Toggle</button>
-        </div>
-      </div>
+      <label>Size</label>
+      <input type="number" id="textSize" value="32">
 
-      <label>Zoom</label>
-      <input type="range" id="zoomRange" min="25" max="200" value="100">
-
-      <div class="hint">
-        Tip: Click an element to edit. Use mouse wheel to scroll. Drag handles to resize. Rotate from corners.
-      </div>
+      <label>Color</label>
+      <input type="color" id="textColor">
     </div>
+
+    <div class="panel-block">
+      <div class="section-title">Layer</div>
+      <div class="top-btn" id="bringFront">Bring Front</div>
+      <div class="top-btn" id="sendBack">Send Back</div>
+    </div>
+
+    <div class="panel-block">
+      <div class="section-title">Rotation</div>
+      <input type="range" id="rotateControl" min="-180" max="180" value="0">
+    </div>
+
+    <div class="panel-block">
+      <div class="section-title">Opacity</div>
+      <input type="range" id="opacityControl" min="0" max="1" step="0.05" value="1">
+    </div>
+
   </div>
 
-  <!-- CENTER -->
-  <div class="center">
-    <div class="stage" id="stage">
-      <canvas id="c"></canvas>
-      <div class="zoomchip"><span>Zoom:</span> <span id="zoomText">100%</span></div>
-    </div>
-  </div>
-
-  <!-- RIGHT -->
-  <div class="panel right">
-    <div class="panel-header">
-      <div>
-        <div class="panel-title">Properties</div>
-        <div class="panel-sub">Edit selected element</div>
-      </div>
-    </div>
-    <div class="panel-body">
-      <div class="section">
-        <div class="mini" id="selectedLabel">Selected: none</div>
-      </div>
-
-      <div class="section">
-        <label>Fill color</label>
-        <input type="color" id="fillColor" value="#ffffff">
-
-        <div class="row">
-          <div>
-            <label>Opacity</label>
-            <input type="range" id="opacityRange" min="0" max="100" value="100">
-          </div>
-          <div>
-            <label>Stroke</label>
-            <input type="color" id="strokeColor" value="#000000">
-          </div>
-        </div>
-
-        <label>Stroke width</label>
-        <input type="range" id="strokeWidth" min="0" max="20" value="0">
-      </div>
-
-      <div class="section" id="textSection" style="display:none;">
-        <label>Font</label>
-        <select id="fontFamily">
-          <option value="Poppins" selected>Poppins</option>
-          <option value="Inter">Inter</option>
-          <option value="Montserrat">Montserrat</option>
-          <option value="Bebas Neue">Bebas Neue</option>
-          <option value="Playfair Display">Playfair Display</option>
-        </select>
-
-        <div class="row">
-          <div>
-            <label>Font size</label>
-            <input type="range" id="fontSize" min="10" max="140" value="44">
-          </div>
-          <div>
-            <label>Letter spacing</label>
-            <input type="range" id="charSpacing" min="-50" max="400" value="0">
-          </div>
-        </div>
-
-        <div class="row">
-          <button class="toolbtn" id="boldBtn">B</button>
-          <button class="toolbtn" id="italicBtn">I</button>
-        </div>
-      </div>
-
-      <div class="section">
-        <label>Arrange</label>
-        <div class="row">
-          <button class="toolbtn" id="frontBtn">Front</button>
-          <button class="toolbtn" id="backBtn">Back</button>
-        </div>
-        <div class="row">
-          <button class="toolbtn" id="centerXBtn">Center X</button>
-          <button class="toolbtn" id="centerYBtn">Center Y</button>
-        </div>
-      </div>
-
-      <div class="section">
-        <label>Layers</label>
-        <div class="mini">Drag to reorder • Click to select</div>
-        <div id="layersList"></div>
-      </div>
-    </div>
-
-    <div class="footer-note">
-      Phase B adds layers (rename/hide/lock/reorder), save/load, snapping guides, and premium polish.</div>
-  </div>
 </div>
 
-<!-- Fonts for selector -->
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Montserrat:wght@300;400;600;700&family=Bebas+Neue&family=Playfair+Display:wght@400;600;700&display=swap" rel="stylesheet">
-
 <script>
-  // ---- Load template passed from generator ----
-  function getTemplateFromStorage(){
-    try{
-      const raw = localStorage.getItem("magicTemplate");
-      return raw ? JSON.parse(raw) : null;
-    }catch(e){
-      console.error(e);
-      return null;
-    }
+let canvas = document.getElementById("designCanvas");
+let activeElement = null;
+let offsetX, offsetY;
+let isResizing = false;
+let isRotating = false;
+let originalMouseX, originalMouseY;
+let originalWidth, originalHeight;
+let originalRotation = 0;
+
+let undoStack = [];
+let redoStack = [];
+
+function saveState() {
+  undoStack.push(canvas.innerHTML);
+  redoStack = [];
+}
+function undo() {
+  if (undoStack.length > 0) {
+    redoStack.push(canvas.innerHTML);
+    canvas.innerHTML = undoStack.pop();
+    attachElementEvents();
   }
-
-  // ---- Canvas setup ----
-  const canvasEl = document.getElementById('c');
-  const stageEl = document.getElementById('stage');
-
-  const template = getTemplateFromStorage();
-
-  // Default preset based on template meta (if available)
-  const presetSelect = document.getElementById('presetSelect');
-  function inferPreset(metaSize){
-    const s = (metaSize || "").toLowerCase();
-    if(s.includes("story") || s.includes("tiktok")) return "1080x1920";
-    if(s.includes("youtube")) return "1280x720";
-    if(s.includes("facebook")) return "1200x628";
-    if(s.includes("logo")) return "800x800";
-    if(s.includes("banner")) return "1920x600";
-    if(s.includes("a4")) return "2480x3508";
-    return "1080x1080";
+}
+function redo() {
+  if (redoStack.length > 0) {
+    undoStack.push(canvas.innerHTML);
+    canvas.innerHTML = redoStack.pop();
+    attachElementEvents();
   }
-  presetSelect.value = inferPreset(template && template.meta && template.meta.size);
+}
 
-  function setCanvasSize(w,h){
-    canvas.setWidth(w);
-    canvas.setHeight(h);
-    canvas.renderAll();
-  }
-
-  // Toast helper (small pop-up)
-  const toastEl = document.getElementById('toast');
-  let toastTimer = null;
-  function toast(msg){
-    if(!toastEl) return;
-    toastEl.textContent = msg;
-    toastEl.classList.add('show');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(()=> toastEl.classList.remove('show'), 1600);
-  }
-
-
-  const canvas = new fabric.Canvas('c', {
-    preserveObjectStacking:true,
-    selection:true
+function createResizeHandles(el) {
+  ["tl", "tr", "bl", "br"].forEach(pos => {
+    let h = document.createElement("div");
+    h.classList.add("resize-handle", pos);
+    el.appendChild(h);
   });
+  let rot = document.createElement("div");
+  rot.classList.add("rotate-handle");
+  el.appendChild(rot);
+}
 
-  // Fit the canvas into stage visually using CSS scale (zoom feature)
-  let visualZoom = 1.0;
-  function applyVisualZoom(){
-    const pct = Math.round(visualZoom*100);
-    document.getElementById('zoomText').textContent = pct + "%";
-    canvasEl.style.transformOrigin = "center center";
-    canvasEl.style.transform = "scale(" + visualZoom + ")";
-  }
+function addElement(el) {
+  saveState();
+  canvas.appendChild(el);
+  attachElementEvents();
+}
 
-  // Grid (simple)
-  let gridOn = false;
-  const GRID_SIZE = 50;
-  const gridLines = [];
-  function setGrid(on){
-    // remove old
-    gridLines.forEach(l => canvas.remove(l));
-    gridLines.length = 0;
-    gridOn = on;
-    if(!on){ canvas.renderAll(); return; }
+function attachElementEvents() {
+  const elements = document.querySelectorAll(".element");
 
-    const w = canvas.getWidth();
-    const h = canvas.getHeight();
+  elements.forEach(el => {
+    el.onmousedown = selectElement;
 
-    for(let i=GRID_SIZE;i<w;i+=GRID_SIZE){
-      const line = new fabric.Line([i,0,i,h], { stroke:'rgba(148,163,184,0.18)', selectable:false, evented:false });
-      gridLines.push(line); canvas.add(line);
-      canvas.sendToBack(line);
-    }
-    for(let j=GRID_SIZE;j<h;j+=GRID_SIZE){
-      const line = new fabric.Line([0,j,w,j], { stroke:'rgba(148,163,184,0.18)', selectable:false, evented:false });
-      gridLines.push(line); canvas.add(line);
-      canvas.sendToBack(line);
-    }
-    canvas.renderAll();
-  }
-
-  // Background color
-  const bgColor = document.getElementById('bgColor');
-  function setBg(color){
-    canvas.setBackgroundColor(color, canvas.renderAll.bind(canvas));
-  }
-  setBg(bgColor.value);
-  bgColor.addEventListener('input', ()=> setBg(bgColor.value));
-
-  // Apply preset size
-  function applyPresetFromSelect(){
-    const [w,h] = presetSelect.value.split("x").map(n=>parseInt(n,10));
-    setCanvasSize(w,h);
-    setGrid(gridOn);
-    // Adjust stage background class for light
-    stageEl.classList.toggle("light", document.documentElement.classList.contains("light"));
-    applyVisualZoom();
-  }
-  presetSelect.addEventListener('change', applyPresetFromSelect);
-
-  // Initial canvas size
-  applyPresetFromSelect();
-
-  // Add base image if present
-  async function addBaseImage(url){
-    return new Promise((resolve)=>{
-      fabric.Image.fromURL(url, (img)=>{
-        // Scale to cover canvas
-        const cw = canvas.getWidth();
-        const ch = canvas.getHeight();
-        const scale = Math.max(cw / img.width, ch / img.height);
-        img.set({
-          left: cw/2,
-          top: ch/2,
-          originX:'center',
-          originY:'center',
-          scaleX: scale,
-          scaleY: scale,
-          selectable:true
-        });
-        canvas.add(img);
-        canvas.sendToBack(img);
-        resolve(img);
-      }, { crossOrigin: 'anonymous' });
+    el.querySelectorAll(".resize-handle").forEach(h => {
+      h.onmousedown = startResize;
     });
-  }
 
-  if(template && template.image){
-    addBaseImage(template.image);
-  }
-
-  // ---- History (simple & stable) ----
-  const MAX_HISTORY = 40;
-  const history = [];
-  let historyIndex = -1;
-
-  function pushHistory(){
-    const json = canvas.toDatalessJSON(['name','_layerName','_hidden','_locked']);
-    // drop redo states
-    history.splice(historyIndex+1);
-    history.push(json);
-    if(history.length > MAX_HISTORY) history.shift();
-    historyIndex = history.length - 1;
-    updateUndoRedoState();
-  }
-
-  function loadHistory(idx){
-    if(idx < 0 || idx >= history.length) return;
-    const json = history[idx];
-    canvas.loadFromJSON(json, ()=>{
-      canvas.renderAll();
-      setGrid(gridOn);
-      historyIndex = idx;
-      updateUndoRedoState();
-      refreshLayers();
-    });
-  }
-
-  function updateUndoRedoState(){
-    document.getElementById('undoBtn').disabled = !(historyIndex > 0);
-    document.getElementById('redoBtn').disabled = !(historyIndex < history.length-1);
-  }
-
-  canvas.on('object:added', (e)=>{ if(e.target && e.target._isGuide) return; pushHistory(); refreshLayers(); scheduleAutosave(); });
-  canvas.on('object:modified', (e)=>{ if(e.target && e.target._isGuide) return; pushHistory(); refreshLayers(); scheduleAutosave(); });
-  canvas.on('object:removed', (e)=>{ if(e.target && e.target._isGuide) return; pushHistory(); refreshLayers(); scheduleAutosave(); });
-
-
-  // Snapping guides (canvas center + edges)
-  const SNAP_PX = 8;
-  let guides = [];
-
-  function clearGuides(){
-    guides.forEach(g=>canvas.remove(g));
-    guides = [];
-  }
-  function addGuide(line){
-    line.selectable = false;
-    line.evented = false;
-    line.excludeFromExport = true;
-    line._isGuide = true;
-    guides.push(line);
-    canvas.add(line);
-    line.moveTo(canvas.getObjects().length-1);
-  }
-
-  function snapTo(val, target){
-    return Math.abs(val - target) <= SNAP_PX ? target : val;
-  }
-
-  canvas.on('object:moving', (opt)=>{
-    const obj = opt.target;
-    if(!obj || obj._locked) return;
-
-    clearGuides();
-
-    const w = canvas.getWidth();
-    const h = canvas.getHeight();
-
-    const br = obj.getBoundingRect(true, true);
-    const objCenter = obj.getCenterPoint();
-
-    // Snap center to canvas center
-    const cx = w/2;
-    const cy = h/2;
-
-    let newCx = snapTo(objCenter.x, cx);
-    let newCy = snapTo(objCenter.y, cy);
-
-    if(newCx === cx){
-      addGuide(new fabric.Line([cx, 0, cx, h], { stroke:'rgba(37,99,235,0.65)', strokeWidth:1 }));
-    }
-    if(newCy === cy){
-      addGuide(new fabric.Line([0, cy, w, cy], { stroke:'rgba(37,99,235,0.65)', strokeWidth:1 }));
-    }
-
-    // Snap edges to canvas edges
-    const left = br.left;
-    const top = br.top;
-    const right = br.left + br.width;
-    const bottom = br.top + br.height;
-
-    // Left edge
-    if(Math.abs(left - 0) <= SNAP_PX){
-      obj.setPositionByOrigin(new fabric.Point(objCenter.x + (0-left), objCenter.y), 'center', 'center');
-      addGuide(new fabric.Line([0, 0, 0, h], { stroke:'rgba(148,163,184,0.5)', strokeWidth:1 }));
-      return;
-    }
-    // Right edge
-    if(Math.abs(right - w) <= SNAP_PX){
-      obj.setPositionByOrigin(new fabric.Point(objCenter.x + (w-right), objCenter.y), 'center', 'center');
-      addGuide(new fabric.Line([w, 0, w, h], { stroke:'rgba(148,163,184,0.5)', strokeWidth:1 }));
-      return;
-    }
-    // Top edge
-    if(Math.abs(top - 0) <= SNAP_PX){
-      obj.setPositionByOrigin(new fabric.Point(objCenter.x, objCenter.y + (0-top)), 'center', 'center');
-      addGuide(new fabric.Line([0, 0, w, 0], { stroke:'rgba(148,163,184,0.5)', strokeWidth:1 }));
-      return;
-    }
-    // Bottom edge
-    if(Math.abs(bottom - h) <= SNAP_PX){
-      obj.setPositionByOrigin(new fabric.Point(objCenter.x, objCenter.y + (h-bottom)), 'center', 'center');
-      addGuide(new fabric.Line([0, h, w, h], { stroke:'rgba(148,163,184,0.5)', strokeWidth:1 }));
-      return;
-    }
-
-    // Apply center snapping (no return)
-    if(newCx !== objCenter.x || newCy !== objCenter.y){
-      obj.setPositionByOrigin(new fabric.Point(newCx, newCy), 'center', 'center');
-    }
+    let rot = el.querySelector(".rotate-handle");
+    if (rot) rot.onmousedown = startRotate;
   });
+}
 
-  canvas.on('mouse:up', ()=> clearGuides());
+function selectElement(e) {
+  if (e.target.classList.contains("resize-handle") ||
+      e.target.classList.contains("rotate-handle")) return;
 
-  // Prime history once after initial load
-  setTimeout(()=>{ pushHistory(); refreshLayers(); }, 400);
+  if (activeElement) activeElement.classList.remove("active");
 
-  // ---- Selection & Properties ----
-  const selectedLabel = document.getElementById('selectedLabel');
-  const fillColor = document.getElementById('fillColor');
-  const strokeColor = document.getElementById('strokeColor');
-  const strokeWidth = document.getElementById('strokeWidth');
-  const opacityRange = document.getElementById('opacityRange');
+  activeElement = e.currentTarget;
+  activeElement.classList.add("active");
 
-  const textSection = document.getElementById('textSection');
-  const fontFamily = document.getElementById('fontFamily');
-  const fontSize = document.getElementById('fontSize');
-  const charSpacing = document.getElementById('charSpacing');
+  const rect = activeElement.getBoundingClientRect();
+  offsetX = e.clientX - rect.left;
+  offsetY = e.clientY - rect.top;
 
-  function isText(obj){
-    return obj && (obj.type === 'textbox' || obj.type === 'text');
+  saveState();
+
+  document.onmousemove = dragElement;
+  document.onmouseup = stopAction;
+}
+
+function dragElement(e) {
+  if (!activeElement || isResizing || isRotating) return;
+
+  let x = e.clientX - offsetX - canvas.getBoundingClientRect().left;
+  let y = e.clientY - offsetY - canvas.getBoundingClientRect().top;
+
+  activeElement.style.left = x + "px";
+  activeElement.style.top = y + "px";
+}
+
+function stopAction() {
+  document.onmousemove = null;
+  document.onmouseup = null;
+  isResizing = false;
+  isRotating = false;
+}
+
+function startResize(e) {
+  e.stopPropagation();
+  isResizing = true;
+
+  activeElement = this.parentElement;
+  activeElement.classList.add("active");
+
+  originalMouseX = e.clientX;
+  originalMouseY = e.clientY;
+
+  originalWidth = activeElement.offsetWidth;
+  originalHeight = activeElement.offsetHeight;
+
+  saveState();
+
+  document.onmousemove = resizeElement;
+  document.onmouseup = stopAction;
+}
+
+function resizeElement(e) {
+  if (!isResizing) return;
+
+  let dx = e.clientX - originalMouseX;
+  let dy = e.clientY - originalMouseY;
+
+  activeElement.style.width = originalWidth + dx + "px";
+  activeElement.style.height = originalHeight + dy + "px";
+}
+
+function startRotate(e) {
+  e.stopPropagation();
+  isRotating = true;
+
+  activeElement = this.parentElement;
+  activeElement.classList.add("active");
+
+  const style = window.getComputedStyle(activeElement);
+  const transform = style.transform;
+
+  if (transform !== "none") {
+    const values = transform.split("(")[1].split(")")[0].split(",");
+    const a = values[0];
+    const b = values[1];
+    originalRotation = Math.round(Math.atan2(b, a) * (180 / Math.PI));
   }
 
-  function syncUIFromObject(obj){
-    if(!obj){
-      selectedLabel.textContent = "Selected: none";
-      textSection.style.display = "none";
-      return;
-    }
-    selectedLabel.textContent = "Selected: " + (obj.name || obj.type || "object");
+  saveState();
 
-    // fill
-    const fill = (obj.fill && typeof obj.fill === "string") ? obj.fill : "#ffffff";
-    try{ fillColor.value = fill.startsWith("#") ? fill : "#ffffff"; }catch(e){}
-    // stroke
-    const stroke = (obj.stroke && typeof obj.stroke === "string") ? obj.stroke : "#000000";
-    try{ strokeColor.value = stroke.startsWith("#") ? stroke : "#000000"; }catch(e){}
-    strokeWidth.value = obj.strokeWidth || 0;
-    opacityRange.value = Math.round((obj.opacity ?? 1) * 100);
+  document.onmousemove = rotateElement;
+  document.onmouseup = stopAction;
+}
 
-    if(isText(obj)){
-      textSection.style.display = "block";
-      fontFamily.value = obj.fontFamily || "Poppins";
-      fontSize.value = obj.fontSize || 44;
-      charSpacing.value = obj.charSpacing || 0;
-    }else{
-      textSection.style.display = "none";
-    }
-  }
+function rotateElement(e) {
+  if (!isRotating) return;
 
-  function applyToActive(fn){
-    const obj = canvas.getActiveObject();
-    if(!obj) return;
-    fn(obj);
-    canvas.requestRenderAll();
-  }
+  const rect = activeElement.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
 
-  canvas.on('selection:created', (e)=> syncUIFromObject(e.selected && e.selected[0]));
-  canvas.on('selection:updated', (e)=> syncUIFromObject(e.selected && e.selected[0]));
-  canvas.on('selection:cleared', ()=> syncUIFromObject(null));
+  const angle = Math.atan2(e.clientY - cy, e.clientX - cx);
+  const deg = angle * (180 / Math.PI);
 
-  fillColor.addEventListener('input', ()=> applyToActive(o=> o.set({fill: fillColor.value})));
-  strokeColor.addEventListener('input', ()=> applyToActive(o=> o.set({stroke: strokeColor.value})));
-  strokeWidth.addEventListener('input', ()=> applyToActive(o=> o.set({strokeWidth: parseInt(strokeWidth.value,10)})));
-  opacityRange.addEventListener('input', ()=> applyToActive(o=> o.set({opacity: parseInt(opacityRange.value,10)/100})));
+  activeElement.style.transform = `rotate(${deg}deg)`;
+  document.getElementById("rotateControl").value = deg;
+}
 
-  fontFamily.addEventListener('change', ()=> applyToActive(o=> {
-    if(isText(o)){ o.set({fontFamily: fontFamily.value}); }
-  }));
-  fontSize.addEventListener('input', ()=> applyToActive(o=> {
-    if(isText(o)){ o.set({fontSize: parseInt(fontSize.value,10)}); }
-  }));
-  charSpacing.addEventListener('input', ()=> applyToActive(o=> {
-    if(isText(o)){ o.set({charSpacing: parseInt(charSpacing.value,10)}); }
-  }));
+document.getElementById("toolText").onclick = () => {
+  let text = document.createElement("div");
+  text.classList.add("element");
+  text.style.left = "100px";
+  text.style.top = "100px";
+  text.style.fontSize = "32px";
+  text.style.color = "#000";
+  text.style.fontWeight = "600";
+  text.textContent = "Double-click to edit";
 
-  // Bold/Italic toggles
-  document.getElementById('boldBtn').addEventListener('click', ()=>{
-    applyToActive(o=>{
-      if(isText(o)){
-        const w = (o.fontWeight === 'bold') ? 'normal' : 'bold';
-        o.set({fontWeight:w});
-      }
-    });
-  });
-  document.getElementById('italicBtn').addEventListener('click', ()=>{
-    applyToActive(o=>{
-      if(isText(o)){
-        const s = (o.fontStyle === 'italic') ? 'normal' : 'italic';
-        o.set({fontStyle:s});
-      }
-    });
-  });
+  createResizeHandles(text);
+  addElement(text);
 
-  // ---- Tools actions ----
-  function nextName(prefix){
-    const n = Math.floor(Math.random()*9000)+1000;
-    return prefix + " " + n;
-  }
+  text.ondblclick = () => {
+    let newText = prompt("Edit text:", text.textContent);
+    if (newText !== null) text.textContent = newText;
+  };
+};
 
-  document.getElementById('addTextBtn').addEventListener('click', ()=>{
-    const t = new fabric.Textbox("Edit text",{
-      left: canvas.getWidth()*0.18,
-      top: canvas.getHeight()*0.12,
-      width: Math.min(720, canvas.getWidth()*0.6),
-      fill:"#ffffff",
-      fontFamily:"Poppins",
-      fontSize:64,
-      name: nextName("Text")
-    });
-    canvas.add(t);
-    canvas.setActiveObject(t);
-  });
+document.getElementById("toolShape").onclick = () => {
+  let rect = document.createElement("div");
+  rect.classList.add("element", "shape-rect");
+  rect.style.left = "120px";
+  rect.style.top = "120px";
+  createResizeHandles(rect);
+  addElement(rect);
+};
 
-  document.getElementById('addRectBtn').addEventListener('click', ()=>{
-    const r = new fabric.Rect({
-      left: canvas.getWidth()*0.2,
-      top: canvas.getHeight()*0.2,
-      width: canvas.getWidth()*0.35,
-      height: canvas.getHeight()*0.18,
-      fill:"#2563eb",
-      rx: 20, ry: 20,
-      name: nextName("Rect")
-    });
-    canvas.add(r);
-    canvas.setActiveObject(r);
-  });
+document.getElementById("toolCircle").onclick = () => {
+  let circle = document.createElement("div");
+  circle.classList.add("element", "shape-circle");
+  circle.style.left = "150px";
+  circle.style.top = "150px";
+  createResizeHandles(circle);
+  addElement(circle);
+};
 
-  document.getElementById('addCircleBtn').addEventListener('click', ()=>{
-    const c = new fabric.Circle({
-      left: canvas.getWidth()*0.25,
-      top: canvas.getHeight()*0.25,
-      radius: Math.min(canvas.getWidth(),canvas.getHeight())*0.09,
-      fill:"#7c3aed",
-      name: nextName("Circle")
-    });
-    canvas.add(c);
-    canvas.setActiveObject(c);
-  });
+document.getElementById("toolImage").onclick = () => {
+  let input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.click();
 
-  document.getElementById('uploadImgBtn').addEventListener('click', ()=>{
-    const input = document.createElement('input');
-    input.type='file';
-    input.accept='image/*';
-    input.onchange = (e)=>{
-      const file = e.target.files && e.target.files[0];
-      if(!file) return;
-      const reader = new FileReader();
-      reader.onload = ()=>{
-        fabric.Image.fromURL(reader.result, (img)=>{
-          img.set({
-            left: canvas.getWidth()*0.2,
-            top: canvas.getHeight()*0.2,
-            name: nextName("Image")
-          });
-          img.scaleToWidth(Math.min(600, canvas.getWidth()*0.5));
-          canvas.add(img);
-          canvas.setActiveObject(img);
-        });
-      };
-      reader.readAsDataURL(file);
+  input.onchange = () => {
+    let file = input.files[0];
+    let reader = new FileReader();
+
+    reader.onload = function (e) {
+      let img = document.createElement("img");
+      img.src = e.target.result;
+      img.classList.add("element");
+      img.style.width = "200px";
+      img.style.left = "150px";
+      img.style.top = "150px";
+
+      createResizeHandles(img);
+      addElement(img);
     };
-    input.click();
-  });
 
-  // Duplicate / Delete
-  document.getElementById('duplicateBtn').addEventListener('click', ()=>{
-    const obj = canvas.getActiveObject();
-    if(!obj) return;
-    obj.clone((cloned)=>{
-      cloned.set({ left: obj.left + 20, top: obj.top + 20, name: nextName((obj.name || obj.type || "Copy")) });
-      canvas.add(cloned);
-      canvas.setActiveObject(cloned);
-    });
-  });
+    reader.readAsDataURL(file);
+  };
+};
 
-  document.getElementById('deleteBtn').addEventListener('click', ()=>{
-    const obj = canvas.getActiveObject();
-    if(!obj) return;
-    canvas.remove(obj);
-    canvas.discardActiveObject();
-    canvas.requestRenderAll();
-    syncUIFromObject(null);
-  });
+document.getElementById("textFont").onchange = (e) => {
+  if (activeElement) activeElement.style.fontFamily = e.target.value;
+};
+document.getElementById("textSize").oninput = (e) => {
+  if (activeElement) activeElement.style.fontSize = e.target.value + "px";
+};
+document.getElementById("textColor").oninput = (e) => {
+  if (activeElement) activeElement.style.color = e.target.value;
+};
 
-  // Arrange
-  document.getElementById('frontBtn').addEventListener('click', ()=>{ const o=canvas.getActiveObject(); if(o) canvas.bringToFront(o); });
-  document.getElementById('backBtn').addEventListener('click', ()=>{ const o=canvas.getActiveObject(); if(o) canvas.sendToBack(o); });
+document.getElementById("opacityControl").oninput = (e) => {
+  if (activeElement) activeElement.style.opacity = e.target.value;
+};
 
-  // Align
-  document.getElementById('centerXBtn').addEventListener('click', ()=>{
-    const o = canvas.getActiveObject(); if(!o) return;
-    o.set({ left: (canvas.getWidth()/2) - (o.getScaledWidth()/2) });
-    canvas.requestRenderAll();
-  });
-  document.getElementById('centerYBtn').addEventListener('click', ()=>{
-    const o = canvas.getActiveObject(); if(!o) return;
-    o.set({ top: (canvas.getHeight()/2) - (o.getScaledHeight()/2) });
-    canvas.requestRenderAll();
-  });
+document.getElementById("rotateControl").oninput = (e) => {
+  if (activeElement) activeElement.style.transform = `rotate(${e.target.value}deg)`;
+};
 
-  // Undo / Redo
-  document.getElementById('undoBtn').addEventListener('click', ()=> loadHistory(historyIndex-1));
-  document.getElementById('redoBtn').addEventListener('click', ()=> loadHistory(historyIndex+1));
+document.getElementById("bringFront").onclick = () => {
+  if (activeElement) activeElement.style.zIndex = 999;
+};
+document.getElementById("sendBack").onclick = () => {
+  if (activeElement) activeElement.style.zIndex = 1;
+};
 
-  // Export PNG
-  document.getElementById('exportBtn').addEventListener('click', ()=>{
-    const dataUrl = canvas.toDataURL({ format:'png', multiplier: 2 });
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = 'template.png';
-    a.click();
-  });
+document.getElementById("canvasSize").onchange = (e) => {
+  let [w, h] = e.target.value.split("x");
+  canvas.style.width = w + "px";
+  canvas.style.height = h + "px";
+};
 
+canvas.style.width = "1080px";
+canvas.style.height = "1080px";
 
-  // Export JPG
-  document.getElementById('exportJpgBtn').addEventListener('click', ()=>{
-    const dataUrl = canvas.toDataURL({ format:'jpeg', quality: 0.95, multiplier: 2 });
-    const a = document.createElement('a');
-    a.href = dataUrl;
-    a.download = 'template.jpg';
-    a.click();
-  });
+document.getElementById("undoBtn").onclick = undo;
+document.getElementById("redoBtn").onclick = redo;
 
-  // Save / Load (local browser storage)
-  const SAVE_KEY = "ultimate_editor_design_v1";
-  const saveBtn = document.getElementById('saveBtn');
-  const loadBtn = document.getElementById('loadBtn');
-  const newBtn  = document.getElementById('newBtn');
-
-  function sanitizeForSave(json){
-    // Avoid saving external image data URLs too large by default (keep as is for now).
-    return json;
-  }
-
-  function saveDesign(silent=false){
-    const json = canvas.toJSON(['name','_layerName','_hidden','_locked']);
-    localStorage.setItem(SAVE_KEY, JSON.stringify(sanitizeForSave(json)));
-    if(!silent) toast("Saved ✅");
-  }
-
-  function loadDesign(){
-    const raw = localStorage.getItem(SAVE_KEY);
-    if(!raw){ toast("No saved design found"); return; }
-    try{
-      const json = JSON.parse(raw);
-      canvas.loadFromJSON(json, ()=>{
-        // Re-apply lock/hidden state
-        canvas.getObjects().forEach(o=>{
-          if(o._hidden){ o.visible=false; }
-          if(o._locked){
-            o.selectable=false; o.evented=false; o.hasControls=false;
-            o.lockMovementX=o.lockMovementY=o.lockRotation=o.lockScalingX=o.lockScalingY=true;
-          }
-        });
-        canvas.requestRenderAll();
-        pushHistory();
-        refreshLayers();
-        toast("Loaded ✅");
-      });
-    }catch(e){
-      console.error(e);
-      toast("Load failed");
-    }
-  }
-
-  function newDesign(){
-    if(!confirm("Start a new blank design? This will clear the canvas.")) return;
-    canvas.getObjects().slice().forEach(o=>{
-      if(o !== canvas.backgroundImage) canvas.remove(o);
-    });
-    canvas.discardActiveObject();
-    canvas.requestRenderAll();
-    pushHistory();
-    refreshLayers();
-    toast("New canvas ✅");
-  }
-
-  saveBtn.addEventListener('click', saveDesign);
-  loadBtn.addEventListener('click', loadDesign);
-  newBtn.addEventListener('click', newDesign);
-
-  // Auto-save softly after changes (every ~1s idle)
-  let autosaveTimer = null;
-  function scheduleAutosave(){
-    clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(()=> {
-      try{ saveDesign(true); }catch(_){}
-    }, 1200);
-  }
-
-  // Zoom
-  const zoomRange = document.getElementById('zoomRange');
-  zoomRange.addEventListener('input', ()=>{
-    visualZoom = parseInt(zoomRange.value,10)/100;
-    applyVisualZoom();
-  });
-  applyVisualZoom();
-
-  // Grid
-  document.getElementById('gridBtn').addEventListener('click', ()=> setGrid(!gridOn));
-
-  // Theme toggle
-  const toggleThemeBtn = document.getElementById('toggleThemeBtn');
-  function syncThemeBtn(){
-    const light = document.documentElement.classList.contains('light');
-    toggleThemeBtn.textContent = light ? "☀️ Light" : "🌙 Dark";
-    stageEl.classList.toggle("light", light);
-  }
-  toggleThemeBtn.addEventListener('click', ()=>{
-    document.documentElement.classList.toggle('light');
-    syncThemeBtn();
-  });
-  syncThemeBtn();
-
-  // Layers list (select only, Phase 1)
-  const layersList = document.getElementById('layersList');
-
-  function getLayerLabel(obj){
-    return (obj && (obj.name || obj._layerName || obj.type || "Layer")) || "Layer";
-  }
-
-  function setLayerLabel(obj, label){
-    if(!obj) return;
-    obj._layerName = String(label || "").trim() || (obj.type || "Layer");
-    refreshLayers();
-  }
-
-  function toggleHidden(obj){
-    if(!obj) return;
-    const hidden = !!obj._hidden;
-    obj._hidden = !hidden;
-    obj.visible = hidden; // if hidden -> visible false, else true
-    obj.evented = !obj._hidden && !obj._locked;
-    if(obj._hidden && canvas.getActiveObject() === obj){
-      canvas.discardActiveObject();
-    }
-    canvas.requestRenderAll();
-    refreshLayers();
-  }
-
-  function toggleLocked(obj){
-    if(!obj) return;
-    obj._locked = !obj._locked;
-    obj.selectable = !obj._locked;
-    obj.evented = !obj._locked && !obj._hidden;
-    obj.hasControls = !obj._locked;
-    obj.lockMovementX = obj._locked;
-    obj.lockMovementY = obj._locked;
-    obj.lockRotation = obj._locked;
-    obj.lockScalingX = obj._locked;
-    obj.lockScalingY = obj._locked;
-    if(obj._locked && canvas.getActiveObject() === obj){
-      // keep active, but controls will hide
-    }
-    canvas.requestRenderAll();
-    refreshLayers();
-  }
-
-  function moveLayerToIndex(obj, newIndexFromBottom){
-    // Fabric indices are from bottom (0) to top (n-1)
-    const all = canvas.getObjects();
-    const cur = all.indexOf(obj);
-    if(cur < 0) return;
-    const clamped = Math.max(0, Math.min(all.length-1, newIndexFromBottom));
-    obj.moveTo(clamped);
-    canvas.requestRenderAll();
-  }
-
-  function refreshLayers(){
-    const all = canvas.getObjects().filter(o => o !== canvas.backgroundImage);
-    // show TOP first (reverse)
-    const topFirst = all.slice().reverse();
-    layersList.innerHTML = "";
-
-    topFirst.forEach((obj, topIndex)=>{
-      const div = document.createElement('div');
-      div.className = 'layer-item' + (obj === canvas.getActiveObject() ? ' active' : '');
-      div.setAttribute('draggable', 'true');
-
-      const handle = document.createElement('div');
-      handle.className = 'layer-handle';
-      handle.title = 'Drag to reorder';
-      handle.textContent = '⋮⋮';
-
-      const nameWrap = document.createElement('div');
-      nameWrap.style.display = 'flex';
-      nameWrap.style.flexDirection = 'column';
-      nameWrap.style.gap = '2px';
-      nameWrap.style.minWidth = '0';
-
-      const name = document.createElement('div');
-      name.className = 'layer-name';
-      name.textContent = getLayerLabel(obj);
-
-      const badges = document.createElement('div');
-      badges.style.display = 'flex';
-      badges.style.gap = '6px';
-      badges.style.flexWrap = 'wrap';
-
-      if(obj._locked){
-        const b = document.createElement('span'); b.className='layer-badge'; b.textContent='Locked';
-        badges.appendChild(b);
-      }
-      if(obj._hidden){
-        const b = document.createElement('span'); b.className='layer-badge'; b.textContent='Hidden';
-        badges.appendChild(b);
-      }
-
-      nameWrap.appendChild(name);
-      if(badges.childNodes.length) nameWrap.appendChild(badges);
-
-      const actions = document.createElement('div');
-      actions.className = 'layer-actions';
-
-      const renameBtn = document.createElement('button');
-      renameBtn.className = 'iconbtn';
-      renameBtn.title = 'Rename';
-      renameBtn.textContent = '✎';
-      renameBtn.onclick = (e)=>{
-        e.stopPropagation();
-        const next = prompt("Rename layer:", getLayerLabel(obj));
-        if(next !== null) setLayerLabel(obj, next);
-      };
-
-      const hideBtn = document.createElement('button');
-      hideBtn.className = 'iconbtn';
-      hideBtn.title = obj._hidden ? 'Show' : 'Hide';
-      hideBtn.textContent = obj._hidden ? '👁' : '🚫';
-      hideBtn.onclick = (e)=>{ e.stopPropagation(); toggleHidden(obj); };
-
-      const lockBtn = document.createElement('button');
-      lockBtn.className = 'iconbtn';
-      lockBtn.title = obj._locked ? 'Unlock' : 'Lock';
-      lockBtn.textContent = obj._locked ? '🔓' : '🔒';
-      lockBtn.onclick = (e)=>{ e.stopPropagation(); toggleLocked(obj); };
-
-      const up = document.createElement('button');
-      up.className = 'iconbtn';
-      up.title = 'Bring forward';
-      up.textContent = '⬆';
-      up.onclick = (e)=>{ e.stopPropagation(); canvas.bringForward(obj); canvas.requestRenderAll(); refreshLayers(); };
-
-      const down = document.createElement('button');
-      down.className = 'iconbtn';
-      down.title = 'Send backward';
-      down.textContent = '⬇';
-      down.onclick = (e)=>{ e.stopPropagation(); canvas.sendBackwards(obj); canvas.requestRenderAll(); refreshLayers(); };
-
-      actions.appendChild(renameBtn);
-      actions.appendChild(hideBtn);
-      actions.appendChild(lockBtn);
-      actions.appendChild(up);
-      actions.appendChild(down);
-
-      div.appendChild(handle);
-      div.appendChild(nameWrap);
-      div.appendChild(actions);
-
-      div.onclick = ()=>{
-        if(obj._hidden) toggleHidden(obj); // unhide on click
-        canvas.setActiveObject(obj);
-        canvas.requestRenderAll();
-        syncUIFromObject(obj);
-        refreshLayers();
-      };
-
-      // Drag reorder
-      div.addEventListener('dragstart', (e)=>{
-        e.dataTransfer.setData('text/plain', String(topIndex));
-        e.dataTransfer.effectAllowed = 'move';
-      });
-      div.addEventListener('dragover', (e)=>{ e.preventDefault(); div.classList.add('dragover'); });
-      div.addEventListener('dragleave', ()=> div.classList.remove('dragover'));
-      div.addEventListener('drop', (e)=>{
-        e.preventDefault();
-        div.classList.remove('dragover');
-        const fromTopIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
-        if(isNaN(fromTopIndex)) return;
-
-        const fromObj = topFirst[fromTopIndex];
-        const toObj = obj;
-        if(!fromObj || !toObj || fromObj === toObj) return;
-
-        // Determine new index in bottom-based coordinates
-        const allBottom = canvas.getObjects().filter(o => o !== canvas.backgroundImage);
-        const fromBottomIndex = allBottom.indexOf(fromObj);
-        const toBottomIndex = allBottom.indexOf(toObj);
-
-        // Move fromObj to toBottomIndex, then adjust if needed
-        moveLayerToIndex(fromObj, toBottomIndex);
-        refreshLayers();
-      });
-
-      layersList.appendChild(div);
-    });
-  }
-
-
-  // Keyboard shortcuts (basic)
-  window.addEventListener('keydown', (e)=>{
-    const obj = canvas.getActiveObject();
-    if(e.key === "Delete" || e.key === "Backspace"){
-      if(obj){ canvas.remove(obj); canvas.discardActiveObject(); canvas.requestRenderAll(); }
-    }
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="z"){
-      e.preventDefault();
-      loadHistory(historyIndex-1);
-    }
-    if((e.ctrlKey || e.metaKey) && (e.key.toLowerCase()==="y" || (e.shiftKey && e.key.toLowerCase()==="z"))){
-      e.preventDefault();
-      loadHistory(historyIndex+1);
-    }
-    if((e.ctrlKey || e.metaKey) && e.key.toLowerCase()==="d"){
-      e.preventDefault();
-      document.getElementById('duplicateBtn').click();
-    }
-  });
 </script>
 
-  <div id="toast" class="toast"></div>
+<script>
+// html2canvas loader
+let script = document.createElement("script");
+script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+document.body.appendChild(script);
+
+document.getElementById("exportPNG").onclick = () => {
+  html2canvas(canvas, {
+    backgroundColor: null,
+    scale: 2
+  }).then(canvasImage => {
+    const link = document.createElement("a");
+    link.download = "design.png";
+    link.href = canvasImage.toDataURL("image/png");
+    link.click();
+  });
+};
+
+document.getElementById("saveProject").onclick = () => {
+  const project = {
+    html: canvas.innerHTML,
+    width: canvas.style.width,
+    height: canvas.style.height
+  };
+  localStorage.setItem("savedDesign", JSON.stringify(project));
+  alert("Project Saved!");
+};
+
+window.onload = () => {
+  const params = new URLSearchParams(window.location.search);
+  const imgURL = params.get("img");
+
+  if (imgURL) {
+    // opened from template → start fresh with that image
+    canvas.innerHTML = "";
+    canvas.style.width = "1080px";
+    canvas.style.height = "1080px";
+
+    let img = document.createElement("img");
+    img.src = imgURL;
+    img.classList.add("element");
+    img.style.width = "500px";
+    img.style.left = "100px";
+    img.style.top = "100px";
+
+    createResizeHandles(img);
+    addElement(img);
+
+  } else {
+    // normal open → load last saved project (if any)
+    const saved = localStorage.getItem("savedDesign");
+    if (saved) {
+      const project = JSON.parse(saved);
+      canvas.innerHTML = project.html;
+      canvas.style.width = project.width;
+      canvas.style.height = project.height;
+      attachElementEvents();
+    }
+  }
+};
+</script>
+
 </body>
 </html>
