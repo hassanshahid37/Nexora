@@ -356,35 +356,27 @@
     }
   </style>
 
+
+
 <style>
-/* --- Canvas lock (replaced) ---
-   Goal: fixed 980×620 stage, always centered, no absolute positioning.
-   Zoom (if used) must keep center stable.
-*/
+/* === NEW CANVAS SYSTEM (REPLACED) === */
 .stage{
-  position: relative;
-  overflow: hidden !important;
-  padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  overflow:hidden !important;
 }
 .canvasWrap{
-  width: 100% !important;
-  height: 100% !important;
-  min-height: 100% !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  min-height:100% !important;
 }
 #canvas{
-  position: relative !important;
-  width: 980px !important;
-  height: 620px !important;
-  left: auto !important;
-  top: auto !important;
-  margin: 0 !important;
-  transform-origin: 50% 50% !important;
+  width:880px !important;
+  height:620px !important;
+  position:relative !important;
+  transform:none !important;
 }
 </style>
 
@@ -633,16 +625,25 @@ const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "S
   const gridOverlay = $("#gridOverlay");
   let zoom = 1;
   let gridOn = true;
-  let autoFitZoom = false; // canvas is fixed & centered; no auto-fit zoom
+  let autoFitZoom = true; // keep canvas comfortably inside stage (Canva-like)
   let docW = 980, docH = 620, docBg = "";
 
   function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
   function fitZoomToStage(force=false){
-    // Replaced: canvas is fixed 980×620 and centered by layout CSS.
-    // Keep zoom stable (default 1) unless user manually changes it.
-    if(force){
-      zoom = clamp(Number(zoom)||1, 0.08, 2.2);
+    if(!force && !autoFitZoom) return;
+    // stage is the center viewport; leave some padding so doc is smaller than background
+    const r = stage.getBoundingClientRect();
+    const pad = 46; // visual breathing room
+    const availW = Math.max(200, r.width - pad*2);
+    const availH = Math.max(200, r.height - pad*2);
+
+    const zW = availW / Math.max(1, docW);
+    const zH = availH / Math.max(1, docH);
+    const next = clamp(Math.min(zW, zH) * 0.96, 0.08, 1.25);
+
+    if(Number.isFinite(next) && Math.abs(next - zoom) > 0.001){
+      zoom = next;
       try{ $("#zoomPill").textContent = Math.round(zoom*100) + "%"; }catch(_){}
     }
   }
@@ -1049,10 +1050,10 @@ function escapeHtml(str){
   }
 
   function resizeCanvas(w,h){
-    // Locked: keep editor canvas at fixed 980×620 (per requirement).
-    baseCanvas.w = 980;
-    baseCanvas.h = 620;
-    localStorage.setItem("templify_canvas_size", JSON.stringify({w: baseCanvas.w, h: baseCanvas.h}));
+    // simple: change canvas size by modifying base dims used in renderAll
+    // We'll store in state as special element? Keep lightweight: store in localStorage
+    localStorage.setItem("templify_canvas_size", JSON.stringify({w,h}));
+    baseCanvas.w = w; baseCanvas.h = h;
     snapshot();
     renderAll();
     scheduleAutosave();
@@ -1060,10 +1061,10 @@ function escapeHtml(str){
 
   const baseCanvas = { w: 980, h: 620 };
   function loadCanvasSize(){
-    // Locked: always fixed.
-    baseCanvas.w = 980;
-    baseCanvas.h = 620;
-    try{ localStorage.setItem("templify_canvas_size", JSON.stringify({w:980,h:620})); }catch(e){}
+    try{
+      const s = JSON.parse(localStorage.getItem("templify_canvas_size")||"null");
+      if(s?.w && s?.h){ baseCanvas.w = s.w; baseCanvas.h = s.h; }
+    }catch(e){}
   }
 
   // Override renderAll to use baseCanvas
@@ -1254,27 +1255,17 @@ function escapeHtml(str){
 
   // Document settings
   function applyDoc(){
-    // Locked canvas size (980×620). Document panel may still set background.
-    docW = 980;
-    docH = 620;
-    $("#docW").value = 980;
-    $("#docH").value = 620;
-
+    docW = Math.max(200, Number($("#docW")?.value || 980));
+    docH = Math.max(200, Number($("#docH")?.value || 620));
     docBg = String($("#docBg")?.value || "").trim();
 
-    baseCanvas.w = 980;
-    baseCanvas.h = 620;
-
-    canvas.style.width = baseCanvas.w + "px";
-    canvas.style.height = baseCanvas.h + "px";
-
-    // Background optional
+    canvas.style.width = docW + "px";
+    canvas.style.height = docH + "px";
     if(docBg){
       canvas.style.background = docBg;
     }else{
-      canvas.style.background = "";
+      canvas.style.background = "transparent";
     }
-
     renderAll();
     updateUI();
   }
@@ -1612,7 +1603,60 @@ function escapeHtml(str){
 })();
 </script>
 
+<script>
+(function(){
+  function resetZoom(){
+    const canvas = document.getElementById('canvas');
+    if(!canvas) return;
 
+    // Remove any scale transforms applied by editor
+    canvas.style.transform = 'scale(1)';
+    canvas.style.transformOrigin = '0 0';
+
+    // Also reset parent wrappers if scaled
+    let p = canvas.parentElement;
+    while(p){
+      if(p.style && p.style.transform){
+        p.style.transform = 'scale(1)';
+        p.style.transformOrigin = '0 0';
+      }
+      p = p.parentElement;
+    }
+  }
+
+  // Run after template open
+  resetZoom();
+  setTimeout(resetZoom, 100);
+  setTimeout(resetZoom, 300);
+  setTimeout(resetZoom, 600);
+})();
+</script>
+
+
+<script>
+/* === NEW CANVAS LOGIC (REPLACED) === */
+(function(){
+  const canvas = document.getElementById('canvas');
+  if(canvas){
+    canvas.style.width = '880px';
+    canvas.style.height = '620px';
+    canvas.style.transform = 'none';
+  }
+
+  // Disable all legacy canvas controllers
+  window.resizeCanvas = function(){};
+  window.fitZoomToStage = function(){};
+  window.fitZoomToView = function(){};
+  window.resetZoom = function(){};
+
+  // Lock zoom
+  try{
+    if(window.zoom !== undefined) window.zoom = 1;
+    if(window.autoFitZoom !== undefined) window.autoFitZoom = false;
+  }catch(e){}
+
+})();
+</script>
 
 </body>
 </html>
