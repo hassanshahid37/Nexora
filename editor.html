@@ -240,11 +240,14 @@
 
     /* Canvas */
     .stage{
-      position:relative;
-      overflow:auto;
-      background:transparent;
-      padding:18px;
-    }
+  position: relative;
+  overflow: auto;
+  background: transparent;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
     .stage::-webkit-scrollbar{width:12px;height:12px}
     .stage::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:999px}
     [data-theme="light"] .stage::-webkit-scrollbar-thumb{background:rgba(10,20,60,.14)}
@@ -361,7 +364,10 @@
   transform: translate(-50%, -50%);
   pointer-events:none;
 }
-.canvasAnchor .canvas{
+.canvasScale{
+  transform-origin: top left;
+}
+.canvas{
   pointer-events:auto;
 }
 
@@ -450,8 +456,10 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
       <main class="stage" id="stage">
         <div class="canvasWrap">
           <div class="canvasAnchor">
+  <div class="canvasScale">
 <div class="canvas" id="canvas">
             <div class="gridOverlay" id="gridOverlay"></div>
+  </div>
 </div>
           </div>
         </div>
@@ -817,7 +825,7 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
     const kids = [...canvas.children].filter(n => n !== gridOverlay);
     kids.forEach(n => n.remove());
     gridOverlay.style.display = gridOn ? "block" : "none";
-    canvas.style.transform = `scale(${zoom})`;
+    canvasScale.style.transform = `scale(${zoom})`;
     canvas.style.width = `${docW}px`;
     canvas.style.height = `${docH}px`;
 
@@ -1077,7 +1085,7 @@ function escapeHtml(str){
     const kids = [...canvas.children].filter(n => n !== gridOverlay);
     kids.forEach(n => n.remove());
     gridOverlay.style.display = gridOn ? "block" : "none";
-    canvas.style.transform = `scale(${zoom})`;
+    canvasScale.style.transform = `scale(${zoom})`;
     canvas.style.width = `${baseCanvas.w}px`;
     canvas.style.height = `${baseCanvas.h}px`;
 
