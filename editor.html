@@ -1,5 +1,4 @@
 
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -332,10 +331,6 @@
       border-radius:16px;padding:10px;margin-top:10px;
     }
 
-    .hidden{ display:none !important; }
-    .actionsRow{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-    .actionsRow .btn{ flex:0 0 auto; }
-
     /* Responsive */
     
     @media (max-width: 1120px){
@@ -352,22 +347,6 @@
       .tools{min-width: 1px}
     }
   </style>
-
-<style>
-.editor-stage, .stage, .canvas-stage {
-  position: relative;
-  overflow: auto;
-}
-#canvas {
-  width: 1080px;
-  height: 1080px;
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-}
-</style>
-
 </head>
 
 <body data-theme="dark">
@@ -447,15 +426,13 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
       <aside class="panel right" id="rightPanel">
         <div class="panelHeader">
           <b>Properties</b>
-          <div class="seg" id="rightTabs">
+          <div class="seg">
             <div class="chip active" data-tab="props">Selected</div>
             <div class="chip" data-tab="doc">Document</div>
-            <div class="chip" data-tab="smart">Smart</div>
           </div>
         </div>
         <div class="panelBody">
-          <div class="pane" data-pane="props">
-            <div class="propGrid">
+          <div class="propGrid">
             <div class="field">
               <label>Element</label>
               <select id="propType">
@@ -499,67 +476,7 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
               Click an element to select. Drag to move. Use the toolbar for duplicate, delete, undo/redo, and export.
             </div>
           </div>
-          </div>
-
-          <div class="pane hidden" data-pane="doc">
-            <div class="propGrid">
-              <div class="field">
-                <label>Canvas size</label>
-                <div class="row2">
-                  <input id="docW" type="number" min="200" value="980" />
-                  <input id="docH" type="number" min="200" value="620" />
-                </div>
-              </div>
-
-              <div class="field">
-                <label>Background</label>
-                <input id="docBg" placeholder="e.g. #0b1020 or linear-gradient(...)" />
-              </div>
-
-              <div class="miniHelp">
-                Document settings affect the whole canvas. (Phase G: editor intelligence)
-              </div>
-
-              <div class="actionsRow">
-                <button class="btn tiny" id="applyDocBtn" type="button">Apply Document</button>
-                <button class="btn tiny" id="resetDocBtn" type="button">Reset</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="pane hidden" data-pane="smart">
-            <div class="propGrid">
-              <div class="field">
-                <label>Use your prompt</label>
-                <div class="miniHelp">
-                  Uses the prompt from the generator to auto-fill Headline / Subtitle / CTA.
-                </div>
-                <button class="btn tiny primary" id="smartApplyPrompt" type="button">Apply Prompt to Design</button>
-              </div>
-
-              <div class="field">
-                <label>Layout helpers</label>
-                <div class="actionsRow">
-                  <button class="btn tiny" id="smartTidy" type="button">Tidy</button>
-                  <button class="btn tiny" id="smartCenter" type="button">Center</button>
-                  <button class="btn tiny" id="smartDistribute" type="button">Distribute</button>
-                </div>
-              </div>
-
-              <div class="field">
-                <label>Typography</label>
-                <div class="actionsRow">
-                  <button class="btn tiny" id="smartUpcase" type="button">UPPERCASE</button>
-                  <button class="btn tiny" id="smartShorten" type="button">Shorten</button>
-                </div>
-              </div>
-
-              <div class="miniHelp">
-                Tip: Select multiple elements (Shift+Click) then use these actions.
-              </div>
-            </div>
-          </div>
-
+        </div>
       </aside>
     </div>
   </div>
@@ -578,33 +495,10 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     localStorage.setItem("templify_theme", next);
   }
 
-  // Draft meta from index (supports both legacy + current keys)
+  // Draft meta from index
   let draft = null;
-  let draftPrompt = "";
-  let draftNotes = "";
-
-  // 1) Preferred: settings saved by index
-  try{
-    const s = JSON.parse(localStorage.getItem("nexora_last_settings_v1")||"null");
-    if(s && typeof s === "object"){
-      draftPrompt = String(s.prompt||"");
-      draftNotes  = String(s.notes||"");
-    }
-  }catch(e){}
-
-  // 2) Current: selected template saved by index
-  try{
-    const t = JSON.parse(localStorage.getItem("nexora_selected_template_v1")||"null");
-    if(t && typeof t === "object"){
-      draft = { template: t, prompt: draftPrompt, notes: draftNotes };
-    }
-  }catch(e){}
-
-  // 3) Legacy: older key
-  if(!draft){
-    try{ draft = JSON.parse(localStorage.getItem("templify_draft")||"null"); }catch(e){}
-  }
-const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "Style"}` : "Untitled";
+  try{ draft = JSON.parse(localStorage.getItem("templify_draft")||"null"); }catch(e){}
+  const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "Style"}` : "Untitled";
   $("#docTitle").textContent = title;
 
   // State
@@ -613,49 +507,14 @@ const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "S
   const gridOverlay = $("#gridOverlay");
   let zoom = 1;
   let gridOn = true;
-  let autoFitZoom = true; // keep canvas comfortably inside stage (Canva-like)
-  let docW = 980, docH = 620, docBg = "";
 
-  function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
-
-  function fitZoomToStage(force=false){
-    if(!force && !autoFitZoom) return;
-    // stage is the center viewport; leave some padding so doc is smaller than background
-    const r = stage.getBoundingClientRect();
-    const pad = 46; // visual breathing room
-    const availW = Math.max(200, r.width - pad*2);
-    const availH = Math.max(200, r.height - pad*2);
-
-    const zW = availW / Math.max(1, docW);
-    const zH = availH / Math.max(1, docH);
-    const next = clamp(Math.min(zW, zH) * 0.96, 0.08, 1.25);
-
-    if(Number.isFinite(next) && Math.abs(next - zoom) > 0.001){
-      zoom = next;
-      try{ $("#zoomPill").textContent = Math.round(zoom*100) + "%"; }catch(_){}
-    }
-  }
-const state = {
+  const state = {
     elements: [],
     selectedIds: new Set(),
     history: [],
     future: [],
     autosave: true,
   };
-
-  // Load a generated template (if provided by index)
-  try{
-    if(draft?.template?.elements && Array.isArray(draft.template.elements)){
-      state.elements = draft.template.elements.map(e => ({
-        id: e.id || uid(),
-        x: Number(e.x ?? 80), y: Number(e.y ?? 80),
-        w: Number(e.w ?? 420), h: Number(e.h ?? 120),
-        title: String(e.title ?? e.text ?? "TEXT"),
-        sub: String(e.sub ?? e.subtitle ?? "")
-      }));
-    }
-  }catch(e){}
-
 
   // Helpers
   function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
@@ -700,47 +559,7 @@ const state = {
   }
 
   // Init content
-  
-  // --- Nexora: load generated templates from index (handoff) ---
-  function getDraftTemplatePayload(){
-    // draft can be:
-    //  A) { template: {meta, template:{elements,canvas}} }   (index handoff wrapper)
-    //  B) { template: {elements,canvas} }                   (direct)
-    //  C) legacy shapes
-    const t = draft?.template || null;
-    if(!t || typeof t !== "object") return null;
-    if(t.elements && Array.isArray(t.elements)) return t;              // direct
-    if(t.template && t.template.elements && Array.isArray(t.template.elements)) return t.template; // wrapped
-    return null;
-  }
-
-  function normalizeEditorElements(arr){
-    // Ensure every element has required geometry + id + type
-    const out = [];
-    for(const raw of (arr||[])){
-      if(!raw || typeof raw !== "object") continue;
-      const el = { ...raw };
-      el.id = String(el.id || uid());
-      el.type = String(el.type || el.kind || el.element || "shape");
-      // geometry defaults
-      el.x = Number.isFinite(el.x) ? el.x : 0;
-      el.y = Number.isFinite(el.y) ? el.y : 0;
-      el.w = Number.isFinite(el.w) ? el.w : (Number.isFinite(el.width) ? el.width : 200);
-      el.h = Number.isFinite(el.h) ? el.h : (Number.isFinite(el.height) ? el.height : 120);
-      // z
-      if(!Number.isFinite(el.zIndex) && Number.isFinite(el.z)) el.zIndex = el.z;
-      // text fallback
-      if(typeof el.text === "string" && typeof el.title !== "string") el.title = el.text;
-      if(typeof el.subtitle === "string" && typeof el.sub !== "string") el.sub = el.subtitle;
-      if(typeof el.sub !== "string") el.sub = "";
-      if(typeof el.title !== "string") el.title = "";
-      out.push(el);
-    }
-    // stable ordering by zIndex then y then x
-    out.sort((a,b)=> (Number(a.zIndex||0)-Number(b.zIndex||0)) || (a.y-b.y) || (a.x-b.x));
-    return out;
-  }
-function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add your text here…"){
+  function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add your text here…"){
     const id = uid();
     state.elements.push({ id, x, y, w, h, title, sub });
     snapshot();
@@ -750,49 +569,20 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
   }
 
   function loadAutosaveOrSeed(){
-    // 0) If we arrived from Generator, load that template first (ignore autosave)
-    const incoming = getDraftTemplatePayload();
-    if(incoming?.elements?.length){
-      // document size
-      if(incoming.canvas && Number.isFinite(incoming.canvas.w) && Number.isFinite(incoming.canvas.h)){
-        docW = Math.max(200, Math.floor(incoming.canvas.w));
-        docH = Math.max(200, Math.floor(incoming.canvas.h));
-      }
-      // normalize + load
-      state.elements = normalizeEditorElements(incoming.elements);
-
-      // Clear selection and render
-      snapshot();
-      state.selectedIds.clear();
-      fitZoomToStage(true);
-      renderAll();
-      updateUI();
-
-      // Mark that we loaded a generated template (optional)
-      try{ localStorage.setItem("nexora_editor_loaded_v1", String(Date.now())); }catch(e){}
-      $("#autosavePill").textContent = "Autosave ON";
-      return;
-    }
-
     let saved = null;
     try{ saved = JSON.parse(localStorage.getItem("templify_autosave")||"null"); }catch(e){}
     if(saved?.elements?.length){
       state.elements = saved.elements;
       snapshot();
-      fitZoomToStage(true);
       renderAll();
       state.selectedIds.clear();
       updateUI();
       $("#autosavePill").textContent = "Autosave ON";
       return;
     }
-
     // Seed
     addElement(90, 92, 320, 150, draft?.meta?.notes ? draft.meta.notes.slice(0,32) : "Luxury Template", "Drag, resize, duplicate…");
     addElement(470, 210, 360, 170, "Modern Card", "Click elements to edit properties.");
-    fitZoomToStage(true);
-    renderAll();
-    updateUI();
   }
 
   // Render
@@ -802,8 +592,8 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
     kids.forEach(n => n.remove());
     gridOverlay.style.display = gridOn ? "block" : "none";
     canvas.style.transform = `scale(${zoom})`;
-    canvas.style.width = `${docW}px`;
-    canvas.style.height = `${docH}px`;
+    canvas.style.width = `${980}px`;
+    canvas.style.height = `${620}px`;
 
     for(const el of state.elements){
       const div = document.createElement("div");
@@ -813,100 +603,14 @@ function addElement(x=80, y=80, w=260, h=130, title="Premium Title", sub="Add yo
       div.style.top = el.y + "px";
       div.style.width = el.w + "px";
       div.style.height = el.h + "px";
-
-      div.style.zIndex = String(el.zIndex ?? el.z ?? 0);
-
-      const t = String(el.type || "card");
-      // reset visuals
-      div.style.background = "";
-      div.style.backgroundImage = "";
-      div.style.backgroundSize = "";
-      div.style.backgroundPosition = "";
-      div.style.border = "";
-      div.style.borderRadius = "";
-      div.style.boxShadow = "";
-      div.style.color = "";
-      div.style.display = "";
-      div.style.alignItems = "";
-      div.style.justifyContent = "";
-      div.style.textAlign = "";
-      div.style.padding = "";
-
-      if(t === "background"){
-        div.innerHTML = "";
-        div.style.left = (Number.isFinite(el.x) ? el.x : 0) + "px";
-        div.style.top  = (Number.isFinite(el.y) ? el.y : 0) + "px";
-        div.style.width  = (Number.isFinite(el.w) ? el.w : docW) + "px";
-        div.style.height = (Number.isFinite(el.h) ? el.h : docH) + "px";
-        div.style.background = el.gradient || el.fill || el.color || "linear-gradient(135deg,#0a1433,#061022)";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
-      } else if(t === "image"){
-        div.innerHTML = "";
-        const src = el.src || el.url || "";
-        if(src) div.style.backgroundImage = `url("${String(src).replace(/"/g,'%22')}")`;
-        div.style.backgroundSize = "cover";
-        div.style.backgroundPosition = "center";
-        div.style.backgroundColor = el.fill || "rgba(255,255,255,0.06)";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
-        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
-      } else if(t === "shape"){
-        div.innerHTML = "";
-        div.style.background = el.gradient || el.fill || el.color || "rgba(255,255,255,0.06)";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
-        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
-        if(Number.isFinite(el.opacity)) div.style.opacity = String(el.opacity);
-      } else if(t === "heading" || t === "text"){
-        const txt = el.text ?? el.title ?? "";
-        const sub = el.sub ?? el.subtitle ?? "";
-        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize: (t==='heading'?44:22)}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:(t==='heading'?800:500)}; line-height:${Number.isFinite(el.lineHeight)?el.lineHeight:1.1}; letter-spacing:${Number.isFinite(el.letterSpacing)?el.letterSpacing:0}px;">${escapeHtml(txt)}</div>` +
-                        (sub ? `<div style="margin-top:10px; font-size:${Math.max(14, Math.round((Number.isFinite(el.fontSize)?el.fontSize:22)*0.55))}px; opacity:0.85;">${escapeHtml(sub)}</div>` : "");
-        div.style.background = el.fill || "transparent";
-        div.style.color = el.color || "#eaf0ff";
-        div.style.padding = (Number.isFinite(el.padding)? el.padding : 18) + "px";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
-      } else if(t === "badge"){
-        const txt = el.text ?? el.title ?? "BADGE";
-        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize:14}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:700}; letter-spacing:${Number.isFinite(el.letterSpacing)?el.letterSpacing:1.2}px; text-transform:uppercase;">${escapeHtml(txt)}</div>`;
-        div.style.background = el.fill || "rgba(255,255,255,0.10)";
-        div.style.color = el.color || "#eaf0ff";
-        div.style.display = "flex";
-        div.style.alignItems = "center";
-        div.style.justifyContent = "center";
-        div.style.textAlign = "center";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 999) + "px";
-        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
-        if(Number.isFinite(el.opacity)) div.style.opacity = String(el.opacity);
-      } else if(t === "cta"){
-        const txt = el.text ?? el.title ?? "Shop Now";
-        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize:16}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:800};">${escapeHtml(txt)}</div>`;
-        div.style.background = el.fill || "#0b5fff";
-        div.style.color = el.color || "#ffffff";
-        div.style.display = "flex";
-        div.style.alignItems = "center";
-        div.style.justifyContent = "center";
-        div.style.textAlign = "center";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 999) + "px";
-      } else {
-        // Default: existing card behavior
-        div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
-      }
-
-      if(el.shadow){
-        div.style.boxShadow = String(el.shadow);
-      }
-
+      div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
       if(state.selectedIds.has(el.id)) div.classList.add("selected");
       canvas.appendChild(div);
       wireElement(div);
     }
   }
 
-  
-  // Initial paint
-  renderAll();
-  updateUI();
-
-function escapeHtml(str){
+  function escapeHtml(str){
     return String(str??"").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
   }
 
@@ -1073,88 +777,7 @@ function escapeHtml(str){
       div.style.top = el.y + "px";
       div.style.width = el.w + "px";
       div.style.height = el.h + "px";
-
-      div.style.zIndex = String(el.zIndex ?? el.z ?? 0);
-
-      const t = String(el.type || "card");
-      // reset visuals
-      div.style.background = "";
-      div.style.backgroundImage = "";
-      div.style.backgroundSize = "";
-      div.style.backgroundPosition = "";
-      div.style.border = "";
-      div.style.borderRadius = "";
-      div.style.boxShadow = "";
-      div.style.color = "";
-      div.style.display = "";
-      div.style.alignItems = "";
-      div.style.justifyContent = "";
-      div.style.textAlign = "";
-      div.style.padding = "";
-
-      if(t === "background"){
-        div.innerHTML = "";
-        div.style.left = (Number.isFinite(el.x) ? el.x : 0) + "px";
-        div.style.top  = (Number.isFinite(el.y) ? el.y : 0) + "px";
-        div.style.width  = (Number.isFinite(el.w) ? el.w : docW) + "px";
-        div.style.height = (Number.isFinite(el.h) ? el.h : docH) + "px";
-        div.style.background = el.gradient || el.fill || el.color || "linear-gradient(135deg,#0a1433,#061022)";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
-      } else if(t === "image"){
-        div.innerHTML = "";
-        const src = el.src || el.url || "";
-        if(src) div.style.backgroundImage = `url("${String(src).replace(/"/g,'%22')}")`;
-        div.style.backgroundSize = "cover";
-        div.style.backgroundPosition = "center";
-        div.style.backgroundColor = el.fill || "rgba(255,255,255,0.06)";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
-        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
-      } else if(t === "shape"){
-        div.innerHTML = "";
-        div.style.background = el.gradient || el.fill || el.color || "rgba(255,255,255,0.06)";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
-        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
-        if(Number.isFinite(el.opacity)) div.style.opacity = String(el.opacity);
-      } else if(t === "heading" || t === "text"){
-        const txt = el.text ?? el.title ?? "";
-        const sub = el.sub ?? el.subtitle ?? "";
-        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize: (t==='heading'?44:22)}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:(t==='heading'?800:500)}; line-height:${Number.isFinite(el.lineHeight)?el.lineHeight:1.1}; letter-spacing:${Number.isFinite(el.letterSpacing)?el.letterSpacing:0}px;">${escapeHtml(txt)}</div>` +
-                        (sub ? `<div style="margin-top:10px; font-size:${Math.max(14, Math.round((Number.isFinite(el.fontSize)?el.fontSize:22)*0.55))}px; opacity:0.85;">${escapeHtml(sub)}</div>` : "");
-        div.style.background = el.fill || "transparent";
-        div.style.color = el.color || "#eaf0ff";
-        div.style.padding = (Number.isFinite(el.padding)? el.padding : 18) + "px";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 18) + "px";
-      } else if(t === "badge"){
-        const txt = el.text ?? el.title ?? "BADGE";
-        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize:14}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:700}; letter-spacing:${Number.isFinite(el.letterSpacing)?el.letterSpacing:1.2}px; text-transform:uppercase;">${escapeHtml(txt)}</div>`;
-        div.style.background = el.fill || "rgba(255,255,255,0.10)";
-        div.style.color = el.color || "#eaf0ff";
-        div.style.display = "flex";
-        div.style.alignItems = "center";
-        div.style.justifyContent = "center";
-        div.style.textAlign = "center";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 999) + "px";
-        if(el.stroke) div.style.border = `1px solid ${el.stroke}`;
-        if(Number.isFinite(el.opacity)) div.style.opacity = String(el.opacity);
-      } else if(t === "cta"){
-        const txt = el.text ?? el.title ?? "Shop Now";
-        div.innerHTML = `<div style="font-size:${Number.isFinite(el.fontSize)?el.fontSize:16}px; font-weight:${Number.isFinite(el.fontWeight)?el.fontWeight:800};">${escapeHtml(txt)}</div>`;
-        div.style.background = el.fill || "#0b5fff";
-        div.style.color = el.color || "#ffffff";
-        div.style.display = "flex";
-        div.style.alignItems = "center";
-        div.style.justifyContent = "center";
-        div.style.textAlign = "center";
-        div.style.borderRadius = (Number.isFinite(el.radius) ? el.radius : 999) + "px";
-      } else {
-        // Default: existing card behavior
-        div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
-      }
-
-      if(el.shadow){
-        div.style.boxShadow = String(el.shadow);
-      }
-
+      div.innerHTML = `<h4>${escapeHtml(el.title)}</h4><p>${escapeHtml(el.sub)}</p>`;
       if(state.selectedIds.has(el.id)) div.classList.add("selected");
       canvas.appendChild(div);
       wireElement(div);
@@ -1202,8 +825,8 @@ function escapeHtml(str){
   $("#undoBtn").addEventListener("click", undo);
   $("#redoBtn").addEventListener("click", redo);
 
-  $("#zoomInBtn").addEventListener("click", ()=> setZoom(zoom * 1.1, true));
-  $("#zoomOutBtn").addEventListener("click", ()=> setZoom(zoom / 1.1, true));
+  $("#zoomInBtn").addEventListener("click", ()=> setZoom(zoom * 1.1));
+  $("#zoomOutBtn").addEventListener("click", ()=> setZoom(zoom / 1.1));
 
   $("#toggleGridBtn").addEventListener("click", ()=>{
     gridOn = !gridOn;
@@ -1237,211 +860,7 @@ function escapeHtml(str){
   bindProp("#propTitle", (s,v)=> s.title = String(v||""));
   bindProp("#propSub", (s,v)=> s.sub = String(v||""));
 
-  // -----------------------------
-  // Phase G: Editor Intelligence
-  // -----------------------------
-
-  // Document settings
-  function applyDoc(){
-    docW = Math.max(200, Number($("#docW")?.value || 980));
-    docH = Math.max(200, Number($("#docH")?.value || 620));
-    docBg = String($("#docBg")?.value || "").trim();
-
-    canvas.style.width = docW + "px";
-    canvas.style.height = docH + "px";
-    if(docBg){
-      canvas.style.background = docBg;
-    }else{
-      canvas.style.background = "transparent";
-    }
-    renderAll();
-    updateUI();
-  }
-
-  $("#applyDocBtn")?.addEventListener("click", applyDoc);
-  $("#resetDocBtn")?.addEventListener("click", ()=>{
-    $("#docW").value = 980;
-    $("#docH").value = 620;
-    $("#docBg").value = "";
-    applyDoc();
-  });
-
-  // Prompt helpers
-  function getGeneratorPrompt(){
-    // Try draft first, then settings
-    if(draft && typeof draft.prompt === "string" && draft.prompt.trim()) return draft.prompt.trim();
-    try{
-      const s = JSON.parse(localStorage.getItem("nexora_last_settings_v1")||"null");
-      if(s && typeof s.prompt === "string") return s.prompt.trim();
-    }catch(e){}
-    return "";
-  }
-
-  function cleanText(s){
-    return String(s||"").replace(/\s+/g," ").trim();
-  }
-
-  function titleCaseWords(s){
-    const w = cleanText(s).split(" ").slice(0, 6);
-    return w.map(x=> x.length<=2 ? x.toUpperCase() : (x[0].toUpperCase()+x.slice(1))).join(" ");
-  }
-
-  function makeHeadline(prompt){
-    if(!prompt) return "New Collection";
-    const p = cleanText(prompt);
-    // Try split on punctuation
-    const first = p.split(/[\n\.\!\?]/)[0] || p;
-    return titleCaseWords(first);
-  }
-
-  function makeSubtitle(prompt){
-    if(!prompt) return "Premium • Ready";
-    const p = cleanText(prompt);
-    const parts = p.split(/[\n\.\!\?]/).map(x=>cleanText(x)).filter(Boolean);
-    if(parts.length>=2) return parts[1].slice(0, 64);
-    return (p.length>64 ? p.slice(0,64)+"…" : p);
-  }
-
-  function selectedOrAll(){
-    const ids = [...state.selectedIds];
-    if(ids.length) return state.elements.filter(e=>ids.includes(e.id));
-    return state.elements;
-  }
-
-  function applyPromptToDesign(){
-    const prompt = getGeneratorPrompt();
-    if(!prompt){
-      // no prompt: still keep stable
-      return;
-    }
-    snapshot();
-    const headline = makeHeadline(prompt);
-    const subtitle = makeSubtitle(prompt);
-
-    // Apply to first 2 text-like elements we find, otherwise to all as fallbacks
-    const targets = selectedOrAll();
-    let applied = 0;
-    for(const el of targets){
-      if(typeof el.title === "string" && applied === 0){
-        el.title = headline;
-        applied++;
-        continue;
-      }
-      if(typeof el.sub === "string" && applied <= 2){
-        el.sub = subtitle;
-        applied++;
-      }
-    }
-    // If nothing matched, set on first element
-    if(!applied && state.elements[0]){
-      state.elements[0].title = headline;
-      state.elements[0].sub = subtitle;
-    }
-
-    renderAll();
-    refreshLeft();
-    updateUI();
-  }
-
-  $("#smartApplyPrompt")?.addEventListener("click", applyPromptToDesign);
-
-  // Layout helpers
-  function smartCenter(){
-    const targets = selectedOrAll();
-    if(!targets.length) return;
-    snapshot();
-    const cx = docW/2, cy = docH/2;
-    const bb = targets.reduce((acc,e)=>{
-      acc.minX = Math.min(acc.minX, e.x);
-      acc.minY = Math.min(acc.minY, e.y);
-      acc.maxX = Math.max(acc.maxX, e.x + e.w);
-      acc.maxY = Math.max(acc.maxY, e.y + e.h);
-      return acc;
-    }, {minX:1e9, minY:1e9, maxX:-1e9, maxY:-1e9});
-    const bw = bb.maxX - bb.minX;
-    const bh = bb.maxY - bb.minY;
-    const dx = Math.round(cx - (bb.minX + bw/2));
-    const dy = Math.round(cy - (bb.minY + bh/2));
-    targets.forEach(e=>{ e.x += dx; e.y += dy; });
-    renderAll(); refreshLeft(); updateUI();
-  }
-
-  function smartTidy(){
-    const targets = selectedOrAll();
-    if(targets.length < 2) return;
-    snapshot();
-    // Sort top-to-bottom, then left-to-right
-    const sorted = [...targets].sort((a,b)=> (a.y-b.y) || (a.x-b.x));
-    // Determine row size by proximity on y
-    const rowGap = 22;
-    const colGap = 22;
-
-    let x = 60, y = 60, rowH = 0;
-    for(const e of sorted){
-      if(x + e.w > docW - 60){
-        x = 60;
-        y = y + rowH + rowGap;
-        rowH = 0;
-      }
-      e.x = x;
-      e.y = y;
-      x = x + e.w + colGap;
-      rowH = Math.max(rowH, e.h);
-    }
-    renderAll(); refreshLeft(); updateUI();
-  }
-
-  function smartDistribute(){
-    const targets = selectedOrAll();
-    if(targets.length < 3) return;
-    snapshot();
-    const sorted = [...targets].sort((a,b)=>a.x-b.x);
-    const left = sorted[0].x;
-    const right = sorted[sorted.length-1].x;
-    const span = right - left;
-    if(span <= 0) return;
-    const step = span / (sorted.length-1);
-    sorted.forEach((e,i)=>{ e.x = Math.round(left + step*i); });
-    renderAll(); refreshLeft(); updateUI();
-  }
-
-  $("#smartTidy")?.addEventListener("click", smartTidy);
-  $("#smartCenter")?.addEventListener("click", smartCenter);
-  $("#smartDistribute")?.addEventListener("click", smartDistribute);
-
-  // Typography helpers
-  $("#smartUpcase")?.addEventListener("click", ()=>{
-    const targets = selectedOrAll();
-    if(!targets.length) return;
-    snapshot();
-    targets.forEach(e=>{
-      if(typeof e.title === "string") e.title = e.title.toUpperCase();
-      if(typeof e.sub === "string") e.sub = e.sub.toUpperCase();
-    });
-    renderAll(); refreshLeft(); updateUI();
-  });
-
-  $("#smartShorten")?.addEventListener("click", ()=>{
-    const targets = selectedOrAll();
-    if(!targets.length) return;
-    snapshot();
-    targets.forEach(e=>{
-      if(typeof e.title === "string") e.title = cleanText(e.title).slice(0, 32);
-      if(typeof e.sub === "string") e.sub = cleanText(e.sub).slice(0, 64);
-    });
-    renderAll(); refreshLeft(); updateUI();
-  });
-
-  // Auto-apply prompt once when editor opens (non-destructive: only if we have a real prompt)
-  try{
-    if(getGeneratorPrompt()){
-      applyPromptToDesign();
-    }
-  }catch(e){}
-
-
   // Keyboard shortcuts
-  window.addEventListener("resize", ()=>{ try{ fitZoomToStage(false); renderAll(); updateUI(); }catch(_){} });
   window.addEventListener("keydown", (e)=>{
     const isMac = navigator.platform.toLowerCase().includes("mac");
     const ctrl = isMac ? e.metaKey : e.ctrlKey;
@@ -1501,22 +920,11 @@ function escapeHtml(str){
     scheduleAutosave();
   }
 
-  function setZoom(z, user=false){
-    if(user) autoFitZoom = false;
-    zoom = clamp(Number(z)||1, 0.08, 2.2);
-    try{ $("#zoomPill").textContent = Math.round(zoom*100) + "%"; }catch(_){}
+  function setZoom(z){
+    zoom = Math.max(0.35, Math.min(2.2, z));
     renderAll();
     updateUI();
   }
-
-  function fitZoomToView(){
-    // public helper: re-enable auto-fit and fit canvas into view
-    autoFitZoom = true;
-    fitZoomToStage(true);
-    renderAll();
-    updateUI();
-  }
-
 
   function undo(){
     if(state.history.length<=1) return;
@@ -1560,22 +968,6 @@ function escapeHtml(str){
     refreshLeft();
   });
 
-  // Right tabs (Selected / Document / Smart)
-  function showRightPane(tab){
-    $$("#rightTabs .chip").forEach(c => c.classList.toggle("active", c.dataset.tab === tab));
-    $$("#rightPanel .pane").forEach(p => p.classList.toggle("hidden", p.dataset.pane !== tab));
-  }
-
-  $("#rightTabs")?.addEventListener("click", (e)=>{
-    const chip = e.target.closest(".chip");
-    if(!chip) return;
-    showRightPane(chip.dataset.tab || "props");
-  });
-
-  // Default
-  showRightPane("props");
-
-
   $("#leftSearch").addEventListener("input", refreshLeft);
 
   // Wire splitters
@@ -1590,9 +982,5 @@ function escapeHtml(str){
   updateUI();
 })();
 </script>
-
-<script>
-</script>
-
 </body>
 </html>
