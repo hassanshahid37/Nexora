@@ -155,7 +155,9 @@
       grid-template-columns: var(--leftW) 8px 1fr 8px var(--rightW);
       height:100%;
       overflow:hidden;
-    }
+    
+  position: relative;
+}
 
     .panel{
       border-right:1px solid var(--stroke);
@@ -351,7 +353,19 @@
       .canvas{width: min(920px, 100%); height: 560px;}
       .tools{min-width: 1px}
     }
-  </style>
+  
+.canvasAnchor{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform: translate(-50%, -50%);
+  pointer-events:none;
+}
+.canvasAnchor .canvas{
+  pointer-events:auto;
+}
+
+</style>
 
 <style>
 .editor-stage, .stage, .canvas-stage {
@@ -435,8 +449,10 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
       <!-- CENTER STAGE -->
       <main class="stage" id="stage">
         <div class="canvasWrap">
-          <div class="canvas" id="canvas">
+          <div class="canvasAnchor">
+<div class="canvas" id="canvas">
             <div class="gridOverlay" id="gridOverlay"></div>
+</div>
           </div>
         </div>
       </main>
