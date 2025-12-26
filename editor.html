@@ -354,6 +354,18 @@
   </style>
 
 <style>
+.editor-stage, .stage, .canvas-stage {
+  position: relative;
+  overflow: auto;
+}
+#canvas {
+  width: 1080px;
+  height: 1080px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
 </style>
 
 </head>
@@ -1580,32 +1592,6 @@ function escapeHtml(str){
 </script>
 
 <script>
-(function(){
-  function resetZoom(){
-    const canvas = document.getElementById('canvas');
-    if(!canvas) return;
-
-    // Remove any scale transforms applied by editor
-    canvas.style.transform = 'scale(1)';
-    canvas.style.transformOrigin = '0 0';
-
-    // Also reset parent wrappers if scaled
-    let p = canvas.parentElement;
-    while(p){
-      if(p.style && p.style.transform){
-        p.style.transform = 'scale(1)';
-        p.style.transformOrigin = '0 0';
-      }
-      p = p.parentElement;
-    }
-  }
-
-  // Run after template open
-  resetZoom();
-  setTimeout(resetZoom, 100);
-  setTimeout(resetZoom, 300);
-  setTimeout(resetZoom, 600);
-})();
 </script>
 
 </body>
