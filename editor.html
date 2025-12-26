@@ -1,5 +1,4 @@
 
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -332,10 +331,6 @@
       border-radius:16px;padding:10px;margin-top:10px;
     }
 
-    .hidden{ display:none !important; }
-    .actionsRow{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
-    .actionsRow .btn{ flex:0 0 auto; }
-
     /* Responsive */
     
     @media (max-width: 1120px){
@@ -431,15 +426,13 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
       <aside class="panel right" id="rightPanel">
         <div class="panelHeader">
           <b>Properties</b>
-          <div class="seg" id="rightTabs">
+          <div class="seg">
             <div class="chip active" data-tab="props">Selected</div>
             <div class="chip" data-tab="doc">Document</div>
-            <div class="chip" data-tab="smart">Smart</div>
           </div>
         </div>
         <div class="panelBody">
-          <div class="pane" data-pane="props">
-            <div class="propGrid">
+          <div class="propGrid">
             <div class="field">
               <label>Element</label>
               <select id="propType">
@@ -483,67 +476,7 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
               Click an element to select. Drag to move. Use the toolbar for duplicate, delete, undo/redo, and export.
             </div>
           </div>
-          </div>
-
-          <div class="pane hidden" data-pane="doc">
-            <div class="propGrid">
-              <div class="field">
-                <label>Canvas size</label>
-                <div class="row2">
-                  <input id="docW" type="number" min="200" value="980" />
-                  <input id="docH" type="number" min="200" value="620" />
-                </div>
-              </div>
-
-              <div class="field">
-                <label>Background</label>
-                <input id="docBg" placeholder="e.g. #0b1020 or linear-gradient(...)" />
-              </div>
-
-              <div class="miniHelp">
-                Document settings affect the whole canvas. (Phase G: editor intelligence)
-              </div>
-
-              <div class="actionsRow">
-                <button class="btn tiny" id="applyDocBtn" type="button">Apply Document</button>
-                <button class="btn tiny" id="resetDocBtn" type="button">Reset</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="pane hidden" data-pane="smart">
-            <div class="propGrid">
-              <div class="field">
-                <label>Use your prompt</label>
-                <div class="miniHelp">
-                  Uses the prompt from the generator to auto-fill Headline / Subtitle / CTA.
-                </div>
-                <button class="btn tiny primary" id="smartApplyPrompt" type="button">Apply Prompt to Design</button>
-              </div>
-
-              <div class="field">
-                <label>Layout helpers</label>
-                <div class="actionsRow">
-                  <button class="btn tiny" id="smartTidy" type="button">Tidy</button>
-                  <button class="btn tiny" id="smartCenter" type="button">Center</button>
-                  <button class="btn tiny" id="smartDistribute" type="button">Distribute</button>
-                </div>
-              </div>
-
-              <div class="field">
-                <label>Typography</label>
-                <div class="actionsRow">
-                  <button class="btn tiny" id="smartUpcase" type="button">UPPERCASE</button>
-                  <button class="btn tiny" id="smartShorten" type="button">Shorten</button>
-                </div>
-              </div>
-
-              <div class="miniHelp">
-                Tip: Select multiple elements (Shift+Click) then use these actions.
-              </div>
-            </div>
-          </div>
-
+        </div>
       </aside>
     </div>
   </div>
@@ -562,33 +495,10 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     localStorage.setItem("templify_theme", next);
   }
 
-  // Draft meta from index (supports both legacy + current keys)
+  // Draft meta from index
   let draft = null;
-  let draftPrompt = "";
-  let draftNotes = "";
-
-  // 1) Preferred: settings saved by index
-  try{
-    const s = JSON.parse(localStorage.getItem("nexora_last_settings_v1")||"null");
-    if(s && typeof s === "object"){
-      draftPrompt = String(s.prompt||"");
-      draftNotes  = String(s.notes||"");
-    }
-  }catch(e){}
-
-  // 2) Current: selected template saved by index
-  try{
-    const t = JSON.parse(localStorage.getItem("nexora_selected_template_v1")||"null");
-    if(t && typeof t === "object"){
-      draft = { template: t, prompt: draftPrompt, notes: draftNotes };
-    }
-  }catch(e){}
-
-  // 3) Legacy: older key
-  if(!draft){
-    try{ draft = JSON.parse(localStorage.getItem("templify_draft")||"null"); }catch(e){}
-  }
-const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "Style"}` : "Untitled";
+  try{ draft = JSON.parse(localStorage.getItem("templify_draft")||"null"); }catch(e){}
+  const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "Style"}` : "Untitled";
   $("#docTitle").textContent = title;
 
   // State
@@ -597,28 +507,14 @@ const title = draft?.meta?.cat ? `${draft.meta.cat} • ${draft.meta.style || "S
   const gridOverlay = $("#gridOverlay");
   let zoom = 1;
   let gridOn = true;
-  let docW = 980, docH = 620, docBg = "";
-const state = {
+
+  const state = {
     elements: [],
     selectedIds: new Set(),
     history: [],
     future: [],
     autosave: true,
   };
-
-  // Load a generated template (if provided by index)
-  try{
-    if(draft?.template?.elements && Array.isArray(draft.template.elements)){
-      state.elements = draft.template.elements.map(e => ({
-        id: e.id || uid(),
-        x: Number(e.x ?? 80), y: Number(e.y ?? 80),
-        w: Number(e.w ?? 420), h: Number(e.h ?? 120),
-        title: String(e.title ?? "TEXT"),
-        sub: String(e.sub ?? "")
-      }));
-    }
-  }catch(e){}
-
 
   // Helpers
   function uid(){ return Math.random().toString(16).slice(2) + Date.now().toString(16); }
@@ -696,8 +592,8 @@ const state = {
     kids.forEach(n => n.remove());
     gridOverlay.style.display = gridOn ? "block" : "none";
     canvas.style.transform = `scale(${zoom})`;
-    canvas.style.width = `${docW}px`;
-    canvas.style.height = `${docH}px`;
+    canvas.style.width = `${980}px`;
+    canvas.style.height = `${620}px`;
 
     for(const el of state.elements){
       const div = document.createElement("div");
@@ -714,12 +610,7 @@ const state = {
     }
   }
 
-  
-  // Initial paint
-  renderAll();
-  updateUI();
-
-function escapeHtml(str){
+  function escapeHtml(str){
     return String(str??"").replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
   }
 
@@ -969,209 +860,6 @@ function escapeHtml(str){
   bindProp("#propTitle", (s,v)=> s.title = String(v||""));
   bindProp("#propSub", (s,v)=> s.sub = String(v||""));
 
-  // -----------------------------
-  // Phase G: Editor Intelligence
-  // -----------------------------
-
-  // Document settings
-  function applyDoc(){
-    docW = Math.max(200, Number($("#docW")?.value || 980));
-    docH = Math.max(200, Number($("#docH")?.value || 620));
-    docBg = String($("#docBg")?.value || "").trim();
-
-    canvas.style.width = docW + "px";
-    canvas.style.height = docH + "px";
-    if(docBg){
-      canvas.style.background = docBg;
-    }else{
-      canvas.style.background = "transparent";
-    }
-    renderAll();
-    updateUI();
-  }
-
-  $("#applyDocBtn")?.addEventListener("click", applyDoc);
-  $("#resetDocBtn")?.addEventListener("click", ()=>{
-    $("#docW").value = 980;
-    $("#docH").value = 620;
-    $("#docBg").value = "";
-    applyDoc();
-  });
-
-  // Prompt helpers
-  function getGeneratorPrompt(){
-    // Try draft first, then settings
-    if(draft && typeof draft.prompt === "string" && draft.prompt.trim()) return draft.prompt.trim();
-    try{
-      const s = JSON.parse(localStorage.getItem("nexora_last_settings_v1")||"null");
-      if(s && typeof s.prompt === "string") return s.prompt.trim();
-    }catch(e){}
-    return "";
-  }
-
-  function cleanText(s){
-    return String(s||"").replace(/\s+/g," ").trim();
-  }
-
-  function titleCaseWords(s){
-    const w = cleanText(s).split(" ").slice(0, 6);
-    return w.map(x=> x.length<=2 ? x.toUpperCase() : (x[0].toUpperCase()+x.slice(1))).join(" ");
-  }
-
-  function makeHeadline(prompt){
-    if(!prompt) return "New Collection";
-    const p = cleanText(prompt);
-    // Try split on punctuation
-    const first = p.split(/[\n\.\!\?]/)[0] || p;
-    return titleCaseWords(first);
-  }
-
-  function makeSubtitle(prompt){
-    if(!prompt) return "Premium • Ready";
-    const p = cleanText(prompt);
-    const parts = p.split(/[\n\.\!\?]/).map(x=>cleanText(x)).filter(Boolean);
-    if(parts.length>=2) return parts[1].slice(0, 64);
-    return (p.length>64 ? p.slice(0,64)+"…" : p);
-  }
-
-  function selectedOrAll(){
-    const ids = [...state.selectedIds];
-    if(ids.length) return state.elements.filter(e=>ids.includes(e.id));
-    return state.elements;
-  }
-
-  function applyPromptToDesign(){
-    const prompt = getGeneratorPrompt();
-    if(!prompt){
-      // no prompt: still keep stable
-      return;
-    }
-    snapshot();
-    const headline = makeHeadline(prompt);
-    const subtitle = makeSubtitle(prompt);
-
-    // Apply to first 2 text-like elements we find, otherwise to all as fallbacks
-    const targets = selectedOrAll();
-    let applied = 0;
-    for(const el of targets){
-      if(typeof el.title === "string" && applied === 0){
-        el.title = headline;
-        applied++;
-        continue;
-      }
-      if(typeof el.sub === "string" && applied <= 2){
-        el.sub = subtitle;
-        applied++;
-      }
-    }
-    // If nothing matched, set on first element
-    if(!applied && state.elements[0]){
-      state.elements[0].title = headline;
-      state.elements[0].sub = subtitle;
-    }
-
-    renderAll();
-    refreshLeft();
-    updateUI();
-  }
-
-  $("#smartApplyPrompt")?.addEventListener("click", applyPromptToDesign);
-
-  // Layout helpers
-  function smartCenter(){
-    const targets = selectedOrAll();
-    if(!targets.length) return;
-    snapshot();
-    const cx = docW/2, cy = docH/2;
-    const bb = targets.reduce((acc,e)=>{
-      acc.minX = Math.min(acc.minX, e.x);
-      acc.minY = Math.min(acc.minY, e.y);
-      acc.maxX = Math.max(acc.maxX, e.x + e.w);
-      acc.maxY = Math.max(acc.maxY, e.y + e.h);
-      return acc;
-    }, {minX:1e9, minY:1e9, maxX:-1e9, maxY:-1e9});
-    const bw = bb.maxX - bb.minX;
-    const bh = bb.maxY - bb.minY;
-    const dx = Math.round(cx - (bb.minX + bw/2));
-    const dy = Math.round(cy - (bb.minY + bh/2));
-    targets.forEach(e=>{ e.x += dx; e.y += dy; });
-    renderAll(); refreshLeft(); updateUI();
-  }
-
-  function smartTidy(){
-    const targets = selectedOrAll();
-    if(targets.length < 2) return;
-    snapshot();
-    // Sort top-to-bottom, then left-to-right
-    const sorted = [...targets].sort((a,b)=> (a.y-b.y) || (a.x-b.x));
-    // Determine row size by proximity on y
-    const rowGap = 22;
-    const colGap = 22;
-
-    let x = 60, y = 60, rowH = 0;
-    for(const e of sorted){
-      if(x + e.w > docW - 60){
-        x = 60;
-        y = y + rowH + rowGap;
-        rowH = 0;
-      }
-      e.x = x;
-      e.y = y;
-      x = x + e.w + colGap;
-      rowH = Math.max(rowH, e.h);
-    }
-    renderAll(); refreshLeft(); updateUI();
-  }
-
-  function smartDistribute(){
-    const targets = selectedOrAll();
-    if(targets.length < 3) return;
-    snapshot();
-    const sorted = [...targets].sort((a,b)=>a.x-b.x);
-    const left = sorted[0].x;
-    const right = sorted[sorted.length-1].x;
-    const span = right - left;
-    if(span <= 0) return;
-    const step = span / (sorted.length-1);
-    sorted.forEach((e,i)=>{ e.x = Math.round(left + step*i); });
-    renderAll(); refreshLeft(); updateUI();
-  }
-
-  $("#smartTidy")?.addEventListener("click", smartTidy);
-  $("#smartCenter")?.addEventListener("click", smartCenter);
-  $("#smartDistribute")?.addEventListener("click", smartDistribute);
-
-  // Typography helpers
-  $("#smartUpcase")?.addEventListener("click", ()=>{
-    const targets = selectedOrAll();
-    if(!targets.length) return;
-    snapshot();
-    targets.forEach(e=>{
-      if(typeof e.title === "string") e.title = e.title.toUpperCase();
-      if(typeof e.sub === "string") e.sub = e.sub.toUpperCase();
-    });
-    renderAll(); refreshLeft(); updateUI();
-  });
-
-  $("#smartShorten")?.addEventListener("click", ()=>{
-    const targets = selectedOrAll();
-    if(!targets.length) return;
-    snapshot();
-    targets.forEach(e=>{
-      if(typeof e.title === "string") e.title = cleanText(e.title).slice(0, 32);
-      if(typeof e.sub === "string") e.sub = cleanText(e.sub).slice(0, 64);
-    });
-    renderAll(); refreshLeft(); updateUI();
-  });
-
-  // Auto-apply prompt once when editor opens (non-destructive: only if we have a real prompt)
-  try{
-    if(getGeneratorPrompt()){
-      applyPromptToDesign();
-    }
-  }catch(e){}
-
-
   // Keyboard shortcuts
   window.addEventListener("keydown", (e)=>{
     const isMac = navigator.platform.toLowerCase().includes("mac");
@@ -1279,22 +967,6 @@ function escapeHtml(str){
     chip.classList.add("active");
     refreshLeft();
   });
-
-  // Right tabs (Selected / Document / Smart)
-  function showRightPane(tab){
-    $$("#rightTabs .chip").forEach(c => c.classList.toggle("active", c.dataset.tab === tab));
-    $$("#rightPanel .pane").forEach(p => p.classList.toggle("hidden", p.dataset.pane !== tab));
-  }
-
-  $("#rightTabs")?.addEventListener("click", (e)=>{
-    const chip = e.target.closest(".chip");
-    if(!chip) return;
-    showRightPane(chip.dataset.tab || "props");
-  });
-
-  // Default
-  showRightPane("props");
-
 
   $("#leftSearch").addEventListener("input", refreshLeft);
 
