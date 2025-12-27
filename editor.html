@@ -1180,112 +1180,6 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     }catch(e){ console.warn("Export failed", e); }
   }
 
-  // === Export Image (PNG/JPG) — DOM → SVG foreignObject → Canvas ===
-  // Option A approved: html2canvas-style export without external CDN (self-contained)
-  async function exportImageDialog(){
-    try{
-      const raw = (prompt("Export format: PNG or JPG", "PNG") || "").trim().toUpperCase();
-      const fmt = (raw === "JPG" || raw === "JPEG") ? "jpg" : "png";
-      await exportCanvasAsImage(fmt);
-    }catch(e){
-      console.warn("Export dialog failed", e);
-    }
-  }
-
-  function collectInlineStyles(){
-    // Grab all <style> blocks so the SVG foreignObject renders the same.
-    try{
-      return Array.from(document.querySelectorAll("style"))
-        .map(s=>s.textContent||"")
-        .join("\n");
-    }catch{ return ""; }
-  }
-
-  function downloadBlob(blob, filename){
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(()=>{ try{ URL.revokeObjectURL(a.href); }catch{} }, 1500);
-  }
-
-  function svgWrapHTML(htmlString, cssText, w, h){
-    // CSS goes inside the foreignObject so it applies to the cloned DOM.
-    const safeCss = (cssText||"").replace(/<\/style>/gi, "</st"+"yle>");
-    return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
-  <foreignObject x="0" y="0" width="100%" height="100%">
-    <div xmlns="http://www.w3.org/1999/xhtml" style="width:${w}px;height:${h}px;overflow:hidden;">
-      <style><![CDATA[${safeCss}]]></style>
-      ${htmlString}
-    </div>
-  </foreignObject>
-</svg>`;
-  }
-
-  async function exportCanvasAsImage(fmt){
-    const node = document.getElementById("canvas");
-    if(!node) throw new Error("Canvas node not found");
-
-    // Use design canvas size (not scaled viewport size)
-    const cw = Number(state?.canvas?.w || 1080);
-    const ch = Number(state?.canvas?.h || 1080);
-
-    // Clone node so we can force exact pixel size without touching UI
-    const clone = node.cloneNode(true);
-    clone.id = "export_canvas_clone";
-    clone.style.width = cw + "px";
-    clone.style.height = ch + "px";
-    clone.style.maxWidth = "none";
-    clone.style.maxHeight = "none";
-    clone.style.transform = "none";
-
-    const css = collectInlineStyles();
-    const svg = svgWrapHTML(clone.outerHTML, css, cw, ch);
-    const svgBlob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
-
-    // Rasterize SVG to canvas
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-
-    const done = await new Promise((resolve, reject)=>{
-      img.onload = () => resolve(true);
-      img.onerror = (e) => reject(new Error("SVG render failed"));
-      img.src = url;
-    });
-
-    try{
-      const out = document.createElement("canvas");
-      out.width = cw; out.height = ch;
-      const ctx = out.getContext("2d");
-
-      if(fmt === "jpg"){
-        // JPEG has no alpha — fill a solid background first
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(0,0,cw,ch);
-      }
-
-      ctx.drawImage(img, 0, 0, cw, ch);
-
-      const mime = (fmt === "jpg") ? "image/jpeg" : "image/png";
-      const quality = (fmt === "jpg") ? 0.92 : 1.0;
-
-      const blob = await new Promise((resolve)=>{
-        out.toBlob((b)=>resolve(b), mime, quality);
-      });
-
-      if(!blob) throw new Error("toBlob failed");
-
-      const base = (state?.title || "design").toString().trim().replace(/[^\w\- ]+/g,"").replace(/\s+/g,"_") || "design";
-      downloadBlob(blob, `${base}.${fmt}`);
-    } finally {
-      try{ URL.revokeObjectURL(url); }catch{}
-    }
-  }
-
   function applyGrid(){
     if(!gridOverlay) return;
     gridOverlay.style.display = state.grid ? "block" : "none";
@@ -1345,7 +1239,7 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   $("#duplicateBtn")?.addEventListener("click", duplicateSelected);
   $("#undoBtn")?.addEventListener("click", undo);
   $("#redoBtn")?.addEventListener("click", redo);
-  $("#exportBtn")?.addEventListener("click", exportImageDialog);
+  $("#exportBtn")?.addEventListener("click", exportJSON);
   // Import Image (instant render, browser-safe)
   (function(){
     if(window.__IMPORT_IMAGE_SPLIT_V2__) return;
