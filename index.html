@@ -64,6 +64,18 @@
       box-shadow:0 10px 26px rgba(11,95,255,.28);
       border:1px solid rgba(255,255,255,.18);
     }
+
+    .logoImg{
+      width:38px;height:38px;border-radius:12px;
+      object-fit:cover;
+      border:1px solid rgba(255,255,255,.18);
+      box-shadow:0 10px 26px rgba(11,95,255,.28);
+      flex:0 0 auto;
+    }
+    [data-theme="light"] .logoImg{
+      border:1px solid rgba(10,20,60,.12);
+      box-shadow:0 10px 26px rgba(10,20,60,.14);
+    }
     .brand h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.2px}
     .brand p{margin:0;color:var(--muted);font-size:12px}
     .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -222,35 +234,6 @@
   text-overflow:ellipsis;
 }
 
-
-/* === Header: match editor branding (icon + stacked text) === */
-.brand{display:flex;align-items:center;gap:12px}
-.brandText{display:flex;flex-direction:column;gap:2px;min-width:0}
-.brandText h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.2px;line-height:1.1}
-.brandText p{margin:0}
-
-/* editor-like circular badge with the NEW official logo cropped to the N mark */
-.logo{
-  width:44px;
-  height:44px;
-  border-radius:14px;
-  background:
-    rgba(10,14,30,.92);
-  border:1px solid rgba(255,255,255,.14);
-  box-shadow:0 10px 26px rgba(0,0,0,.45);
-  flex-shrink:0;
-}
-
-/* stacked lines like editor */
-.brandTag{color:var(--muted);font-size:12px;line-height:1.2}
-.brandSub{color:var(--muted);font-size:12px;line-height:1.2;opacity:.95}
-
-/* keep header height stable on small screens */
-@media (max-width:520px){
-  .logo{width:40px;height:40px;border-radius:12px}
-  .brandText h1{font-size:14px}
-}
-
 </style>
     
 </head>
@@ -258,16 +241,13 @@
 <body data-theme="dark">
   <div class="wrap">
     <header>
-      
       <div class="brand">
-        <div class="logo" aria-hidden="true"></div>
-        <div class="brandText">
+        <img class="logoImg" src="nexora-logo.jpeg" alt="Nexora" />
+        <div>
           <h1>Nexora</h1>
-          <p class="brandTag">AI Creative Director</p>
-          <p class="brandSub">Dark Premium AI Template Generator + Ultimate Editor v1</p>
+          <p>AI Creative Director • Dark Premium AI Template Generator + Ultimate Editor v1</p>
         </div>
       </div>
-    
 
       <div class="actions">
         <span class="tag">No auth • No subscriptions • Netlify-ready</span>
@@ -797,7 +777,7 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
     // allow homepage to restore when user comes back from editor
     try{ sessionStorage.setItem("nexora_restore_home_v1","1"); }catch(_){}
     try{ saveHomeState && saveHomeState(); }catch(_){}
-    window.location.href = location.origin + "/editor.html";
+    window.location.href = "editor.html";
   }
 
   // Keep latest generated templates (for tile click -> editor)
