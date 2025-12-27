@@ -732,6 +732,36 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   const KEY_DRAFT = "templify_draft";
   const KEY_SELECTED = "nexora_selected_template_v1";
 
+
+  const FIT_META_KEY = "__nexora_fit_applied_v1";
+
+  function fitTemplateToEditor(tplCanvas){
+    try{
+      const cw = canvasEl.clientWidth || 0;
+      const ch = canvasEl.clientHeight || 0;
+      if(cw < 50 || ch < 50) return false;
+
+      const pad = 18;
+      const tw = Number(tplCanvas?.w || state.canvas?.w || cw) || cw;
+      const th = Number(tplCanvas?.h || state.canvas?.h || ch) || ch;
+      const availW = Math.max(10, cw - pad*2);
+      const availH = Math.max(10, ch - pad*2);
+
+      let s = Math.min(availW / tw, availH / th);
+      if(!Number.isFinite(s) || s <= 0) return false;
+
+      const ox = Math.round((cw - tw*s) / 2);
+      const oy = Math.round((ch - th*s) / 2);
+
+      state.elements.forEach(e=>{
+        e.x = Math.round((Number(e.x)||0) * s + ox);
+        e.y = Math.round((Number(e.y)||0) * s + oy);
+        e.w = Math.round(Math.max(10, (Number(e.w)||0) * s));
+        e.h = Math.round(Math.max(10, (Number(e.h)||0) * s));
+      });
+      return true;
+    }catch{return false;}
+  }
   const state = {
     canvas: { w: 1080, h: 1080 },
     title: "Untitled",
@@ -806,6 +836,7 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     const draft = safeParse(localStorage.getItem(KEY_DRAFT) || "null");
     const sel = safeParse(localStorage.getItem(KEY_SELECTED) || "null");
     const tpl = (draft && draft.template) ? draft.template : sel;
+    const fitAlready = !!(draft && draft.meta && draft.meta[FIT_META_KEY]);
 
     if(tpl && Array.isArray(tpl.elements)){
       state.title = tpl.title || "Untitled";
@@ -830,6 +861,23 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
         weight: Number(e.weight ?? 700)
       }));
       state.selected.clear();
+
+      // Fit imported template into the visible editor canvas (one-time)
+      if(!fitAlready){
+        requestAnimationFrame(()=>{
+          const applied = fitTemplateToEditor(tpl.canvas || state.canvas);
+          if(applied){
+            // persist flag to avoid double-scaling next time
+            try{
+              const d = safeParse(localStorage.getItem(KEY_DRAFT) || "null") || {};
+              d.meta = d.meta || {};
+              d.meta[FIT_META_KEY] = 1;
+              localStorage.setItem(KEY_DRAFT, JSON.stringify(d));
+            }catch{}
+            render();
+          }
+        });
+      }
     }else{
       state.elements = [{
         id: uid(), type:"text", x:120, y:120, w:420, h:120,
