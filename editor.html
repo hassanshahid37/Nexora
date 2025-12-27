@@ -818,45 +818,53 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     canvasEl.querySelectorAll(".el").forEach(n=>n.remove());
   }
 
+  
   function render(){
     clearEls();
     state.elements.forEach(e=>{
       const el = document.createElement("div");
       el.className = "el";
       el.dataset.id = e.id;
-      el.style.left = e.x + "px";
-      el.style.top  = e.y + "px";
-      el.style.width  = Math.max(30, e.w) + "px";
-      el.style.height = Math.max(20, e.h) + "px";
+
+      el.style.left = (Number(e.x)||0) + "px";
+      el.style.top  = (Number(e.y)||0) + "px";
+      el.style.width  = Math.max(30, Number(e.w)||30) + "px";
+      el.style.height = Math.max(20, Number(e.h)||20) + "px";
       el.style.opacity = String(e.opacity ?? 1);
-      el.style.borderRadius = (e.radius ?? 14) + "px";
+      el.style.borderRadius = (Number(e.radius ?? 14)) + "px";
 
-      if(e.type === "text"){
-        el.style.background = "rgba(255,255,255,0.06)";
-        el.style.borderColor = "rgba(255,255,255,0.14)";
-      }else if(e.type === "image"){
-        el.style.background = e.bg || "linear-gradient(135deg, rgba(11,95,255,.35), rgba(136,71,255,.25))";
-      }else{
-        el.style.background = e.bg || "rgba(11,95,255,0.18)";
-      }
-
-      el.style.color = e.color || "rgba(255,255,255,0.92)";
-      el.style.fontSize = (e.fontSize || 22) + "px";
-      el.style.fontWeight = String(e.weight || 700);
       el.style.display = "flex";
-      el.style.flexDirection = "column";
+      el.style.alignItems = "center";
       el.style.justifyContent = "center";
-      el.style.gap = "4px";
 
-      el.innerHTML = `
-        <div style="line-height:1.12; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(e.title||"")}</div>
-        ${e.subtitle ? `<div style="font-size:12px; opacity:.72; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(e.subtitle)}</div>` : ``}
-      `;
+      if(e.type === "image"){
+        el.style.background = "#111";
+        el.style.overflow = "hidden";
+        el.style.border = "1px solid rgba(255,255,255,.15)";
+
+        const img = document.createElement("img");
+        img.src = e.src;
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.objectFit = (e.fit === "fit" ? "contain" : "cover");
+        img.style.pointerEvents = "none";
+        el.appendChild(img);
+      } else {
+        el.style.background = e.bg || "rgba(11,95,255,0.18)";
+        el.style.color = e.color || "#fff";
+        el.style.fontSize = (e.fontSize||22)+"px";
+        el.style.fontWeight = e.weight||700;
+        el.innerHTML = `
+          <div>${escapeHtml(e.title||"")}</div>
+          ${e.subtitle?`<div style="font-size:12px;opacity:.7">${escapeHtml(e.subtitle)}</div>`:""}
+        `;
+      }
 
       if(state.selected.has(e.id)) el.classList.add("selected");
       canvasEl.appendChild(el);
     });
   }
+
 
   // Selection + drag
   let drag = null;
@@ -1121,7 +1129,7 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
       h: 220,
       title: "",
       subtitle: "",
-      src: url,
+      bg: `url(${url}) center/cover no-repeat`,
       color: "transparent",
       radius: 14,
       opacity: 1,
@@ -1142,6 +1150,91 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
 
     if(typeof window.updateUI === "function") updateUI();
   });
+})();
+</script>
+
+
+<script>
+/* === IMAGE IMPORT (CORE SAFE) === */
+(function(){
+  const btn = document.getElementById("importBtn");
+  if(!btn) return;
+
+  const input = document.createElement("input");
+  input.type = "file";
+  input.accept = "image/*";
+  input.style.display = "none";
+  document.body.appendChild(input);
+
+  btn.onclick = () => input.click();
+
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    if(!file) return;
+
+    const url = URL.createObjectURL(file);
+
+    const el = {
+      id: "img_"+Date.now(),
+      type: "image",
+      src: url,
+      fit: "fit",     // FULL IMAGE default
+      x: 160,
+      y: 160,
+      w: 320,
+      h: 220,
+      radius: 14,
+      opacity: 1
+    };
+
+    Editor.state.elements.push(el);
+    Editor.state.selected.clear();
+    Editor.state.selected.add(el.id);
+
+    // THIS is the key: use core update pipeline
+    if(typeof updateUI === "function") updateUI();
+
+    input.value = "";
+  };
+})();
+</script>
+
+
+<script>
+/* === FIT / FILL (SAFE) === */
+(function(){
+  const bar = document.querySelector(".topbar") || document.body;
+
+  const fitBtn = document.createElement("button");
+  fitBtn.textContent = "Fit";
+  fitBtn.className = "btn tiny";
+
+  const fillBtn = document.createElement("button");
+  fillBtn.textContent = "Fill";
+  fillBtn.className = "btn tiny";
+
+  bar.appendChild(fitBtn);
+  bar.appendChild(fillBtn);
+
+  fitBtn.onclick = ()=>{
+    if(Editor.state.selected.size!==1) return;
+    const id=[...Editor.state.selected][0];
+    const el=Editor.state.elements.find(e=>e.id===id);
+    if(el && el.type==="image"){
+      el.fit="fit";
+      updateUI();
+    }
+  };
+
+  fillBtn.onclick = ()=>{
+    if(Editor.state.selected.size!==1) return;
+    const id=[...Editor.state.selected][0];
+    const el=Editor.state.elements.find(e=>e.id===id);
+    if(el && el.type==="image"){
+      el.fit="fill";
+      updateUI();
+    }
+  };
 })();
 </script>
 
