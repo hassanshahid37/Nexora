@@ -1731,5 +1731,91 @@ function escapeHtml(str){
   showDesignMode();
 })();
 </script>
+
+<script>
+/* === FIX: Wire Canva-style buttons to existing editor logic === */
+(function(){
+  // Helper to safely trigger original UI actions
+  function clickIfExists(sel){
+    const el = document.querySelector(sel);
+    if(el){ el.click(); return true; }
+    return false;
+  }
+
+  function callIfExists(name, args=[]){
+    if(typeof window[name] === 'function'){
+      window[name].apply(window, args);
+      return true;
+    }
+    return false;
+  }
+
+  // Map Canva rail modes to your existing editor capabilities
+  const MODE_MAP = {
+    design(){
+      // Prefer template view
+      return (
+        clickIfExists('[data-view="templates"]') ||
+        clickIfExists('#btnTemplates') ||
+        callIfExists('showTemplates') ||
+        true
+      );
+    },
+    elements(){
+      return (
+        clickIfExists('[data-view="elements"]') ||
+        clickIfExists('#btnElements') ||
+        callIfExists('showElements') ||
+        true
+      );
+    },
+    text(){
+      return (
+        clickIfExists('[data-view="text"]') ||
+        clickIfExists('#btnText') ||
+        callIfExists('addTextMode') ||
+        true
+      );
+    },
+    uploads(){
+      return (
+        clickIfExists('[data-view="uploads"]') ||
+        clickIfExists('#btnUploads') ||
+        callIfExists('showUploads') ||
+        true
+      );
+    },
+    projects(){
+      return (
+        clickIfExists('[data-view="projects"]') ||
+        clickIfExists('#btnProjects') ||
+        true
+      );
+    }
+  };
+
+  // Attach to rail
+  const rail = document.getElementById('rail');
+  if(rail){
+    rail.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.railBtn');
+      if(!btn) return;
+      const mode = btn.dataset.mode;
+      if(MODE_MAP[mode]) MODE_MAP[mode]();
+    });
+  }
+
+  // Ensure canvas click deselects -> returns to Design mode
+  const canvas = document.getElementById('canvas');
+  if(canvas){
+    canvas.addEventListener('mousedown', ()=>{
+      if(window.__NEXORA_CANVA_CLONE__){
+        window.__NEXORA_CANVA_CLONE__.showDesignMode();
+      }
+    });
+  }
+})();
+</script>
+
 </body>
 </html>
