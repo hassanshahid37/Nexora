@@ -483,6 +483,8 @@
         
         <button class="btn tiny primary" id="exportBtn" type="button">⬇ Export</button>
 <button class="btn tiny" id="importBtn" type="button">⬆ Import</button>
+        <button class="btn tiny" id="topFitBtn" type="button" style="display:none">Fit</button>
+        <button class="btn tiny" id="topFillBtn" type="button" style="display:none">Fill</button>
       </div>
 
       <div class="righttools">
@@ -1111,6 +1113,58 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   window.Editor = { state, addElement, deleteSelected, duplicateSelected, undo, redo, export: exportJSON, toggleGrid, zoomIn, zoomOut, _pushHistory: pushHistory, _render: render, _renderProps: renderProps, updateUI: window.updateUI };
 
   // Toolbar wiring
+
+  // === Topbar Fit / Fill (Option A) ===
+  const topFitBtn = $("#topFitBtn");
+  const topFillBtn = $("#topFillBtn");
+
+  function syncTopFitFill(){
+    if(!topFitBtn || !topFillBtn) return;
+    if(state.selected.size !== 1){
+      topFitBtn.style.display = "none";
+      topFillBtn.style.display = "none";
+      return;
+    }
+    const id = Array.from(state.selected)[0];
+    const el = state.elements.find(x=>x.id===id);
+    if(!el || el.type !== "image"){
+      topFitBtn.style.display = "none";
+      topFillBtn.style.display = "none";
+      return;
+    }
+    topFitBtn.style.display = "";
+    topFillBtn.style.display = "";
+    const mode = (el.fit === "contain") ? "contain" : "cover";
+    topFitBtn.classList.toggle("active", mode === "contain");
+    topFillBtn.classList.toggle("active", mode === "cover");
+  }
+
+  topFitBtn?.addEventListener("click", ()=>{
+    if(state.selected.size !== 1) return;
+    const id = Array.from(state.selected)[0];
+    const el = state.elements.find(x=>x.id===id);
+    if(!el || el.type !== "image") return;
+    pushHistory();
+    el.fit = "contain";
+    render();
+    renderProps();
+    autosave();
+    syncTopFitFill();
+  });
+
+  topFillBtn?.addEventListener("click", ()=>{
+    if(state.selected.size !== 1) return;
+    const id = Array.from(state.selected)[0];
+    const el = state.elements.find(x=>x.id===id);
+    if(!el || el.type !== "image") return;
+    pushHistory();
+    el.fit = "cover";
+    render();
+    renderProps();
+    autosave();
+    syncTopFitFill();
+  });
+
   $("#backBtn")?.addEventListener("click", ()=>{ window.location.href="index.html"; });
   $("#themeBtn")?.addEventListener("click", ()=>{
     const cur = document.body.getAttribute("data-theme") || "dark";
