@@ -1522,7 +1522,7 @@ function escapeHtml(str){
   }
 
   // Left tabs
-  $("#leftTabs").addEventListener("click", (e)=>{
+  $("#leftTabs")?.addEventListener("click", (e)=>{
     const chip = e.target.closest(".chip");
     if(!chip) return;
     $$("#leftTabs .chip").forEach(c => c.classList.remove("active"));
@@ -1549,8 +1549,8 @@ function escapeHtml(str){
   $("#leftSearch").addEventListener("input", refreshLeft);
 
   // Wire splitters
-  wireSplitter($("#splitLeft"), "left");
-  wireSplitter($("#splitRight"), "right");
+  { const _sl = $("#splitLeft"); if(_sl) wireSplitter(_sl, "left"); }
+  { const _sr = $("#splitRight"); if(_sr) wireSplitter(_sr, "right"); }
 
   // Boot
   loadCanvasSize();
@@ -1814,6 +1814,49 @@ function escapeHtml(str){
       }
     });
   }
+})();
+</script>
+
+
+<script>
+/* === GLOBAL EVENT DELEGATION FIX (Top + Left Bars) === */
+(function(){
+  function call(fn){
+    if(typeof window[fn] === 'function'){
+      window[fn]();
+      return true;
+    }
+    return false;
+  }
+
+  function clickSel(sel){
+    const el = document.querySelector(sel);
+    if(el){ el.click(); return true; }
+    return false;
+  }
+
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('button, .btn, [role="button"], [data-action]');
+    if(!btn) return;
+
+    const label = (btn.innerText || btn.getAttribute('aria-label') || '').toLowerCase();
+
+    // Top bar actions
+    if(label.includes('undo')){ call('undo'); return; }
+    if(label.includes('redo')){ call('redo'); return; }
+    if(label.includes('export')){ call('exportCanvas') || clickSel('#exportBtn'); return; }
+    if(label.includes('zoom')){
+      if(label.includes('+')) call('zoomIn');
+      else if(label.includes('-')) call('zoomOut');
+      return;
+    }
+
+    // Left design tabs
+    if(label.includes('template')){ call('showTemplates'); return; }
+    if(label.includes('element')){ call('showElements'); return; }
+    if(label.includes('text')){ call('addTextMode'); return; }
+    if(label.includes('upload')){ call('showUploads'); return; }
+  }, true);
 })();
 </script>
 
