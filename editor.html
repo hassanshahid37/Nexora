@@ -790,6 +790,9 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
         h: Number(e.h ?? 120),
         title: String(e.title ?? e.text ?? "Text"),
         subtitle: String(e.subtitle ?? ""),
+        // Image support (both new + legacy templates)
+        src: e.src ?? e.url ?? null,
+        fit: e.fit ?? e.objectFit ?? null,
         bg: e.bg ?? e.fill ?? null,
         color: e.color ?? "rgba(255,255,255,0.92)",
         radius: Number(e.radius ?? 16),
@@ -818,7 +821,6 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     canvasEl.querySelectorAll(".el").forEach(n=>n.remove());
   }
 
-  
   function render(){
     clearEls();
     state.elements.forEach(e=>{
@@ -826,37 +828,58 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
       el.className = "el";
       el.dataset.id = e.id;
 
-      el.style.left = (Number(e.x)||0) + "px";
-      el.style.top  = (Number(e.y)||0) + "px";
-      el.style.width  = Math.max(30, Number(e.w)||30) + "px";
-      el.style.height = Math.max(20, Number(e.h)||20) + "px";
+      // geometry
+      el.style.left = e.x + "px";
+      el.style.top  = e.y + "px";
+      el.style.width  = Math.max(30, e.w) + "px";
+      el.style.height = Math.max(20, e.h) + "px";
       el.style.opacity = String(e.opacity ?? 1);
-      el.style.borderRadius = (Number(e.radius ?? 14)) + "px";
+      el.style.borderRadius = (e.radius ?? 14) + "px";
 
+      // base styles
       el.style.display = "flex";
-      el.style.alignItems = "center";
+      el.style.flexDirection = "column";
       el.style.justifyContent = "center";
+      el.style.gap = "4px";
+      el.style.color = e.color || "rgba(255,255,255,0.92)";
+      el.style.fontSize = (e.fontSize || 22) + "px";
+      el.style.fontWeight = String(e.weight || 700);
 
+      // content
       if(e.type === "image"){
-        el.style.background = "#111";
+        // IMPORTANT: do NOT set innerHTML for images (it would overwrite the <img>)
+        el.style.padding = "0";
         el.style.overflow = "hidden";
-        el.style.border = "1px solid rgba(255,255,255,.15)";
+        el.style.background = "transparent";
+        el.style.borderColor = "rgba(255,255,255,0.14)";
 
         const img = document.createElement("img");
-        img.src = e.src;
+        // Support both {src} and legacy {bg: 'url(...) ...'} templates
+        const legacyBg = (typeof e.bg === "string" && e.bg.startsWith("url(")) ? e.bg : null;
+        let src = e.src || e.url || null;
+        if(!src && legacyBg){
+          const mm = legacyBg.match(/^url\((['"]?)(.*?)\1\)/);
+          if(mm && mm[2]) src = mm[2];
+        }
+        img.src = src || "";
         img.style.width = "100%";
         img.style.height = "100%";
-        img.style.objectFit = (e.fit === "fit" ? "contain" : "cover");
+        img.style.objectFit = (e.fit === "contain" ? "contain" : "cover");
+        img.style.background = "rgba(255,255,255,0.06)";
         img.style.pointerEvents = "none";
         el.appendChild(img);
       } else {
-        el.style.background = e.bg || "rgba(11,95,255,0.18)";
-        el.style.color = e.color || "#fff";
-        el.style.fontSize = (e.fontSize||22)+"px";
-        el.style.fontWeight = e.weight||700;
+        // backgrounds for non-image elements
+        if(e.type === "text"){
+          el.style.background = "rgba(255,255,255,0.06)";
+          el.style.borderColor = "rgba(255,255,255,0.14)";
+        }else{
+          el.style.background = e.bg || "rgba(11,95,255,0.18)";
+        }
+
         el.innerHTML = `
-          <div>${escapeHtml(e.title||"")}</div>
-          ${e.subtitle?`<div style="font-size:12px;opacity:.7">${escapeHtml(e.subtitle)}</div>`:""}
+          <div style="line-height:1.12; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(e.title||"")}</div>
+          ${e.subtitle ? `<div style="font-size:12px; opacity:.72; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHtml(e.subtitle)}</div>` : ``}
         `;
       }
 
@@ -864,7 +887,6 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
       canvasEl.appendChild(el);
     });
   }
-
 
   // Selection + drag
   let drag = null;
@@ -929,6 +951,18 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     wrap.innerHTML = `
       <div class="field"><label>Title</label><input id="propTitle" value="${escapeHtml(e.title||"")}" /></div>
       <div class="field"><label>Subtitle</label><input id="propSub" value="${escapeHtml(e.subtitle||"")}" /></div>
+
+      ${e.type === "image" ? `
+        <div class="field">
+          <label>Image</label>
+          <div class="actionsRow">
+            <button class="btn tiny" id="imgFillBtn" type="button">Fill</button>
+            <button class="btn tiny" id="imgFitBtn" type="button">Fit</button>
+          </div>
+          <div class="miniHelp">Fill = cover (crop edges). Fit = contain (show full image).</div>
+        </div>
+      ` : ``}
+
       <div class="row2">
         <div class="field"><label>X</label><input id="propX" type="number" value="${e.x}"></div>
         <div class="field"><label>Y</label><input id="propY" type="number" value="${e.y}"></div>
@@ -956,7 +990,35 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     bind("propY", v=> e.y = Number(v)||0);
     bind("propW", v=> e.w = Math.max(30, Number(v)||30));
     bind("propH", v=> e.h = Math.max(20, Number(v)||20));
+
+    // Image Fit/Fill (Canva-style)
+    if(e.type === "image"){
+      const fitBtn = $("#imgFitBtn");
+      const fillBtn = $("#imgFillBtn");
+      const sync = ()=>{
+        const mode = (e.fit === "contain") ? "contain" : "cover";
+        fitBtn?.classList.toggle("active", mode === "contain");
+        fillBtn?.classList.toggle("active", mode === "cover");
+      };
+      sync();
+
+      fitBtn?.addEventListener("click", ()=>{
+        pushHistory();
+        e.fit = "contain";
+        render();
+        renderProps();
+        autosave();
+      });
+      fillBtn?.addEventListener("click", ()=>{
+        pushHistory();
+        e.fit = "cover";
+        render();
+        renderProps();
+        autosave();
+      });
+    }
   }
+
 
   // Actions
   function addElement(){
@@ -1044,7 +1106,9 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   function zoomIn(){ state.zoom = Math.min(3, Math.round((state.zoom + 0.1)*10)/10); applyZoom(); }
   function zoomOut(){ state.zoom = Math.max(0.2, Math.round((state.zoom - 0.1)*10)/10); applyZoom(); }
 
-  window.Editor = { state, addElement, deleteSelected, duplicateSelected, undo, redo, export: exportJSON, toggleGrid, zoomIn, zoomOut };
+  window.updateUI = function(){ render(); renderProps(); };
+
+  window.Editor = { state, addElement, deleteSelected, duplicateSelected, undo, redo, export: exportJSON, toggleGrid, zoomIn, zoomOut, _pushHistory: pushHistory, _render: render, _renderProps: renderProps, updateUI: window.updateUI };
 
   // Toolbar wiring
   $("#backBtn")?.addEventListener("click", ()=>{ window.location.href="index.html"; });
@@ -1060,6 +1124,75 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   $("#undoBtn")?.addEventListener("click", undo);
   $("#redoBtn")?.addEventListener("click", redo);
   $("#exportBtn")?.addEventListener("click", exportJSON);
+  // Import Image (instant render, browser-safe)
+  (function(){
+    if(window.__IMPORT_IMAGE_SPLIT_V2__) return;
+    window.__IMPORT_IMAGE_SPLIT_V2__ = true;
+
+    const btn = $("#importBtn");
+    if(!btn) return;
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.style.display = "none";
+    document.body.appendChild(input);
+
+    const addImageFromFile = (file)=>{
+      if(!file) return;
+      // avoid double-add on same event
+      const url = URL.createObjectURL(file);
+      pushHistory();
+      const id = uid();
+      state.elements.push({
+        id,
+        type:"image",
+        x: 140,
+        y: 140,
+        w: 420,
+        h: 300,
+        title: "",
+        subtitle: "",
+        src: url,
+        fit: "cover",
+        bg: null,
+        color: "transparent",
+        radius: 14,
+        opacity: 1,
+        fontSize: 0,
+        weight: 0
+      });
+      state.selected.clear();
+      state.selected.add(id);
+      render();
+      renderProps();
+      autosave();
+    };
+
+    btn.addEventListener("click", ()=>{
+      // reset value so selecting same file twice still triggers change
+      input.value = "";
+      input.click();
+    });
+
+    input.addEventListener("change", ()=>{
+      const file = input.files && input.files[0];
+      addImageFromFile(file);
+    });
+
+    // Drag/drop into editor (prevents browser opening the file)
+    const prevent = (e)=>{ e.preventDefault(); e.stopPropagation(); };
+    ["dragenter","dragover","dragleave","drop"].forEach(ev=>{
+      window.addEventListener(ev, prevent, { passive:false });
+    });
+
+    canvasEl.addEventListener("drop", (e)=>{
+      prevent(e);
+      const file = e.dataTransfer?.files?.[0];
+      if(file && /^image\//i.test(file.type)) addImageFromFile(file);
+    });
+  })();
+
   $("#toggleGridBtn")?.addEventListener("click", toggleGrid);
   $("#zoomInBtn")?.addEventListener("click", zoomIn);
   $("#zoomOutBtn")?.addEventListener("click", zoomOut);
@@ -1094,149 +1227,6 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
 })();
 </script>
 
-
-<script>
-/* === IMPORT IMAGE (LOCKED FILE SAFE ADDITION) === */
-(function(){
-  if(window.__IMPORT_IMAGE_V1__) return;
-  window.__IMPORT_IMAGE_V1__ = true;
-
-  const btn = document.getElementById("importBtn");
-  if(!btn || !window.Editor) return;
-
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.style.display = "none";
-  document.body.appendChild(input);
-
-  btn.addEventListener("click", ()=> input.click());
-
-  input.addEventListener("change", ()=>{
-    const file = input.files && input.files[0];
-    if(!file) return;
-
-    const url = URL.createObjectURL(file);
-
-    const id = crypto.randomUUID ? crypto.randomUUID() : "img_"+Date.now();
-
-    Editor.state.elements.push({
-      id,
-      type: "image",
-      x: 160,
-      y: 160,
-      w: 320,
-      h: 220,
-      title: "",
-      subtitle: "",
-      bg: `url(${url}) center/cover no-repeat`,
-      color: "transparent",
-      radius: 14,
-      opacity: 1,
-      fontSize: 0,
-      weight: 0
-    });
-
-    Editor.state.selected.clear();
-    Editor.state.selected.add(id);
-
-    Editor.state.history.push(JSON.parse(JSON.stringify(Editor.state)));
-    Editor.state.future.length = 0;
-
-    Editor.state.zoom = Editor.state.zoom; // no-op, preserve state
-    document.getElementById("canvas").style.transform = document.getElementById("canvas").style.transform;
-
-    document.getElementById("canvas").dispatchEvent(new Event("refresh"));
-
-    if(typeof window.updateUI === "function") updateUI();
-  });
-})();
-</script>
-
-
-<script>
-/* === IMAGE IMPORT (CORE SAFE) === */
-(function(){
-  const btn = document.getElementById("importBtn");
-  if(!btn) return;
-
-  const input = document.createElement("input");
-  input.type = "file";
-  input.accept = "image/*";
-  input.style.display = "none";
-  document.body.appendChild(input);
-
-  btn.onclick = () => input.click();
-
-  input.onchange = () => {
-    const file = input.files && input.files[0];
-    if(!file) return;
-
-    const url = URL.createObjectURL(file);
-
-    const el = {
-      id: "img_"+Date.now(),
-      type: "image",
-      src: url,
-      fit: "fit",     // FULL IMAGE default
-      x: 160,
-      y: 160,
-      w: 320,
-      h: 220,
-      radius: 14,
-      opacity: 1
-    };
-
-    Editor.state.elements.push(el);
-    Editor.state.selected.clear();
-    Editor.state.selected.add(el.id);
-
-    // THIS is the key: use core update pipeline
-    if(typeof updateUI === "function") updateUI();
-
-    input.value = "";
-  };
-})();
-</script>
-
-
-<script>
-/* === FIT / FILL (SAFE) === */
-(function(){
-  const bar = document.querySelector(".topbar") || document.body;
-
-  const fitBtn = document.createElement("button");
-  fitBtn.textContent = "Fit";
-  fitBtn.className = "btn tiny";
-
-  const fillBtn = document.createElement("button");
-  fillBtn.textContent = "Fill";
-  fillBtn.className = "btn tiny";
-
-  bar.appendChild(fitBtn);
-  bar.appendChild(fillBtn);
-
-  fitBtn.onclick = ()=>{
-    if(Editor.state.selected.size!==1) return;
-    const id=[...Editor.state.selected][0];
-    const el=Editor.state.elements.find(e=>e.id===id);
-    if(el && el.type==="image"){
-      el.fit="fit";
-      updateUI();
-    }
-  };
-
-  fillBtn.onclick = ()=>{
-    if(Editor.state.selected.size!==1) return;
-    const id=[...Editor.state.selected][0];
-    const el=Editor.state.elements.find(e=>e.id===id);
-    if(el && el.type==="image"){
-      el.fit="fill";
-      updateUI();
-    }
-  };
-})();
-</script>
 
 </body>
 </html>
