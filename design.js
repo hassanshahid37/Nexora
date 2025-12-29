@@ -423,100 +423,6 @@
     return pick(archetypes, seed);
   }
 
-  
-  // ---- Layout Families v1 (Instagram) ----
-  // Keeps generation diverse (up to 200) while staying within proven Canva-grade archetypes.
-  function nxPickInstagramFamilyV1(seed, idx, intent){
-    const t = intent?.type || "generic";
-    const families = [
-      { family:"Hero",      name:"Hero Poster",      layouts:["posterHero","productPoster"] },
-      { family:"Split",     name:"Split Hero",       layouts:["splitHero"] },
-      { family:"Grid",      name:"Feature Grid",     layouts:["featureGrid"] },
-      { family:"Badge",     name:"Badge Promo",      layouts:["badgePromo","bigNumber"] },
-      { family:"Quote",     name:"Minimal Quote",    layouts:["minimalQuote"] },
-      { family:"Photo",     name:"Photo Card",       layouts:["photoCard","eventFlyer"] }
-    ];
-
-    // Stronger bias by intent (still uses same safe archetypes)
-    const bias = (fam)=>{
-      if(t==="promo" && (fam.family==="Badge" || fam.family==="Hero")) return 1.35;
-      if(t==="hiring" && (fam.family==="Hero" || fam.family==="Grid")) return 1.25;
-      if(t==="announcement" && (fam.family==="Hero" || fam.family==="Photo")) return 1.15;
-      if(t==="quote" && fam.family==="Quote") return 1.6;
-      return 1.0;
-    };
-
-    const s = (seed ^ hash("igfam|"+t+"|"+idx)) >>> 0;
-    // Deterministic “shuffled cycle”: stable but varied across idx.
-    const order = families
-      .map((f,i)=>({ f, score:(hash(f.family+"|"+s)>>>0) * bias(f) }))
-      .sort((a,b)=>b.score-a.score)
-      .map(x=>x.f);
-
-    const fam = order[idx % order.length] || families[0];
-    const layouts = fam.layouts || ["posterHero"];
-    const layout = pick(layouts, s + idx*997);
-    return { family:fam.family, name:fam.name, layout };
-  }
-
-  // ---- Archetype Polish v1 ----
-  // Subtle, safe tweaks to make compositions feel more “Canva-grade” without changing the contract.
-  function nxApplyArchetypePolishV1(elements, spec, layout){
-    const { w,h,pal } = spec || {};
-    const isDark = !!pal && (String(pal.bg||"").startsWith("#0") || String(pal.bg||"").startsWith("#1"));
-    const roundBase = Math.round(Math.min(w||1080,h||1080) * 0.035); // ~38 on 1080
-    const roundHi   = Math.round(Math.min(w||1080,h||1080) * 0.055); // ~59 on 1080
-
-    for(const el of elements){
-      if(!el || typeof el!=="object") continue;
-
-      // Unify corner radius across “card-like” observations.
-      if(el.type==="card" || el.type==="photo" || el.type==="shape" || el.type==="pill" || el.type==="chip" || el.type==="badge"){
-        if(typeof el.r==="number"){
-          // Keep original intent but smooth extremes.
-          el.r = clamp(el.r, roundBase, roundHi);
-        }
-      }
-
-      // Typography polish: increase readability & spacing consistency.
-      if(el.type==="text"){
-        if(typeof el.size==="number"){
-          // Keep within sane bounds.
-          el.size = clamp(el.size, Math.round((h||1080)*0.020), Math.round((h||1080)*0.090));
-        }
-        if(typeof el.letter==="number"){
-          el.letter = clamp(el.letter, -1.2, 0.6);
-        }
-        if(typeof el.weight==="number"){
-          // Normalize 800/900 heaviness depending on style.
-          if(!isDark && el.weight>800) el.weight = 800;
-        }
-      }
-
-      // Light stroke consistency for glass/dark styles (safe: only touches if stroke already present).
-      if(typeof el.stroke==="string" && el.stroke.includes("rgba")){
-        // Slightly reduce harshness.
-        el.stroke = el.stroke.replace(/rgba\(([^)]+)\)/, (m,inner)=>{
-          const parts = inner.split(",").map(x=>x.trim());
-          if(parts.length!==4) return m;
-          const a = parseFloat(parts[3]);
-          if(!isFinite(a)) return m;
-          const na = clamp(a * 0.85, 0.06, 0.30);
-          return `rgba(${parts[0]},${parts[1]},${parts[2]},${na})`;
-        });
-      }
-    }
-
-    // Layout-specific micro tweaks (no schema changes)
-    if(layout==="minimalQuote"){
-      for(const el of elements){
-        if(el?.type==="text" && typeof el.size==="number" && el.size>Math.round((h||1080)*0.075)){
-          el.size = Math.round(el.size * 0.92);
-        }
-      }
-    }
-  }
-
   function buildElements(layout, spec){
     const { w,h,pal,brand,tagline,seed } = spec;
     const elements = [];
@@ -684,10 +590,6 @@
       add({ type:"chip", x:Math.round(w*0.14),y:Math.round(h*0.71), text:"@"+brand.replace(/\s+/g,"").toLowerCase(), size:Math.round(h*0.028), color: pal.muted });
     }
 
-    // Canva-grade polish (safe, deterministic)
-    nxApplyArchetypePolishV1(elements, spec, layout);
-
-
     return elements;
   }
 
@@ -701,17 +603,6 @@
 
     const cm = contentModel(prompt, category, intent, seed);
     const arch = archetypeWithIntent(seed, intent);
-    // Instagram: keep results within a small set of proven archetype families,
-    // while still producing up to 200 unique variations via seed + idx.
-    if(category === "Instagram Post"){
-      const fam = nxPickInstagramFamilyV1(seed, idx, intent);
-      if(fam && fam.layout){
-        arch.layout = fam.layout;
-        arch.name = fam.name;
-        arch.family = fam.family;
-      }
-    }
-
 
     const titleByCategory = {
       "Instagram Post": "Instagram Post #"+(idx+1),
@@ -748,10 +639,61 @@
       smallprint: cm.smallprint
     };
 
-    const elements = buildElements(arch.layout, spec);
+    const elementsRaw = buildElements(arch.layout, spec);
+
+    // Spine v1: attach semantic roles (background/headline/subhead/image/cta/badge)
+    const elements = (Array.isArray(elementsRaw) ? elementsRaw : []).map((e)=>({ ...e }));
+    let textSeen = 0;
+    for(const e of elements){
+      const t = String(e?.type || "").toLowerCase();
+      if(t === "bg"){
+        e.role = "background";
+        e.id = e.id || "bg";
+        continue;
+      }
+      if(t === "photo" || t === "image"){
+        e.role = "image";
+        e.id = e.id || "media";
+        continue;
+      }
+      if(t === "pill" || t === "badge" || t === "chip"){
+        const txt = String(e?.text || e?.title || "").trim();
+        if(txt && String(spec.ctaText || "").trim() && txt === String(spec.ctaText).trim()){
+          e.role = "cta";
+          e.id = e.id || "cta";
+        }else{
+          e.role = "badge";
+          e.id = e.id || "badge";
+        }
+        continue;
+      }
+      if(t === "text"){
+        textSeen += 1;
+        // First text is headline, second is subhead, remaining default to subhead
+        e.role = (textSeen === 1) ? "headline" : "subhead";
+        e.id = e.id || (textSeen === 1 ? "headline" : (textSeen === 2 ? "subhead" : ("text_"+textSeen)));
+        continue;
+      }
+      // Default fallbacks
+      e.role = e.role || "badge";
+      e.id = e.id || ("el_" + Math.random().toString(16).slice(2));
+    }
+
+    // Spine v1: build TemplateContract (best-effort; works even if NexoraSpine isn't loaded)
+    let contract = null;
+    try{
+      contract = window.NexoraSpine?.createContract?.({
+        templateId: "tpl_"+seed.toString(16),
+        category,
+        canvas: { w: meta.w, h: meta.h },
+        palette: pal,
+        layers: elements.map(el => ({ id: String(el.id||"layer"), role: String(el.role||"badge") }))
+      }) || null;
+    }catch(_){ contract = null; }
 
     return {
       id: "tpl_"+seed.toString(16),
+      contract,
       title: titleByCategory[category] || (category+" #"+(idx+1)),
       description: normalizeStyleName(style)+" • "+arch.name+" • "+(intent.type||"generic"),
       category,
