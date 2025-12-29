@@ -5,23 +5,6 @@
    No external deps. Exposes window.NexoraDesign.
 */
 (function(){
-  /* ===============================
-     DESIGN TOKENS v1 (Canva-grade)
-     =============================== */
-  const DESIGN_TOKENS_V1 = {
-    radius: { sm: 10, md: 16, lg: 24 },
-    spacing: { xs: 8, sm: 12, md: 20, lg: 32, xl: 48 },
-    shadow: {
-      soft: { x:0, y:10, blur:30, color:"rgba(0,0,0,0.18)" }
-    },
-    text: {
-      hero: { size: 48, weight: 800, lineHeight: 1.05 },
-      title:{ size: 32, weight: 700, lineHeight: 1.15 },
-      body: { size: 18, weight: 500, lineHeight: 1.4 },
-      meta: { size: 14, weight: 500, lineHeight: 1.3 }
-    }
-  };
-
   const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
   const pick=(arr,seed)=>arr[(seed%arr.length+arr.length)%arr.length];
   const hash=(s)=>{
@@ -305,6 +288,63 @@
     if(cat.includes("youtube")){
       w.youtubeBold += 18; w.posterHero -= 6; w.productPoster -= 6;
     }
+
+  /* ===============================
+     Layout Families v1 (Instagram)
+     =============================== */
+  const IG_LAYOUT_FAMILIES_V1 = [
+    { id:"text-first",   label:"Text First",   layouts:["minimalQuote","bigNumber","posterHero"] },
+    { id:"image-led",    label:"Image Led",    layouts:["photoCard","productPoster","posterHero"] },
+    { id:"split",        label:"Split",        layouts:["splitHero","eventFlyer"] },
+    { id:"cards",        label:"Cards",        layouts:["featureGrid","badgePromo"] },
+    { id:"minimal-grid", label:"Minimal Grid", layouts:["posterHero","minimalQuote"] }
+  ];
+
+  const __LAYOUT_NAME_BY_ID = {
+    posterHero:"Poster Hero",
+    productPoster:"Product Poster",
+    eventFlyer:"Event Flyer",
+    splitHero:"Split Hero",
+    badgePromo:"Badge Promo",
+    featureGrid:"Feature Grid",
+    photoCard:"Photo Card",
+    minimalQuote:"Minimal Quote",
+    bigNumber:"Big Number",
+    youtubeBold:"YouTube Bold"
+  };
+
+  function pickLayoutFamilyV1(seed, intent, category){
+    if(String(category||"").toLowerCase() !== "instagram post") return null;
+
+    const t = (intent?.type || "generic");
+    const s = (seed ^ hash("ig|family|"+t)) >>> 0;
+
+    const weights = {
+      generic:      { "text-first":18, "image-led":24, "split":18, "cards":22, "minimal-grid":18 },
+      promo:        { "text-first":10, "image-led":34, "split":14, "cards":30, "minimal-grid":12 },
+      quote:        { "text-first":48, "image-led":10, "split":10, "cards":12, "minimal-grid":20 },
+      hiring:       { "text-first":16, "image-led":14, "split":28, "cards":30, "minimal-grid":12 },
+      announcement: { "text-first":22, "image-led":18, "split":26, "cards":18, "minimal-grid":16 }
+    };
+
+    const w = weights[t] || weights.generic;
+    const wlist = IG_LAYOUT_FAMILIES_V1.map(f=>({ w: w[f.id] ?? 10, v: f }));
+    return weightedPick(wlist, s);
+  }
+
+  function pickLayoutFromFamily(seed, family){
+    if(!family) return null;
+    const layouts = family.layouts || [];
+    if(!layouts.length) return null;
+    const s = (seed ^ hash("ig|variant|"+family.id)) >>> 0;
+    return layouts[s % layouts.length];
+  }
+
+  function archetypeForFamily(seed, intent, family){
+    const layout = pickLayoutFromFamily(seed, family);
+    if(!layout) return null;
+    return { name: __LAYOUT_NAME_BY_ID[layout] || family.label || family.id, layout };
+  }
     if(cat.includes("logo")){
       w.minimalQuote += 10; w.posterHero -= 10; w.productPoster -= 8;
     }
@@ -440,7 +480,63 @@
     return pick(archetypes, seed);
   }
 
-  function buildElements(layout, spec){
+  
+/* ===============================
+   DESIGN TOKENS v1 (Canva-grade)
+   =============================== */
+const DESIGN_TOKENS_V1 = {
+  radius: { sm: 10, md: 16, lg: 24, xl: 44 },
+  spacing:{ xs: 8, sm: 12, md: 20, lg: 32, xl: 48 },
+  shadow: { soft: { x:0, y:14, blur:38, color:"rgba(0,0,0,0.22)" } }
+};
+
+function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+function scaleByH(h, v){ return Math.round(h * v); }
+
+function polishElementsV1(elements, layout, spec){
+  const { w,h,pal } = spec;
+  const radLG = DESIGN_TOKENS_V1.radius.lg;
+  const radXL = DESIGN_TOKENS_V1.radius.xl;
+
+  for(const el of elements){
+    if(typeof el.r === "number" && el.r > 0){
+      el.r = clamp(el.r, radLG, radXL);
+    }
+    if(el.type === "shape" && el.stroke && typeof el.opacity === "number" && el.opacity >= 0.85){
+      el.shadow = el.shadow || DESIGN_TOKENS_V1.shadow.soft;
+    }
+    if(el.type === "text" && typeof el.size === "number"){
+      if(el.size >= scaleByH(h, 0.06)){
+        if(typeof el.letter !== "number") el.letter = -0.8;
+        el.weight = el.weight || 900;
+      } else if(el.size <= scaleByH(h, 0.035)){
+        el.weight = el.weight || 600;
+      }
+    }
+    if((el.type === "pill" || el.type === "button") && el.w && el.h){
+      el.r = el.r || DESIGN_TOKENS_V1.radius.md;
+      el.shadow = el.shadow || DESIGN_TOKENS_V1.shadow.soft;
+    }
+  }
+
+  if(layout === "posterHero"){
+    const hasChip = elements.some(e=>e.type==="chip");
+    if(!hasChip && spec.kicker){
+      elements.push({
+        type:"chip",
+        x:Math.round(w*0.08),
+        y:Math.round(h*0.10),
+        text:String(spec.kicker).toUpperCase().slice(0,22),
+        size:Math.round(h*0.028),
+        color: pal.muted
+      });
+    }
+  }
+
+  return elements;
+}
+
+function buildElements(layout, spec){
     const { w,h,pal,brand,tagline,seed } = spec;
     const elements = [];
     const s = seed;
@@ -607,7 +703,7 @@
       add({ type:"chip", x:Math.round(w*0.14),y:Math.round(h*0.71), text:"@"+brand.replace(/\s+/g,"").toLowerCase(), size:Math.round(h*0.028), color: pal.muted });
     }
 
-    return elements;
+    return polishElementsV1(elements, layout, spec);
   }
 
   function generateOne(category, prompt, style, idx){
@@ -619,8 +715,8 @@
     const b = brandFromPrompt(prompt);
 
     const cm = contentModel(prompt, category, intent, seed);
-    const arch = archetypeWithIntent(seed, intent);
-
+    const family = pickLayoutFamilyV1(seed, intent, category);
+    const arch = archetypeForFamily(seed, intent, family) || archetypeWithIntent(seed, intent);
     const titleByCategory = {
       "Instagram Post": "Instagram Post #"+(idx+1),
       "Story": "Story #"+(idx+1),
@@ -983,11 +1079,3 @@ function applyIntentScene(template, intent) {
     };
   }
 })();
-
-  function applyCardPolish(layer){
-    if(!layer || !layer.style) return layer;
-    layer.style.borderRadius = DESIGN_TOKENS_V1.radius.lg;
-    layer.style.shadow = DESIGN_TOKENS_V1.shadow.soft;
-    layer.padding = DESIGN_TOKENS_V1.spacing.lg;
-    return layer;
-  }
