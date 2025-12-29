@@ -255,49 +255,62 @@
     return list[list.length-1].v;
   }
 
-  function archetypeWithIntent(seed, intent){
-    // Phase AC-V1: richer poster-first archetypes (still logic-only, no UI changes).
+  function archetypeWithIntent(seed, intent, category){
+    // Phase 6A (YT-1): category-aware archetypes.
+    // NOTE: Only YouTube Thumbnail gets custom archetypes in this step.
+    const cat = String(category||"").toLowerCase();
+
+    if(cat.includes("youtube")){
+      // YouTube Thumbnail archetypes (structural, not just styling)
+      const yt = [
+        { name:"Face Left",  layout:"ytFaceLeft"  },
+        { name:"Face Right", layout:"ytFaceRight" },
+        { name:"Text Heavy", layout:"ytTextHeavy" },
+        { name:"Minimal",    layout:"ytMinimal"   }
+      ];
+      // Slight bias based on intent (if detected)
+      const t = String(intent?.type||"generic");
+      if(t.includes("quote") || t.includes("announcement")){
+        return pickW(seed, [
+          { v: yt[2], w: 3 }, // Text Heavy
+          { v: yt[3], w: 2 }, // Minimal
+          { v: yt[0], w: 1 },
+          { v: yt[1], w: 1 }
+        ]);
+      }
+      return pickW(seed, [
+        { v: yt[0], w: 3 },
+        { v: yt[1], w: 3 },
+        { v: yt[2], w: 2 },
+        { v: yt[3], w: 2 }
+      ]);
+    }
+
+    // Default (existing): poster-first archetypes (still logic-only, no UI changes).
     const base = [
       { name:"Poster Hero", layout:"posterHero" },
       { name:"Product Poster", layout:"productPoster" },
       { name:"Event Flyer", layout:"eventFlyer" },
       { name:"Split Hero", layout:"splitHero" },
-      { name:"Badge Promo", layout:"badgePromo" },
       { name:"Feature Grid", layout:"featureGrid" },
-      { name:"Photo Card", layout:"photoCard" },
-      { name:"Minimal Quote", layout:"minimalQuote" },
-      { name:"Big Number", layout:"bigNumber" },
-      { name:"YouTube Bold", layout:"youtubeBold" }
+      { name:"Minimal Quote", layout:"minimalQuote" }
     ];
 
-    const t = intent?.type || "generic";
-    const cat = (intent?.category || "").toLowerCase();
-    const s = (seed ^ hash("intent|"+t+"|"+cat)) >>> 0;
+    const t = String(intent?.type||"generic");
+    if(t.includes("quote")) return base[4];
+    if(t.includes("announcement")) return base[2];
+    if(t.includes("product")) return base[1];
 
-    // Layout weighting: bias toward poster compositions for print/social, thumbnail-heavy for YouTube.
-    const weights = {
-      generic:     { posterHero:22, productPoster:18, eventFlyer:12, splitHero:16, badgePromo:12, featureGrid:12, photoCard:14, minimalQuote:10, bigNumber:10, youtubeBold:10 },
-      promo:       { posterHero:16, productPoster:26, eventFlyer:10, splitHero:12, badgePromo:22, featureGrid:12, photoCard:12, minimalQuote:6,  bigNumber:22, youtubeBold:10 },
-      hiring:      { posterHero:18, productPoster:10, eventFlyer:12, splitHero:18, badgePromo:6,  featureGrid:24, photoCard:16, minimalQuote:8,  bigNumber:10, youtubeBold:8  },
-      announcement:{ posterHero:18, productPoster:12, eventFlyer:24, splitHero:16, badgePromo:10, featureGrid:16, photoCard:18, minimalQuote:10, bigNumber:10, youtubeBold:10 },
-      quote:       { posterHero:14, productPoster:6,  eventFlyer:6,  splitHero:10, badgePromo:6,  featureGrid:10, photoCard:12, minimalQuote:34, bigNumber:10, youtubeBold:6  }
-    };
-
-    // Category overrides (gentle)
-    const w = { ...(weights[t] || weights.generic) };
-    if(cat.includes("youtube")){
-      w.youtubeBold += 18; w.posterHero -= 6; w.productPoster -= 6;
-    }
-    if(cat.includes("logo")){
-      w.minimalQuote += 10; w.posterHero -= 10; w.productPoster -= 8;
-    }
-    if(cat.includes("business card")){
-      w.featureGrid += 10; w.posterHero -= 10; w.productPoster -= 10;
-    }
-
-    const wlist = base.map(a=>({ w: w[a.layout] ?? 10, v: a }));
-    return weightedPick(wlist, s);
+    return pickW(seed, [
+      { v: base[0], w: 3 },
+      { v: base[3], w: 2 },
+      { v: base[4], w: 3 },
+      { v: base[5], w: 2 },
+      { v: base[2], w: 2 },
+      { v: base[1], w: 2 }
+    ]);
   }
+
 
   function normalizeStyleName(style){
     return (style||"Dark Premium").trim();
@@ -438,13 +451,83 @@
     const tHeadline = String(spec.headline || tagline || brand || "New");
     const tSub = String(spec.subhead || spec.subtitle || "Designed • Clean • Modern");
     const tKicker = String(spec.kicker || "").trim();
+    const truncateWords = (str, max)=> {
+      const parts = String(str||"").trim().split(/\s+/).filter(Boolean);
+      if(parts.length<=max) return String(str||"").trim();
+      return parts.slice(0,max).join(" ");
+    };
+
+    // For YouTube thumbnails we enforce short punchy headlines (Phase 6A).
+    const isYT = String(spec.category||"").toLowerCase().includes("youtube");
+
     const tCTA = String(spec.ctaText || "Learn More");
 
     const photoLabel = (brand||"Nexora").toString().slice(0,18);
     const photoSrcA = smartPhotoSrc((s^hash("A"))>>>0, pal, photoLabel);
     const photoSrcB = smartPhotoSrc((s^hash("B"))>>>0, pal, (tHeadline.split(" ")[0]||photoLabel));
 
-    if(layout==="posterHero"){
+    
+    // Phase 6A (YT-1): YouTube Thumbnail structural layouts
+    if(layout==="ytFaceLeft" || layout==="ytFaceRight"){
+      const faceLeft = layout==="ytFaceLeft";
+      const imgW = Math.round(w*0.52);
+      const textW = w - imgW - M*2;
+      const imgX = faceLeft ? 0 : (w - imgW);
+      const textX = faceLeft ? (imgW + M) : M;
+
+      const ytHead = truncateWords(tHeadline, 6).toUpperCase();
+      add({ type:"photo", src: photoSrcA, x:imgX, y:0, w:imgW, h, r:0, opacity:1 });
+      add({ type:"shape", x:imgX, y:0, w:imgW, h, r:0, fill:"linear-gradient(90deg, rgba(0,0,0,0.55), rgba(0,0,0,0.00))", opacity: faceLeft?1:0 });
+      add({ type:"shape", x:imgX, y:0, w:imgW, h, r:0, fill:"linear-gradient(270deg, rgba(0,0,0,0.55), rgba(0,0,0,0.00))", opacity: faceLeft?0:1 });
+
+      // Text panel
+      add({ type:"shape", x:textX, y:Math.round(h*0.10), w:textW, h:Math.round(h*0.78), r:36,
+            fill: glass ? "rgba(255,255,255,0.10)" : "rgba(0,0,0,0.22)",
+            stroke:"rgba(255,255,255,0.14)", opacity:1 });
+
+      add({ type:"text", x:textX+24, y:Math.round(h*0.22), text:ytHead, size:Math.round(h*0.095), weight:900,
+            color: pal.ink, letter:-1.2, shadow:true });
+
+      add({ type:"text", x:textX+24, y:Math.round(h*0.52), text:truncateWords(tSub, 10), size:Math.round(h*0.040), weight:700,
+            color: "rgba(255,255,255,0.88)" });
+
+      add({ type:"pill", x:textX+24, y:Math.round(h*0.68), w:Math.round(textW*0.62), h:Math.round(h*0.10), r:999,
+            fill: pal.accent, text:tCTA.toUpperCase(), tcolor:"#071423", tsize:Math.round(h*0.038), tweight:900 });
+
+      // Badge
+      add({ type:"chip", x:textX+24, y:Math.round(h*0.14), text:"YT", size:Math.round(h*0.030), color: pal.muted });
+      return elements;
+    }
+
+    if(layout==="ytTextHeavy"){
+      const ytHead = truncateWords(tHeadline, 7).toUpperCase();
+      add({ type:"shape", x:M, y:M, w:w-M*2, h:h-M*2, r:48,
+            fill: glass ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.20)",
+            stroke:"rgba(255,255,255,0.14)", opacity:1 });
+      add({ type:"text", x:M+34, y:Math.round(h*0.18), text:ytHead, size:Math.round(h*0.120), weight:950,
+            color: pal.ink, letter:-1.6, shadow:true });
+      add({ type:"text", x:M+34, y:Math.round(h*0.50), text:truncateWords(tSub, 14), size:Math.round(h*0.045), weight:700,
+            color: "rgba(255,255,255,0.86)" });
+      add({ type:"pill", x:M+34, y:Math.round(h*0.70), w:Math.round(w*0.34), h:Math.round(h*0.11), r:999,
+            fill: pal.accent, text:tCTA.toUpperCase(), tcolor:"#071423", tsize:Math.round(h*0.040), tweight:900 });
+      add({ type:"chip", x:w-M-140, y:M+20, text:"YT • BOLD", size:Math.round(h*0.028), color: pal.muted });
+      return elements;
+    }
+
+    if(layout==="ytMinimal"){
+      const ytHead = truncateWords(tHeadline, 5).toUpperCase();
+      add({ type:"shape", x:M, y:M, w:w-M*2, h:h-M*2, r:56,
+            fill: glass ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.18)",
+            stroke:"rgba(255,255,255,0.12)", opacity:1 });
+      add({ type:"text", x:M+40, y:Math.round(h*0.30), text:ytHead, size:Math.round(h*0.110), weight:950,
+            color: pal.ink, letter:-1.4, shadow:true });
+      add({ type:"pill", x:M+40, y:Math.round(h*0.62), w:Math.round(w*0.28), h:Math.round(h*0.10), r:999,
+            fill: pal.accent, text:tCTA.toUpperCase(), tcolor:"#071423", tsize:Math.round(h*0.038), tweight:900 });
+      add({ type:"chip", x:w-M-120, y:M+20, text:"YT • MIN", size:Math.round(h*0.028), color: pal.muted });
+      return elements;
+    }
+
+if(layout==="posterHero"){
       // Full-bleed hero photo with gradient overlay + strong typography.
       add({ type:"photo", src: photoSrcA, x:0,y:0,w,h, r:0, opacity:1 });
       add({ type:"shape", x:0,y:0,w,h, r:0, fill:"linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.60))", opacity:1 });
@@ -602,7 +685,7 @@
     const b = brandFromPrompt(prompt);
 
     const cm = contentModel(prompt, category, intent, seed);
-    const arch = archetypeWithIntent(seed, intent);
+    const arch = archetypeWithIntent(seed, intent, category);
 
     const titleByCategory = {
       "Instagram Post": "Instagram Post #"+(idx+1),
@@ -619,6 +702,7 @@
     const ctaText = pickCTA(intent, seed);
 
     const spec = {
+      category,
       w: meta.w, h: meta.h,
       pal,
       brand: b.brand,
