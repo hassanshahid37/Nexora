@@ -1,22 +1,4 @@
 
-/* ===============================
-   Nexora Controlled Variation Layer
-   - Safe, deterministic variations
-   - No layout breakage
-   =============================== */
-
-const VARIATION_MATRIX = {
-  alignment: ["left", "center"],
-  emphasis: ["headline", "image"],
-  density: ["spacious", "compact"]
-};
-
-function pickVariation(seed, list) {
-  return list[seed % list.length];
-}
-
-
-
 
 /* Nexora – design.js
    Visual template generator (client-side fallback + preview layouts)
@@ -306,6 +288,68 @@ function pickVariation(seed, list) {
     if(cat.includes("youtube")){
       w.youtubeBold += 18; w.posterHero -= 6; w.productPoster -= 6;
     }
+
+  /* ===============================
+     Layout Families v1 (Instagram)
+     - Explicit structural archetypes (Canva-grade packs)
+     - Deterministic (seeded), spine-safe
+     =============================== */
+
+  const IG_LAYOUT_FAMILIES_V1 = [
+    { id:"text-first",   label:"Text First",   layouts:["minimalQuote","bigNumber","posterHero"] },
+    { id:"image-led",    label:"Image Led",    layouts:["photoCard","productPoster","posterHero"] },
+    { id:"split",        label:"Split",        layouts:["splitHero"] },
+    { id:"cards",        label:"Cards",        layouts:["featureGrid","badgePromo"] },
+    { id:"minimal-grid", label:"Minimal Grid", layouts:["posterHero","minimalQuote"] }
+  ];
+
+  const __LAYOUT_NAME_BY_ID = {
+    posterHero:"Poster Hero",
+    productPoster:"Product Poster",
+    eventFlyer:"Event Flyer",
+    splitHero:"Split Hero",
+    badgePromo:"Badge Promo",
+    featureGrid:"Feature Grid",
+    photoCard:"Photo Card",
+    minimalQuote:"Minimal Quote",
+    bigNumber:"Big Number",
+    youtubeBold:"YouTube Bold"
+  };
+
+  function pickLayoutFamilyV1(seed, intent, category){
+    // Only apply to Instagram Post for v1. Others continue using existing archetype logic.
+    if(String(category||"").toLowerCase() !== "instagram post") return null;
+
+    const t = (intent?.type || "generic");
+    const s = (seed ^ hash("ig|family|"+t)) >>> 0;
+
+    // Intent biases (deterministic): quote -> text-first, promo -> image-led/cards, hiring -> split/cards, announcement -> split/text-first
+    const weights = {
+      generic:      { "text-first":18, "image-led":24, "split":16, "cards":22, "minimal-grid":20 },
+      promo:        { "text-first":10, "image-led":34, "split":14, "cards":30, "minimal-grid":12 },
+      quote:        { "text-first":46, "image-led":10, "split":10, "cards":12, "minimal-grid":22 },
+      hiring:       { "text-first":18, "image-led":14, "split":24, "cards":30, "minimal-grid":14 },
+      announcement: { "text-first":22, "image-led":18, "split":26, "cards":18, "minimal-grid":16 }
+    };
+
+    const w = weights[t] || weights.generic;
+    const wlist = IG_LAYOUT_FAMILIES_V1.map(f=>({ w: w[f.id] ?? 10, v: f }));
+    return weightedPick(wlist, s);
+  }
+
+  function pickLayoutFromFamily(seed, family){
+    if(!family) return null;
+    const layouts = family.layouts || [];
+    if(!layouts.length) return null;
+    const s = (seed ^ hash("ig|variant|"+family.id)) >>> 0;
+    return layouts[s % layouts.length];
+  }
+
+  function archetypeForFamily(seed, intent, family){
+    const layout = pickLayoutFromFamily(seed, family);
+    if(!layout) return null;
+    return { name: __LAYOUT_NAME_BY_ID[layout] || family.label || family.id, layout };
+  }
     if(cat.includes("logo")){
       w.minimalQuote += 10; w.posterHero -= 10; w.productPoster -= 8;
     }
@@ -657,64 +701,15 @@ function pickVariation(seed, list) {
       smallprint: cm.smallprint
     };
 
-    const elementsRaw = buildElements(arch.layout, spec);
-
-    // Spine v1: attach semantic roles (background/headline/subhead/image/cta/badge)
-    const elements = (Array.isArray(elementsRaw) ? elementsRaw : []).map((e)=>({ ...e }));
-    let textSeen = 0;
-    for(const e of elements){
-      const t = String(e?.type || "").toLowerCase();
-      if(t === "bg"){
-        e.role = "background";
-        e.id = e.id || "bg";
-        continue;
-      }
-      if(t === "photo" || t === "image"){
-        e.role = "image";
-        e.id = e.id || "media";
-        continue;
-      }
-      if(t === "pill" || t === "badge" || t === "chip"){
-        const txt = String(e?.text || e?.title || "").trim();
-        if(txt && String(spec.ctaText || "").trim() && txt === String(spec.ctaText).trim()){
-          e.role = "cta";
-          e.id = e.id || "cta";
-        }else{
-          e.role = "badge";
-          e.id = e.id || "badge";
-        }
-        continue;
-      }
-      if(t === "text"){
-        textSeen += 1;
-        // First text is headline, second is subhead, remaining default to subhead
-        e.role = (textSeen === 1) ? "headline" : "subhead";
-        e.id = e.id || (textSeen === 1 ? "headline" : (textSeen === 2 ? "subhead" : ("text_"+textSeen)));
-        continue;
-      }
-      // Default fallbacks
-      e.role = e.role || "badge";
-      e.id = e.id || ("el_" + Math.random().toString(16).slice(2));
-    }
-
-    // Spine v1: build TemplateContract (best-effort; works even if NexoraSpine isn't loaded)
-    let contract = null;
-    try{
-      contract = window.NexoraSpine?.createContract?.({
-        templateId: "tpl_"+seed.toString(16),
-        category,
-        canvas: { w: meta.w, h: meta.h },
-        palette: pal,
-        layers: elements.map(el => ({ id: String(el.id||"layer"), role: String(el.role||"badge") }))
-      }) || null;
-    }catch(_){ contract = null; }
+    const elements = buildElements(arch.layout, spec);
 
     return {
       id: "tpl_"+seed.toString(16),
-      contract,
       title: titleByCategory[category] || (category+" #"+(idx+1)),
       description: normalizeStyleName(style)+" • "+arch.name+" • "+(intent.type||"generic"),
       category,
+      layoutFamily: (typeof family !== "undefined" && family) ? family.id : undefined,
+      layoutVariant: (typeof family !== "undefined" && family) ? pickLayoutFromFamily(seed, family) : undefined,
       style,
       vibe: intent.type || "generic",
       cta: ctaText,
