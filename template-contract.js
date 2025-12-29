@@ -17,6 +17,39 @@
   const VERSION = "v1";
   const ROLE_SET = new Set(["background", "headline", "subhead", "image", "cta", "badge"]);
 
+  // Layout Families v1 (Instagram) — explicit structural archetypes.
+  // Non-breaking: optional fields only; validator ignores unknown keys.
+  const LAYOUT_FAMILIES = {
+    instagram: [
+      { family: "text-first", variants: ["quote", "announcement"] },
+      { family: "image-led", variants: ["product", "lifestyle"] },
+      { family: "split", variants: ["text-left", "text-right"] },
+      { family: "cards", variants: ["stack", "tiles"] },
+      { family: "minimal-grid", variants: ["editorial", "clean"] }
+    ]
+  };
+
+  function normalizeLayoutChoice(category, layoutFamily, layoutVariant) {
+    try {
+      const cat = String(category || "").toLowerCase();
+      const groups = cat.includes("instagram") ? LAYOUT_FAMILIES.instagram : null;
+      if (!groups) return { layoutFamily: null, layoutVariant: null };
+
+      const fam = layoutFamily ? String(layoutFamily) : null;
+      const varr = layoutVariant ? String(layoutVariant) : null;
+
+      if (!fam) return { layoutFamily: null, layoutVariant: null };
+
+      const found = groups.find((g) => g.family === fam);
+      if (!found) return { layoutFamily: null, layoutVariant: null };
+
+      const okVariant = varr && Array.isArray(found.variants) && found.variants.includes(varr) ? varr : null;
+      return { layoutFamily: fam, layoutVariant: okVariant };
+    } catch {
+      return { layoutFamily: null, layoutVariant: null };
+    }
+  }
+
   function stableId(prefix) {
     try {
       return (globalThis.crypto?.randomUUID?.() || (String(prefix || "id") + "_" + Math.random().toString(16).slice(2) + Date.now().toString(16)));
@@ -54,12 +87,14 @@
     }
   }
 
-  function createContract({ templateId, category, canvas, palette, layers }) {
+  function createContract({ templateId, category, canvas, palette, layers, layoutFamily, layoutVariant }) {
     try {
       const cv = normalizeCanvas(canvas);
       if (!cv) return null;
       const tid = String(templateId || stableId("tpl"));
       const cat = String(category || "Unknown");
+
+      const lc = normalizeLayoutChoice(cat, layoutFamily, layoutVariant);
 
       const safePalette = palette && typeof palette === "object" ? {
         bg: palette.bg ?? palette.bg2 ?? null,
@@ -86,6 +121,8 @@
         palette: safePalette,
         layers: normalizedLayers,
         exportProfiles: [cat.replace(/\s+/g, "_").toLowerCase()],
+        layoutFamily: lc.layoutFamily,
+        layoutVariant: lc.layoutVariant,
         createdAt: Date.now()
       };
 
@@ -98,6 +135,7 @@
   window.NexoraSpine = {
     VERSION,
     ROLE_SET,
+    LAYOUT_FAMILIES,
     stableId,
     normalizeCanvas,
     validateContract,
