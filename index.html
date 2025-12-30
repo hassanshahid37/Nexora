@@ -1,6 +1,7 @@
 
 
 
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -616,18 +617,38 @@
   }
 
 
-  function seedTemplates(n){
+  function seedTemplates(n, opts){
     grid.innerHTML = "";
     __lastTemplates = [];
-    const category = $("#cat").value;
-    const style = $("#style").value;
-    const prompt = ($("#prompt").value || "").trim();
+
+    opts = opts || {};
+    const category = String(opts.category || $("#cat").value || "Instagram Post");
+    const style = String(opts.style || $("#style").value || "Dark Premium");
+    const prompt = String((opts.prompt != null ? opts.prompt : $("#prompt").value) || "").trim();
+    const notes = String((opts.notes != null ? opts.notes : $("#notes")?.value) || "").trim();
 
     // Phase I: client-side "Canva-style" generator (design.js) as the primary safe fallback.
     if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
       try{
         const raw = window.NexoraDesign.generateTemplates({ category, style, prompt, count: n });
         const templates = (Array.isArray(raw) ? raw : []).map(t => toEditorTemplate(t));
+
+        // YT-2 safety: even if a generator forgets prompt binding, inject it here.
+        applyPromptToTemplates(templates, prompt);
+
+        // Attach per-template meta (used by editor + copy prompt).
+        templates.forEach((t, i) => {
+          if(!t) return;
+          t.meta = Object.assign({}, (t.meta||{}), {
+            prompt,
+            notes,
+            category,
+            style,
+            // Lightweight layout hint (non-breaking)
+            layoutIndex: i+1,
+            source: "seed_designjs"
+          });
+        });
 
         templates.forEach((t, i) => {
           const div = document.createElement("div");
@@ -686,11 +707,6 @@
 
       const elements = patterns[i % patterns.length](i).map(e => ({ id: (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))), ...e }));
 
-      const thumb = div.querySelector('.thumb');
-      if(thumb){
-        drawThumb(thumb, { elements, canvas: { w: 980, h: 620 } });
-      }
-
       const template = {
         id: `seed_${Date.now()}_${i}`,
         title: `${category} #${i}`,
@@ -698,8 +714,25 @@
         category,
         style,
         canvas: { w: 980, h: 620 },
-        elements
+        elements,
+        meta: {
+          prompt,
+          notes,
+          category,
+          style,
+          layoutIndex: i,
+          source: "seed_legacy"
+        }
       };
+
+      // YT-2 fix: inject prompt into the actual visual text blocks.
+      applyPromptToTemplate(template, prompt);
+
+      const thumb = div.querySelector('.thumb');
+      if(thumb){
+        drawThumb(thumb, { elements: template.elements, canvas: { w: 980, h: 620 } });
+      }
+
       __lastTemplates.push(template);
 
       div.addEventListener("click", ()=>openEditorWith(template));
@@ -771,8 +804,11 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
     }
 
     // keep latest settings for editor intelligence
+    // YT-2: prefer template-bound prompt/notes when available (each template is self-describing)
+    const tplPrompt = String((tpl?.meta?.prompt != null ? tpl.meta.prompt : $("#prompt").value) || "").trim();
+    const tplNotes  = String((tpl?.meta?.notes  != null ? tpl.meta.notes  : $("#notes")?.value) || "").trim();
     try{
-      localStorage.setItem("nexora_last_settings_v1", JSON.stringify({ category: cat, style, prompt: $("#prompt").value.trim(), notes: $("#notes").value.trim(), count: Number($("#count")?.value||24) }));
+      localStorage.setItem("nexora_last_settings_v1", JSON.stringify({ category: cat, style, prompt: tplPrompt, notes: tplNotes, count: Number($("#count")?.value||24) }));
     }catch(e){}
 
     // Also store selected template in a stable key
@@ -786,8 +822,8 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
         cat,
         style,
         i: payload?.i || 1,
-        prompt: $("#prompt").value.trim(),
-        notes: $("#notes").value.trim(),
+        prompt: tplPrompt,
+        notes: tplNotes,
         title: (tpl?.title || payload?.title || null),
         description: (tpl?.description || payload?.description || payload?.subtitle || null),
       },
@@ -998,7 +1034,7 @@ currentStyle = "Dark Premium";
 // === AE-3: instant local templates + async AI copy (no UI changes) ===
 // 1) Show high-quality client-side templates immediately (design.js).
 // 2) In background, fetch AI copy-only improvements and merge into existing templates.
-seedTemplates(payload.count);
+seedTemplates(payload.count, payload);
         try{ saveHomeState(); }catch(_){}
 
 statusEl.textContent = "Generating (instant)…";
@@ -1113,7 +1149,7 @@ if(Array.isArray(__lastTemplates) && __lastTemplates.length){
       applyPromptToTemplates(normalized, payload.prompt);
 // If AI returned nothing usable, fall back to seeded "real" templates
       if(!normalized.length){
-        seedTemplates(payload.count);
+        seedTemplates(payload.count, payload);
         statusEl.textContent = `Generated ${payload.count}`;
         return;
       }
@@ -1141,7 +1177,7 @@ if(Array.isArray(__lastTemplates) && __lastTemplates.length){
       statusEl.textContent = `Generated ${__lastTemplates.length}`;
     } catch (e) {
       // ✅ Fallback: never leave user with "nothing happened"
-      seedTemplates(payload.count);
+      seedTemplates(payload.count, payload);
     }
   });
 });
