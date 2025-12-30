@@ -494,7 +494,6 @@
       <div class="tools" role="toolbar" aria-label="Editor toolbar">
         <button class="btn tiny" id="backBtn" type="button">← Back</button>
         <button class="btn tiny" id="themeBtn" type="button">🌗 Theme</button>
-        <button class="btn tiny" id="copyPromptBtn" type="button" title="Copy the generation prompt & notes">⧉ Copy Prompt</button>
         <span class="pill" id="autosavePill">Autosave ON</span>
 
         <button class="btn tiny" id="selectBtn" type="button">🖱 Select</button>
@@ -733,6 +732,7 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
 
   const KEY_DRAFT = "templify_draft";
   const KEY_SELECTED = "nexora_selected_template_v1";
+  const KEY_ACTIVE_DOC = "NEXORA_ACTIVE_DOC_V1";
 
 
   const FIT_META_KEY = "__nexora_fit_applied_v1";
@@ -772,59 +772,12 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     zoom: 1,
     grid: true,
     history: [],
-    future: [],
-    meta: { category:null, style:null, prompt:"", notes:"" }
+    future: []
   };
 
   const uid = () => (globalThis.crypto?.randomUUID?.() || ("id_"+Math.random().toString(16).slice(2)+Date.now().toString(16)));
   const safeParse = (s)=>{ try { return JSON.parse(s); } catch { return null; } };
   const deepClone = (o)=>JSON.parse(JSON.stringify(o));
-
-
-  // Clipboard helper (safe fallback)
-  async function copyText(text){
-    const t = String(text || "");
-    if(!t) return false;
-    try{
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        await navigator.clipboard.writeText(t);
-        return true;
-      }
-    }catch(_){}
-    try{
-      const ta = document.createElement("textarea");
-      ta.value = t;
-      ta.setAttribute("readonly","");
-      ta.style.position="fixed";
-      ta.style.left="-9999px";
-      ta.style.top="-9999px";
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
-      return !!ok;
-    }catch(_){ return false; }
-  }
-
-  function flashPill(msg){
-    try{
-      const pill = document.getElementById("autosavePill");
-      if(!pill) return;
-      const prev = pill.textContent;
-      pill.textContent = msg;
-      pill.style.opacity = "1";
-      setTimeout(()=>{ pill.textContent = prev; }, 1200);
-    }catch(_){}
-  }
-
-  function readLastSettings(){
-    try{
-      const s = localStorage.getItem("nexora_last_settings_v1");
-      if(!s) return null;
-      const o = JSON.parse(s);
-      return o && typeof o === "object" ? o : null;
-    }catch(_){ return null; }
-  }
 
   function escapeHtml(s){
     return String(s)
@@ -881,23 +834,41 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
     }catch{}
   }
 
-  function loadDraft(){
+  
+  function hydrateFromActiveDoc(){
+    try{
+      const raw = localStorage.getItem(KEY_ACTIVE_DOC);
+      if(!raw) return false;
+      const doc = safeParse(raw);
+      if(!doc) return false;
+
+      // Prefer spine adapter if available
+      let tpl = null;
+      try{
+        if(window.NexoraSpine && typeof window.NexoraSpine.docToTemplate === "function"){
+          tpl = window.NexoraSpine.docToTemplate(doc);
+        }else if(window.NexoraSpine && typeof window.NexoraSpine.createTemplateFromInput === "function"){
+          // fallback path
+          tpl = window.NexoraSpine.createTemplateFromInput(doc?.meta || {}, {debug:false})?.template || null;
+        }
+      }catch(_){ tpl = null; }
+
+      if(tpl && Array.isArray(tpl.elements)){
+        const payload = { template: tpl, meta: { "__nexora_fit_applied_v1": true } };
+        localStorage.setItem(KEY_DRAFT, JSON.stringify(payload));
+        return true;
+      }
+    }catch(_){}
+    return false;
+  }
+
+function loadDraft(){
+    // Spine-first: if an active NexoraDoc exists, synthesize a draft from it.
+    hydrateFromActiveDoc();
     const draft = safeParse(localStorage.getItem(KEY_DRAFT) || "null");
     const sel = safeParse(localStorage.getItem(KEY_SELECTED) || "null");
     const tpl = (draft && draft.template) ? draft.template : sel;
     const fitAlready = !!(draft && draft.meta && draft.meta[FIT_META_KEY]);
-
-    // Keep generation context (for prompt-to-copy and future AI tools)
-    try{
-      const m = (draft && draft.meta) ? draft.meta : null;
-      const last = readLastSettings();
-      state.meta.category = String(m?.cat || m?.category || last?.category || ""); 
-      state.meta.style    = String(m?.style || last?.style || ""); 
-      state.meta.prompt   = String(m?.prompt || last?.prompt || "");
-      state.meta.notes    = String(m?.notes || last?.notes || "");
-    }catch(_){
-      state.meta = { category:null, style:null, prompt:"", notes:"" };
-    }
 
     if(tpl && Array.isArray(tpl.elements)){
       state.title = tpl.title || "Untitled";
@@ -1621,27 +1592,6 @@ function close(){ overlay.style.display = 'none'; }
   });
 
   $("#backBtn")?.addEventListener("click", ()=>{ window.location.href="index.html"; });
-
-  // Copy generation prompt/notes (Phase 6A YT-2: fixes broken prompt-to-copy)
-  $("#copyPromptBtn")?.addEventListener("click", async ()=>{
-    const cat = String(state.meta?.category || "").trim();
-    const style = String(state.meta?.style || "").trim();
-    const prompt = String(state.meta?.prompt || "").trim();
-    const notes = String(state.meta?.notes || "").trim();
-
-    // Compose a stable "regen prompt" that users can paste back into Nexora (or any AI)
-    let out = "";
-    if(prompt) out += prompt;
-    if(notes){
-      out += (out ? "\n\n" : "") + "Notes: " + notes;
-    }
-    if(cat || style){
-      out += (out ? "\n\n" : "") + "Category: " + (cat || "—") + "\nStyle: " + (style || "—");
-    }
-
-    const ok = await copyText(out || prompt || notes);
-    flashPill(ok ? "Copied prompt ✔" : "Copy failed");
-  });
   $("#themeBtn")?.addEventListener("click", ()=>{
     const cur = document.body.getAttribute("data-theme") || "dark";
     const next = cur === "dark" ? "light" : "dark";
