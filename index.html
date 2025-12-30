@@ -368,33 +368,280 @@
   }
 
   // Phase G (Generator-side invisible editor helpers)
-  // Ensures prompt meaningfully maps into template elements BEFORE rendering/opening editor.
-  function applyPromptToTemplate(tpl, prompt){
-    if(!tpl || !prompt) return tpl;
-    const p = String(prompt).trim();
-    if(!p) return tpl;
+// Ensures prompt meaningfully maps into template elements BEFORE rendering/opening editor.
+// Phase 6B (YT quality jump): add deterministic "headline intelligence" for YouTube Thumbnails,
+// without changing the rendering spine. Other categories remain conservative.
+const __NEXORA_STOPWORDS = new Set([
+  "a","an","the","and","or","of","for","to","with","in","on","at","from","by","about","into","over","after",
+  "my","your","our","their","his","her","its","this","that","these","those","now","new","best","top",
+  "template","templates","design","creative","modern","premium","clean","layout","style","canva"
+]);
+const __NEXORA_GENERIC_NOUNS = new Set([
+  "product","products","item","items","things","stuff","ideas","guide","tips","tip","sale","offers","offer",
+  "brand","brands","business","marketing","ad","ads","thumbnail","thumbnails","youtube","video","videos"
+]);
 
-    // Title
-    tpl.title = tpl.title && tpl.title.startsWith("Instagram") ? p.slice(0, 32) : (tpl.title || p.slice(0, 32));
+function __nexoraWords(s){
+  return String(s||"").trim().split(/\s+/).filter(Boolean);
+}
+function __nexoraTitleCase(s){
+  return String(s||"")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(w => w.length ? (w[0].toUpperCase() + w.slice(1).toLowerCase()) : w)
+    .join(" ");
+}
+function __nexoraUpper(s){ return String(s||"").toUpperCase(); }
+function __nexoraClamp(n,a,b){ n = Number(n); if(!Number.isFinite(n)) n = a; return Math.max(a, Math.min(b,n)); }
 
-    // Elements mapping
-    const els = Array.isArray(tpl.elements) ? tpl.elements : [];
-    // FIX: use the correct local list variable (was `list` which caused ReferenceError)
-    const heading = els.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase()))
-        || els.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
-    if(heading) heading.title = p.slice(0, 60);
+// Extract a short "topic" from prompt (2–3 strong words), deterministic.
+function __nexoraTopicFromPrompt(prompt){
+  const raw = String(prompt||"").trim();
+  if(!raw) return "";
+  // Prefer first clause; avoid long descriptions.
+  const head = raw.split(/[.|,|;|:|\n]/)[0].trim();
+  const w = __nexoraWords(head)
+    .map(x => x.replace(/[^\p{L}\p{N}]+/gu,"").trim())
+    .filter(Boolean);
 
-    const body = els.find(e => String(e.type||"").toLowerCase()==="text");
-    if(body) body.sub = p.slice(0, 90);
+  const strong = [];
+  for(const tok of w){
+    const low = tok.toLowerCase();
+    if(__NEXORA_STOPWORDS.has(low)) continue;
+    // keep numbers (e.g., "10x") and 3+ letter words
+    if(low.length >= 3 || /\d/.test(low)) strong.push(tok);
+    if(strong.length >= 4) break;
+  }
 
+  // Drop generic nouns if we still have enough signal
+  let filtered = strong.filter(t => !__NEXORA_GENERIC_NOUNS.has(String(t).toLowerCase()));
+  if(filtered.length === 0) filtered = strong;
+
+  // Keep 1–3 words
+  const keep = filtered.slice(0, 3);
+  return keep.join(" ").trim();
+}
+
+function __nexoraPick(list, i){
+  if(!Array.isArray(list) || !list.length) return "";
+  return list[i % list.length];
+}
+
+// Deterministic YouTube thumbnail copywriter:
+// prompt -> headline + optional subline + CTA label.
+function __nexoraDeriveYTHeadline(prompt, style, layoutIndex){
+  const topic = __nexoraTopicFromPrompt(prompt) || "Your Topic";
+  const idx = Math.max(1, parseInt(String(layoutIndex||1),10) || 1);
+
+  const isPremium = /premium|lux|elegant|dark\s*premium|minimal/i.test(String(style||""));
+  const isNeon = /neon|vibrant|electric|colorful/i.test(String(style||""));
+  const isModern = /modern|clean/i.test(String(style||""));
+
+  // Build compact topic fragments
+  const topicTC = __nexoraTitleCase(topic);
+  const topicUC = __nexoraUpper(topic);
+
+  const headlineVariantsPremium = [
+    `Top ${topicTC} Picks`,
+    `${topicTC} Essentials`,
+    `Best ${topicTC} Guide`,
+    `${topicTC} Must‑Haves`,
+    `Premium ${topicTC}`
+  ];
+  const headlineVariantsPunchy = [
+    `STOP Buying ${topicTC}`,
+    `${topicTC} You Need`,
+    `Game‑Changer ${topicTC}`,
+    `${topicTC} Hacks`,
+    `Worth It? ${topicTC}`
+  ];
+  const headlineVariantsNeutral = [
+    `Best ${topicTC}`,
+    `Top ${topicTC}`,
+    `${topicTC} Picks`,
+    `${topicTC} Tips`,
+    `${topicTC} Breakdown`
+  ];
+
+  const subVariantsPremium = [
+    "Expert picks • clear results",
+    "Clean, premium choices",
+    "What to buy (and why)",
+    "Fast guide • high impact"
+  ];
+  const subVariantsPunchy = [
+    "Don’t waste money",
+    "Watch before you buy",
+    "Instant upgrades",
+    "Big results, fast"
+  ];
+  const subVariantsNeutral = [
+    "Simple, clear takeaways",
+    "Quick list • easy wins",
+    "Watch in 60 seconds",
+    "No fluff • just value"
+  ];
+
+  const ctaVariants = ["Watch Now", "Save This", "Try It", "Shop Now", "Learn More"];
+
+  // Choose buckets by style
+  const bucketH = isPremium ? headlineVariantsPremium : (isNeon ? headlineVariantsPunchy : headlineVariantsNeutral);
+  const bucketS = isPremium ? subVariantsPremium : (isNeon ? subVariantsPunchy : subVariantsNeutral);
+
+  let headline = __nexoraPick(bucketH, idx-1);
+  let subline = __nexoraPick(bucketS, idx-1);
+  let cta = __nexoraPick(ctaVariants, idx-1);
+
+  // Force short, thumbnail-friendly headline (2–6 words)
+  const hw = __nexoraWords(headline);
+  if(hw.length > 6) headline = hw.slice(0, 6).join(" ");
+
+  // Casing rules
+  if(isNeon) headline = __nexoraUpper(headline);
+  else if(isModern || isPremium) headline = __nexoraTitleCase(headline);
+
+  // Optional 2-line punch for certain layouts
+  const twoLine = (idx % 3 === 0);
+  if(twoLine){
+    const parts = __nexoraWords(headline);
+    if(parts.length >= 4){
+      const split = Math.ceil(parts.length/2);
+      headline = parts.slice(0, split).join(" ") + "\n" + parts.slice(split).join(" ");
+    }
+  }
+
+  return { topic, headline, subline, cta };
+}
+
+function __nexoraApplyTypographyEmphasis(heading, body, ctx){
+  // Conservative defaults; scaled only a bit to avoid breaking layouts.
+  const cat = String(ctx?.category||"");
+  const isYT = /youtube\s*thumbnail/i.test(cat);
+  if(!isYT) return;
+
+  const li = Math.max(1, parseInt(String(ctx?.layoutIndex||1),10) || 1);
+  const scale = __nexoraClamp(1.12 + ((li % 3) * 0.06), 1.12, 1.28); // 1.12–1.28
+
+  // Heading scaling
+  if(heading){
+    if(heading.fontSize != null){
+      const fs = Number(heading.fontSize);
+      if(Number.isFinite(fs)) heading.fontSize = Math.round(fs * scale);
+    }
+    if(heading.size != null){
+      const fs = Number(heading.size);
+      if(Number.isFinite(fs)) heading.size = Math.round(fs * scale);
+    }
+    // Push weight a bit
+    if(heading.fontWeight != null){
+      const fw = parseInt(String(heading.fontWeight),10);
+      if(Number.isFinite(fw)) heading.fontWeight = Math.min(900, Math.max(fw, 800));
+    }
+    if(heading.weight != null){
+      const fw = parseInt(String(heading.weight),10);
+      if(Number.isFinite(fw)) heading.weight = Math.min(900, Math.max(fw, 800));
+    }
+    // Slight stroke/shadow preference (non-breaking if renderer ignores)
+    heading.shadow = heading.shadow || "0 10px 22px rgba(0,0,0,.35)";
+  }
+
+  // Body de-emphasis
+  if(body){
+    if(body.fontSize != null){
+      const fs = Number(body.fontSize);
+      if(Number.isFinite(fs)) body.fontSize = Math.round(fs * 0.92);
+    }
+    if(body.size != null){
+      const fs = Number(body.size);
+      if(Number.isFinite(fs)) body.size = Math.round(fs * 0.92);
+    }
+    body.opacity = (body.opacity != null) ? body.opacity : 0.85;
+  }
+}
+
+// ctx is optional: { category, style, notes, layoutIndex }
+function applyPromptToTemplate(tpl, prompt, ctx){
+  if(!tpl) return tpl;
+
+  const p = String(prompt||"").trim();
+  const cat = String(ctx?.category || tpl?.meta?.category || tpl?.category || "");
+  const style = String(ctx?.style || tpl?.meta?.style || tpl?.style || "");
+  const layoutIndex = (ctx?.layoutIndex != null) ? ctx.layoutIndex : (tpl?.meta?.layoutIndex || 1);
+
+  // Always attach prompt into meta (non-breaking)
+  tpl.meta = Object.assign({}, (tpl.meta||{}), {
+    prompt: p,
+    notes: String(ctx?.notes || tpl?.meta?.notes || tpl?.notes || "").trim(),
+    category: cat || tpl?.meta?.category || tpl?.category,
+    style: style || tpl?.meta?.style || tpl?.style,
+    layoutIndex
+  });
+
+  if(!p) return tpl;
+
+  const isYT = /youtube\s*thumbnail/i.test(cat || "");
+  const els = Array.isArray(tpl.elements) ? tpl.elements : [];
+
+  // Find heading/body safely across both legacy and design.js-converted templates.
+  const heading = els.find(e => ["heading","subhead","title"].includes(String(e.type||"").toLowerCase()))
+    || els.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46 || Number(e.fontSize||0) >= 46));
+  const body = els.find(e => String(e.type||"").toLowerCase()==="text" && e !== heading);
+  const cta = els.find(e => ["cta","button"].includes(String(e.type||"").toLowerCase()));
+
+  if(isYT){
+    const { headline, subline, cta: ctaLabel } = __nexoraDeriveYTHeadline(p, style, layoutIndex);
+
+    // Template title used in list; keep short
+    tpl.title = headline.replace(/\n/g, " ").slice(0, 48);
+
+    if(heading){
+      // Support both shapes: {title} or {text}
+      if("title" in heading) heading.title = headline.slice(0, 70);
+      if("text" in heading) heading.text = headline.slice(0, 70);
+    }
+    if(body){
+      const sub = String(subline||"").trim();
+      if(sub){
+        if("sub" in body) body.sub = sub.slice(0, 80);
+        if("title" in body && !body.title) body.title = sub.slice(0, 80);
+        if("text" in body && !body.text) body.text = sub.slice(0, 80);
+      }
+    }
+    if(cta){
+      if("title" in cta) cta.title = ctaLabel;
+      if("text" in cta) cta.text = ctaLabel;
+    }
+
+    __nexoraApplyTypographyEmphasis(heading, body, { category: cat, style, layoutIndex });
+
+    // Description hint (non-breaking)
+    tpl.description = tpl.description || `${style || "YouTube"} • hook headline • high contrast`;
     return tpl;
   }
 
-  function applyPromptToTemplates(templates, prompt){
-    if(!Array.isArray(templates)) return templates;
-    templates.forEach(t => applyPromptToTemplate(t, prompt));
-    return templates;
+  // Non-YT conservative mapping (previous behavior)
+  tpl.title = tpl.title && tpl.title.startsWith("Instagram") ? p.slice(0, 32) : (tpl.title || p.slice(0, 32));
+  if(heading){
+    if("title" in heading) heading.title = p.slice(0, 60);
+    if("text" in heading) heading.text = p.slice(0, 60);
   }
+  if(body){
+    if("sub" in body) body.sub = p.slice(0, 90);
+    if("text" in body && !("title" in body)) body.text = p.slice(0, 90);
+  }
+  return tpl;
+}
+
+function applyPromptToTemplates(templates, prompt, ctxBase){
+  if(!Array.isArray(templates)) return templates;
+  templates.forEach((t, i) => applyPromptToTemplate(t, prompt, Object.assign({}, (ctxBase||{}), { layoutIndex: i+1 })));
+  return templates;
+}
+
+// Expose for debugging / future bridge (non-destructive)
+window.NEXORA = window.NEXORA || {};
+window.NEXORA.applyPromptToTemplates = applyPromptToTemplates;
 
   // Expose for debugging / future bridge (non-destructive)
   window.NEXORA = window.NEXORA || {};
@@ -617,38 +864,18 @@
   }
 
 
-  function seedTemplates(n, opts){
+  function seedTemplates(n){
     grid.innerHTML = "";
     __lastTemplates = [];
-
-    opts = opts || {};
-    const category = String(opts.category || $("#cat").value || "Instagram Post");
-    const style = String(opts.style || $("#style").value || "Dark Premium");
-    const prompt = String((opts.prompt != null ? opts.prompt : $("#prompt").value) || "").trim();
-    const notes = String((opts.notes != null ? opts.notes : $("#notes")?.value) || "").trim();
+    const category = $("#cat").value;
+    const style = $("#style").value;
+    const prompt = ($("#prompt").value || "").trim();
 
     // Phase I: client-side "Canva-style" generator (design.js) as the primary safe fallback.
     if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
       try{
         const raw = window.NexoraDesign.generateTemplates({ category, style, prompt, count: n });
         const templates = (Array.isArray(raw) ? raw : []).map(t => toEditorTemplate(t));
-
-        // YT-2 safety: even if a generator forgets prompt binding, inject it here.
-        applyPromptToTemplates(templates, prompt);
-
-        // Attach per-template meta (used by editor + copy prompt).
-        templates.forEach((t, i) => {
-          if(!t) return;
-          t.meta = Object.assign({}, (t.meta||{}), {
-            prompt,
-            notes,
-            category,
-            style,
-            // Lightweight layout hint (non-breaking)
-            layoutIndex: i+1,
-            source: "seed_designjs"
-          });
-        });
 
         templates.forEach((t, i) => {
           const div = document.createElement("div");
@@ -707,6 +934,11 @@
 
       const elements = patterns[i % patterns.length](i).map(e => ({ id: (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))), ...e }));
 
+      const thumb = div.querySelector('.thumb');
+      if(thumb){
+        drawThumb(thumb, { elements, canvas: { w: 980, h: 620 } });
+      }
+
       const template = {
         id: `seed_${Date.now()}_${i}`,
         title: `${category} #${i}`,
@@ -714,25 +946,8 @@
         category,
         style,
         canvas: { w: 980, h: 620 },
-        elements,
-        meta: {
-          prompt,
-          notes,
-          category,
-          style,
-          layoutIndex: i,
-          source: "seed_legacy"
-        }
+        elements
       };
-
-      // YT-2 fix: inject prompt into the actual visual text blocks.
-      applyPromptToTemplate(template, prompt);
-
-      const thumb = div.querySelector('.thumb');
-      if(thumb){
-        drawThumb(thumb, { elements: template.elements, canvas: { w: 980, h: 620 } });
-      }
-
       __lastTemplates.push(template);
 
       div.addEventListener("click", ()=>openEditorWith(template));
@@ -804,11 +1019,8 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
     }
 
     // keep latest settings for editor intelligence
-    // YT-2: prefer template-bound prompt/notes when available (each template is self-describing)
-    const tplPrompt = String((tpl?.meta?.prompt != null ? tpl.meta.prompt : $("#prompt").value) || "").trim();
-    const tplNotes  = String((tpl?.meta?.notes  != null ? tpl.meta.notes  : $("#notes")?.value) || "").trim();
     try{
-      localStorage.setItem("nexora_last_settings_v1", JSON.stringify({ category: cat, style, prompt: tplPrompt, notes: tplNotes, count: Number($("#count")?.value||24) }));
+      localStorage.setItem("nexora_last_settings_v1", JSON.stringify({ category: cat, style, prompt: $("#prompt").value.trim(), notes: $("#notes").value.trim(), count: Number($("#count")?.value||24) }));
     }catch(e){}
 
     // Also store selected template in a stable key
@@ -822,8 +1034,8 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
         cat,
         style,
         i: payload?.i || 1,
-        prompt: tplPrompt,
-        notes: tplNotes,
+        prompt: $("#prompt").value.trim(),
+        notes: $("#notes").value.trim(),
         title: (tpl?.title || payload?.title || null),
         description: (tpl?.description || payload?.description || payload?.subtitle || null),
       },
@@ -1034,7 +1246,7 @@ currentStyle = "Dark Premium";
 // === AE-3: instant local templates + async AI copy (no UI changes) ===
 // 1) Show high-quality client-side templates immediately (design.js).
 // 2) In background, fetch AI copy-only improvements and merge into existing templates.
-seedTemplates(payload.count, payload);
+seedTemplates(payload.count);
         try{ saveHomeState(); }catch(_){}
 
 statusEl.textContent = "Generating (instant)…";
@@ -1149,7 +1361,7 @@ if(Array.isArray(__lastTemplates) && __lastTemplates.length){
       applyPromptToTemplates(normalized, payload.prompt);
 // If AI returned nothing usable, fall back to seeded "real" templates
       if(!normalized.length){
-        seedTemplates(payload.count, payload);
+        seedTemplates(payload.count);
         statusEl.textContent = `Generated ${payload.count}`;
         return;
       }
@@ -1177,7 +1389,7 @@ if(Array.isArray(__lastTemplates) && __lastTemplates.length){
       statusEl.textContent = `Generated ${__lastTemplates.length}`;
     } catch (e) {
       // ✅ Fallback: never leave user with "nothing happened"
-      seedTemplates(payload.count, payload);
+      seedTemplates(payload.count);
     }
   });
 });
