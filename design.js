@@ -62,14 +62,6 @@
       speakers: [],
       smallprint: ""
     };
-    // FORCE prompt-driven headline for YouTube Thumbnails (Phase 6B.1 fix)
-    if(String(category||"").toLowerCase().includes("youtube")){
-      if(p){
-        cm.headline = p.toUpperCase().slice(0, 48);
-        cm.subhead = "";
-      }
-    }
-
 
     const it = intent?.type || "generic";
     const cat = String(category||"");
@@ -241,43 +233,59 @@
   
   // === Phase AD: Intent Biasing (no UI changes) ===
   function classifyIntent(prompt, category, style){
-    const p = (prompt||"").toLowerCase();
+    const pRaw = (prompt||"").trim();
+    const p = pRaw.toLowerCase();
     const has = (arr)=>arr.some(k=>p.includes(k));
     const intent = {
-      type: "generic",
-      energy: "medium",   // low|medium|high
-      density: "balanced",// text|balanced|visual
-      ctaMode: "generic"  // hiring|promo|info|brand|generic
+      type: "generic",     // generic|insight|promo|announcement|quote|event|hiring
+      energy: "medium",    // low|medium|high
+      density: "balanced", // text|balanced|visual
+      ctaMode: "generic"   // hiring|promo|info|brand|generic|learn
     };
 
-    if(has(["hiring","we are hiring","job","jobs","vacancy","vacancies","career","careers","apply","join our team","recruit"])){
+    // Educational / informational (critical for YouTube thumbnails)
+    // Examples: "why X", "how to Y", "top 10 Z", "X explained"
+    if(/^(why|how|what|when|where|who)/.test(p) || has(["explained","explain","guide","tutorial","tips","mistakes","secrets","reasons","steps","strategy","strategies","learn","lesson","lessons","truth","myth","myths"])){
+      intent.type="insight"; intent.energy="high"; intent.density="balanced"; intent.ctaMode="learn";
+    } else if(has(["hiring","we are hiring","job","jobs","vacancy","vacancies","career","careers","apply","join our team","recruit"])){
       intent.type="hiring"; intent.energy="medium"; intent.density="text"; intent.ctaMode="hiring";
     } else if(has(["sale","discount","%","off","limited","offer","deal","flash","promo","promotion","black friday","clearance"])){
       intent.type="promo"; intent.energy="high"; intent.density="balanced"; intent.ctaMode="promo";
-    } else if(has(["launch","new","update","announcement","announcing","introducing","event","webinar","workshop","meetup","conference"])){
+    } else if(has(["launch","new","update","announcement","announcing","introducing","release","event","webinar","workshop","meetup","conference"])){
       intent.type="announcement"; intent.energy="medium"; intent.density="balanced"; intent.ctaMode="info";
-    } else if(has(["quote","motiv","inspir","mindset","success","dream","life"]) || (p.split(/\s+/).filter(Boolean).length<=6 && !has(["sale","discount","hiring","job"]))){
+    } else if(has(["quote","inspiration","motivational","motivation","wisdom","life","success"])){
       intent.type="quote"; intent.energy="low"; intent.density="text"; intent.ctaMode="brand";
+    } else if(has(["conference","summit","meetup","webinar","workshop","live","tickets"])){
+      intent.type="event"; intent.energy="medium"; intent.density="balanced"; intent.ctaMode="info";
     }
 
     // Category bias
-    const cat = (category||"").toLowerCase();
-    if(cat.includes("presentation") || cat.includes("slide") || cat.includes("resume")){
+    const c = (category||"").toLowerCase();
+    if(c.includes("resume")){
       // more structured & text-friendly by default
       if(intent.density==="visual") intent.density="balanced";
       if(intent.energy==="high") intent.energy="medium";
+      intent.ctaMode = "generic";
     }
+    if(c.includes("youtube")){
+      // YouTube thumbnails benefit from high energy and readable, short copy
+      if(intent.type==="generic") intent.type="insight";
+      if(intent.energy==="low") intent.energy="medium";
+      if(intent.density==="text") intent.density="balanced";
+      if(intent.ctaMode==="generic") intent.ctaMode="learn";
+    }
+
     // Style bias (keep premium and consistent)
     const st = (style||"").toLowerCase();
     if(st.includes("corporate") && intent.type==="promo"){
       // corporate promos should be less loud
       intent.energy="medium";
     }
+
     intent.category = category || "";
     return intent;
   }
-
-  function weightedPick(list, seed){
+function weightedPick(list, seed){
     // list: [{w:number, v:any}, ...]
     let total = 0;
     for(const it of list) total += Math.max(0, it.w||0);
