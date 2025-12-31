@@ -617,7 +617,10 @@
   }
 
 
-  function seedTemplates(n){
+function seedTemplates(n){
+    // hard safety: never allow NaN/0 to produce an empty grid
+    n = Number.isFinite(Number(n)) ? Number(n) : 12;
+    n = Math.max(1, Math.min(200, Math.floor(n)));
     grid.innerHTML = "";
     __lastTemplates = [];
     const category = $("#cat").value;
@@ -765,53 +768,35 @@ function toEditorTemplate(tpl){
     const W = Number(tpl?.canvas?.w || 980);
     const H = Number(tpl?.canvas?.h || 620);
 
-    // NOTE: Preserve as much design.js styling as possible so the editor is Canva-like.
-    // The editor supports: bg, color, radius, opacity, fontSize, weight, src/fit.
-    const outEls = elements.map((e)=> {
-      const rawType = String(e.type||"card").toLowerCase();
+    const outEls = elements.map((e, idx)=> {
+      const type = String(e.type||"card").toLowerCase();
       const id = e.id || (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16)));
-
-      // Map design.js element types -> editor types
-      let type = rawType;
-      if(rawType === "pill" || rawType === "badge" || rawType === "chip") type = "badge";
-      if(rawType === "photo") type = "image";
-      if(rawType === "bg") type = "bg";
-      if(rawType === "shape") type = "card";
-
       const x = Number(e.x ?? 80), y = Number(e.y ?? 80);
       const w = Number(e.w ?? 320), h = Number(e.h ?? 120);
 
       let title = "";
-      let subtitle = "";
+      let sub = "";
 
-      if(rawType === "text"){
+      if(type === "text"){
         title = String(e.text ?? "");
-      }else if(["pill","badge","chip"].includes(rawType)){
+        sub = "";
+      }else if(["pill","badge","chip"].includes(type)){
         title = String(e.text ?? e.title ?? "BADGE");
-      }else if(rawType === "button" || rawType === "cta"){
-        type = "button";
+      }else if(type === "button" || type === "cta"){
         title = String(e.text ?? e.title ?? "CTA");
-      }else if(rawType === "photo" || rawType === "image"){
-        title = String(e.title ?? "IMAGE");
-        subtitle = String(e.label ?? "");
-      }else if(rawType === "bg"){
-        title = "";
+      }else if(type === "photo" || type === "image"){
+        title = "IMAGE";
+        sub = String(e.label ?? "");
+      }else if(type === "bg"){
+        title = "BG";
+      }else if(type === "shape"){
+        title = "SHAPE";
       }else{
         title = String(e.title ?? "");
-        subtitle = String(e.sub ?? e.subtitle ?? "");
+        sub = String(e.sub ?? "");
       }
 
-      // Style passthrough
-      const bg = e.bg ?? e.fill ?? e.color ?? null;
-      const color = e.color ?? null;
-      const radius = Number(e.r ?? e.radius ?? 16);
-      const opacity = Number(e.opacity ?? 1);
-      const fontSize = Number(e.size ?? e.fontSize ?? 22);
-      const weight = Number(e.weight ?? 700);
-      const src = e.src ?? e.url ?? null;
-      const fit = e.fit ?? e.objectFit ?? null;
-
-      return { id, type, x, y, w, h, title, subtitle, bg, color, radius, opacity, fontSize, weight, src, fit };
+      return { id, type, x, y, w, h, title, sub };
     });
 
     return {
