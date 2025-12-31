@@ -623,6 +623,53 @@
     const category = $("#cat").value;
     const style = $("#style").value;
     const prompt = ($("#prompt").value || "").trim();
+// Phase Spine: deterministic NexoraDoc → Template generation (preferred).
+if (window.NexoraSpine && typeof window.NexoraSpine.createTemplateFromInput === "function") {
+  try {
+    grid.innerHTML = "";
+    __lastTemplates = [];
+    __lastDocs = [];
+
+    for (let i = 0; i < n; i++) {
+      const res = window.NexoraSpine.createTemplateFromInput(
+        { category, style, prompt, index: i + 1 },
+        { seed: i + 1 }
+      );
+
+      if (!res || !res.template) continue;
+
+      const t = toEditorTemplate(res.template);
+      __lastTemplates.push(t);
+      __lastDocs.push(res.doc || null);
+
+      const div = document.createElement("div");
+      div.className = "tile";
+      div.tabIndex = 0;
+      div.innerHTML = `<div class="thumb" aria-hidden="true"></div>
+        <div class="meta"><b>${escapeHtml(t.title || (category + " #" + (i + 1)))}</b>
+        <span>${escapeHtml(t.description || (style + " • Spine"))}</span></div>`;
+
+      const thumb = div.querySelector(".thumb");
+      if (thumb) drawThumb(thumb, t, t.bg);
+
+      const payload = { template: t, doc: __lastDocs[i], cat: category, style, i: i + 1 };
+      div.addEventListener("click", () => openEditorWith(payload));
+      div.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openEditorWith(payload);
+        }
+      });
+
+      grid.appendChild(div);
+    }
+
+    return; // IMPORTANT: stop here, don’t fall back
+  } catch (e) {
+    console.warn("Spine generation failed; falling back to design.js", e);
+  }
+}
+
 
     // Phase I: client-side "Canva-style" generator (design.js) as the primary safe fallback.
     if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
@@ -631,8 +678,6 @@
         const templates = (Array.isArray(raw) ? raw : []).map(t => toEditorTemplate(t));
 
         templates.forEach((t, i) => {
-          if(!t || !Array.isArray(t.elements)) { console.error('Invalid template', t); return; }
-
           const div = document.createElement("div");
           div.className = "tile";
           div.tabIndex = 0;
@@ -712,73 +757,81 @@
   }
 
 function toEditorTemplate(tpl){
-  if(!tpl) return tpl;
+    if(!tpl) return tpl;
+    const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
+    const looksLikeDesignJS = elements.some(e => ["bg","photo","pill","chip"].includes(String(e.type||"").toLowerCase()) || ("text" in (e||{}) && !("title" in (e||{}))));
+    if(!looksLikeDesignJS) return tpl;
 
-  // If it's already in "editor template" shape, return as-is
-  if(Array.isArray(tpl.elements) && tpl.elements.length){
-    const e0 = tpl.elements[0] || {};
-    const looksEditor = ("title" in e0) && ("sub" in e0) && ("x" in e0) && ("y" in e0);
-    if(looksEditor) return tpl;
+    const W = Number(tpl?.canvas?.w || 980);
+    const H = Number(tpl?.canvas?.h || 620);
+
+    // NOTE: Preserve as much design.js styling as possible so the editor is Canva-like.
+    // The editor supports: bg, color, radius, opacity, fontSize, weight, src/fit.
+    const outEls = elements.map((e)=> {
+      const rawType = String(e.type||"card").toLowerCase();
+      const id = e.id || (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16)));
+
+      // Map design.js element types -> editor types
+      let type = rawType;
+      if(rawType === "pill" || rawType === "badge" || rawType === "chip") type = "badge";
+      if(rawType === "photo") type = "image";
+      if(rawType === "bg") type = "bg";
+      if(rawType === "shape") type = "card";
+
+      const x = Number(e.x ?? 80), y = Number(e.y ?? 80);
+      const w = Number(e.w ?? 320), h = Number(e.h ?? 120);
+
+      let title = "";
+      let subtitle = "";
+
+      if(rawType === "text"){
+        title = String(e.text ?? "");
+      }else if(["pill","badge","chip"].includes(rawType)){
+        title = String(e.text ?? e.title ?? "BADGE");
+      }else if(rawType === "button" || rawType === "cta"){
+        type = "button";
+        title = String(e.text ?? e.title ?? "CTA");
+      }else if(rawType === "photo" || rawType === "image"){
+        title = String(e.title ?? "IMAGE");
+        subtitle = String(e.label ?? "");
+      }else if(rawType === "bg"){
+        title = "";
+      }else{
+        title = String(e.title ?? "");
+        subtitle = String(e.sub ?? e.subtitle ?? "");
+      }
+
+      // Style passthrough
+      const bg = e.bg ?? e.fill ?? e.color ?? null;
+      const color = e.color ?? null;
+      const radius = Number(e.r ?? e.radius ?? 16);
+      const opacity = Number(e.opacity ?? 1);
+      const fontSize = Number(e.size ?? e.fontSize ?? 22);
+      const weight = Number(e.weight ?? 700);
+      const src = e.src ?? e.url ?? null;
+      const fit = e.fit ?? e.objectFit ?? null;
+
+      return { id, type, x, y, w, h, title, subtitle, bg, color, radius, opacity, fontSize, weight, src, fit };
+    });
+
+    return {
+      id: tpl.id || `tpl_${Date.now()}`,
+      title: tpl.title || "Template",
+      description: tpl.description || tpl.subtitle || "",
+      category: tpl.category || "Instagram Post",
+      style: tpl.style || "Dark Premium",
+      bg: tpl.bg || null,
+      canvas: tpl.canvas || { w: W, h: H },
+      elements: outEls
+    };
   }
-
-  const rawElements = Array.isArray(tpl.elements) ? tpl.elements : [];
-  const W = Number(tpl?.canvas?.w || tpl?.size?.w || 980);
-  const H = Number(tpl?.canvas?.h || tpl?.size?.h || 620);
-
-  // Heuristic: design.js elements usually contain {type, x,y,w,h, ...} and for text contain {text}
-  const outEls = rawElements.map((e, idx)=> {
-    const type = String(e?.type || "card").toLowerCase();
-    const id = e?.id || (globalThis.crypto?.randomUUID?.() || (`e_${idx}_${Date.now()}`));
-    const x = Number(e?.x ?? 80), y = Number(e?.y ?? 80);
-    const w = Number(e?.w ?? e?.width ?? 320), h = Number(e?.h ?? e?.height ?? 120);
-
-    let title = "";
-    let sub = "";
-
-    if(type === "text"){
-      title = String(e?.text ?? e?.title ?? "");
-      sub = String(e?.sub ?? "");
-    }else if(["pill","badge","chip"].includes(type)){
-      title = String(e?.text ?? e?.title ?? "BADGE");
-      sub = String(e?.sub ?? "");
-    }else if(type === "button" || type === "cta"){
-      title = String(e?.text ?? e?.title ?? "CTA");
-      sub = String(e?.sub ?? "");
-    }else if(type === "photo" || type === "image"){
-      title = String(e?.title ?? "IMAGE");
-      sub = String(e?.label ?? e?.sub ?? "");
-    }else if(type === "bg" || type === "background"){
-      title = "BG";
-      sub = "";
-    }else if(type === "shape"){
-      title = String(e?.title ?? "SHAPE");
-      sub = String(e?.sub ?? "");
-    }else{
-      title = String(e?.title ?? "");
-      sub = String(e?.sub ?? "");
-    }
-
-    return { id, type, x, y, w, h, title, sub };
-  });
-
-  return {
-    id: tpl.id || `tpl_${Date.now()}`,
-    title: tpl.title || "Template",
-    description: tpl.description || tpl.subtitle || "",
-    category: tpl.category || "Instagram Post",
-    style: tpl.style || "Dark Premium",
-    bg: tpl.bg || null,
-    canvas: tpl.canvas || { w: W, h: H },
-    elements: outEls
-  };
-}
-
 
 function openEditorWith(payload){
     // payload can be {cat,style,i} OR a full template object
     const cat = payload?.category || payload?.cat || $("#cat").value;
     const style = payload?.style || $("#style").value;
-let tpl = payload?.elements ? toEditorTemplate(payload) : null;
+let tpl = payload?.template ? toEditorTemplate(payload.template) : (payload?.elements ? toEditorTemplate(payload) : null);
+  const doc = payload?.doc || null;
     // If called with settings-only payload (e.g., Open Editor button), default to latest generated template #1
     if(!tpl && Array.isArray(__lastTemplates) && __lastTemplates.length){
       tpl = toEditorTemplate(__lastTemplates[(payload?.i? (Number(payload.i)-1):0)] || __lastTemplates[0]);
@@ -792,6 +845,7 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
     // Also store selected template in a stable key
     try{
       if(tpl) localStorage.setItem("nexora_selected_template_v1", JSON.stringify(tpl));
+  try { if (doc) localStorage.setItem("NEXORA_ACTIVE_DOC_V1", JSON.stringify(doc)); } catch(e){}
     }catch(e){}
 
     // Store draft so editor can load a REAL template (elements/positions)
@@ -1039,120 +1093,15 @@ fetch("/api/generate", {
       if(ai?.cta) t.cta = String(ai.cta);
     });
   }
+
+  // Re-render to reflect updated AI copy on tiles + thumbs
+  try { renderTemplatesFromList(__lastTemplates); } catch (_) {}
+  try { statusEl.textContent = `Generated ${__lastTemplates.length} (AI copy applied)`; } catch (_) {}
 }).catch(() => {});
 
-      const data = await res.json();
-      console.log("AI RESPONSE:", data);
+      // Background copy enrichment runs above; UI updates happen inside that promise.
 
-      // ✅ MINIMAL FIX: connect AI result to the existing renderer
-      // Render AI templates into the grid
-      const templates = Array.isArray(data?.templates) ? data.templates : [];
 
-// AE-3 merge: apply AI copy to the already-rendered client templates (keep visuals)
-if(Array.isArray(__lastTemplates) && __lastTemplates.length){
-  templates.forEach((ai, i) => {
-    const t = __lastTemplates[i];
-    if(!t) return;
-    if(ai?.title) t.title = String(ai.title);
-    if(ai?.description) t.description = String(ai.description);
-    // Update a few text elements for stronger previews (non-destructive)
-    if(Array.isArray(t.elements)){
-      for(const el of t.elements){
-        const kind = String(el.type||"").toLowerCase();
-        if(kind.includes("title") || kind==="text"){
-          if(ai?.title) el.title = String(ai.title);
-        }
-        if(kind.includes("subtitle") || kind.includes("caption")){
-          if(ai?.description) el.title = String(ai.description);
-        }
-        if(kind.includes("cta") || kind.includes("button")){
-          if(ai?.cta) el.title = String(ai.cta);
-        }
-        if(kind.includes("badge") || kind.includes("tag")){
-          if(ai?.badge) el.title = String(ai.badge);
-        }
-      }
-    }
-  });
-
-  // Re-render only the tile labels (keep thumbs as-is)
-  const tiles = grid.querySelectorAll(".tile");
-  tiles.forEach((tile, i) => {
-    const t = __lastTemplates[i];
-    if(!t) return;
-    const b = tile.querySelector("b");
-    const s = tile.querySelector("span");
-    if(b) b.textContent = t.title || b.textContent;
-    if(s) s.textContent = t.description || s.textContent;
-  });
-
-  statusEl.textContent = `Generated ${__lastTemplates.length} (AI copy applied)`;
-  return;
-}
-      grid.innerHTML = "";
-      const cat = payload.category;
-      const style = payload.style;
-
-      // Normalize templates to our editor-friendly schema
-      const normalized = (templates.length ? templates : []).map((t, i) => {
-        const elements = Array.isArray(t.elements) ? t.elements : [];
-        return {
-          id: t.id || `ai_${Date.now()}_${i+1}`,
-          title: t.title || `${cat} #${i+1}`,
-          description: t.description || t.subtitle || `${style} • AI generated`,
-          category: t.category || payload.category || cat,
-          style: t.style || payload.style || style,
-          canvas: t.canvas || { w: 980, h: 620 },
-          elements: elements.map(e => ({
-            id: e.id || (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))),
-            type: String(e.type ?? "card"),
-            x: Number(e.x ?? 80), y: Number(e.y ?? 80),
-            w: Number(e.w ?? e.width ?? 420), h: Number(e.h ?? e.height ?? 120),
-            title: String(e.title ?? e.text ?? (String(e.type??"").toLowerCase()==="image" ? "IMAGE" : "TEXT")),
-            sub: String(e.sub ?? e.caption ?? ""),
-            fontSize: (e.fontSize ?? null),
-            fontWeight: (e.fontWeight ?? null),
-            color: (e.color ?? null),
-            align: (e.align ?? null),
-            radius: (e.radius ?? null),
-            fill: (e.fill ?? null),
-            background: (e.background ?? null),
-            opacity: (e.opacity ?? null)
-          }))
-        };
-      });
-
-      
-      // Phase G: inject prompt into template elements for stronger previews/editor
-      applyPromptToTemplates(normalized, payload.prompt);
-// If AI returned nothing usable, fall back to seeded "real" templates
-      if(!normalized.length){
-        seedTemplates(payload.count);
-        statusEl.textContent = `Generated ${payload.count}`;
-        return;
-      }
-
-      __lastTemplates = normalized;
-      window.NEXORA.lastTemplates = __lastTemplates;
-      grid.innerHTML = "";
-
-      __lastTemplates.forEach((t) => {
-        const div = document.createElement("div");
-        div.className = "tile";
-        div.tabIndex = 0;
-        div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title}</b><span>${t.description}</span>`;
-
-      const thumb = div.querySelector('.thumb');
-      if(thumb){
-        drawThumb(thumb, t, t.bg);
-      }
-
-        div.addEventListener("click", ()=>openEditorWith(t));
-        div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
-        grid.appendChild(div);
-      });
-
-      statusEl.textContent = `Generated ${__lastTemplates.length}`;
     } catch (e) {
       // ✅ Fallback: never leave user with "nothing happened"
       seedTemplates(payload.count);
