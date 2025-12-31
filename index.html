@@ -623,6 +623,53 @@
     const category = $("#cat").value;
     const style = $("#style").value;
     const prompt = ($("#prompt").value || "").trim();
+// Phase Spine: deterministic NexoraDoc → Template generation (preferred).
+if (window.NexoraSpine && typeof window.NexoraSpine.createTemplateFromInput === "function") {
+  try {
+    grid.innerHTML = "";
+    __lastTemplates = [];
+    __lastDocs = [];
+
+    for (let i = 0; i < n; i++) {
+      const res = window.NexoraSpine.createTemplateFromInput(
+        { category, style, prompt, index: i + 1 },
+        { seed: i + 1 }
+      );
+
+      if (!res || !res.template) continue;
+
+      const t = toEditorTemplate(res.template);
+      __lastTemplates.push(t);
+      __lastDocs.push(res.doc || null);
+
+      const div = document.createElement("div");
+      div.className = "tile";
+      div.tabIndex = 0;
+      div.innerHTML = `<div class="thumb" aria-hidden="true"></div>
+        <div class="meta"><b>${escapeHtml(t.title || (category + " #" + (i + 1)))}</b>
+        <span>${escapeHtml(t.description || (style + " • Spine"))}</span></div>`;
+
+      const thumb = div.querySelector(".thumb");
+      if (thumb) drawThumb(thumb, t, t.bg);
+
+      const payload = { template: t, doc: __lastDocs[i], cat: category, style, i: i + 1 };
+      div.addEventListener("click", () => openEditorWith(payload));
+      div.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openEditorWith(payload);
+        }
+      });
+
+      grid.appendChild(div);
+    }
+
+    return; // IMPORTANT: stop here, don’t fall back
+  } catch (e) {
+    console.warn("Spine generation failed; falling back to design.js", e);
+  }
+}
+
 
     // Phase I: client-side "Canva-style" generator (design.js) as the primary safe fallback.
     if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
@@ -765,7 +812,8 @@ function openEditorWith(payload){
     // payload can be {cat,style,i} OR a full template object
     const cat = payload?.category || payload?.cat || $("#cat").value;
     const style = payload?.style || $("#style").value;
-let tpl = payload?.elements ? toEditorTemplate(payload) : null;
+let tpl = payload?.template ? toEditorTemplate(payload.template) : (payload?.elements ? toEditorTemplate(payload) : null);
+  const doc = payload?.doc || null;
     // If called with settings-only payload (e.g., Open Editor button), default to latest generated template #1
     if(!tpl && Array.isArray(__lastTemplates) && __lastTemplates.length){
       tpl = toEditorTemplate(__lastTemplates[(payload?.i? (Number(payload.i)-1):0)] || __lastTemplates[0]);
@@ -779,6 +827,7 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
     // Also store selected template in a stable key
     try{
       if(tpl) localStorage.setItem("nexora_selected_template_v1", JSON.stringify(tpl));
+  try { if (doc) localStorage.setItem("NEXORA_ACTIVE_DOC_V1", JSON.stringify(doc)); } catch(e){}
     }catch(e){}
 
     // Store draft so editor can load a REAL template (elements/positions)
@@ -1220,9 +1269,7 @@ function renderPreview(canvas, t){
 </script>
 
 
-<script src="template-contract.js"></script>
-  <script src="spine-core.js"></script>
-  <script src="design.js"></script>
+<script src="design.js"></script>
 <script src="invisible-editor.js"></script>
 
 </body>
