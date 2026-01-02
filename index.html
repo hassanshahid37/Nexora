@@ -117,8 +117,7 @@
       overflow:hidden;
     }
     .thumb{
-      min-height:84px;
-      height:auto;
+      height:84px;
       border-radius:12px;
       margin-bottom:10px;
       position:relative;
@@ -405,16 +404,10 @@
   function drawThumb(thumb, tplOrElements, bg){
     if(!thumb) return;
 
-    // Keep these in outer scope so the fallback renderer can always use them.
-    const tplOuter = Array.isArray(tplOrElements)
-      ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
-      : (tplOrElements || {});
-    const elementsOuter = Array.isArray(tplOuter?.elements) ? tplOuter.elements : [];
-
     // Fail-safe: never break the app if preview rendering has issues
     try{
-      const tpl = tplOuter;
-      const elements = elementsOuter;
+      const tpl = Array.isArray(tplOrElements) ? { elements: tplOrElements, canvas: { w: 980, h: 620 } } : (tplOrElements || {});
+      const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
       const W0 = Number(tpl?.canvas?.w || 980);
       const H0 = Number(tpl?.canvas?.h || 620);
       thumb.innerHTML = "";
@@ -610,7 +603,7 @@
         const w0 = 980, h0 = 620;
         const sx = (thumb.clientWidth||260) / w0;
         const sy = (thumb.clientHeight||84) / h0;
-        (elementsOuter||[]).slice(0,6).forEach((e) => {
+        (elements||[]).slice(0,6).forEach((e) => {
           const m = document.createElement("div");
           m.className = "mini";
           m.style.left = (Number(e.x||0)*sx) + "px";
@@ -627,65 +620,58 @@
   function seedTemplates(n){
     grid.innerHTML = "";
     __lastTemplates = [];
-
-    // Phase YT-LOCK: we are focusing ONLY on YouTube Thumbnails for now.
-    const catSel = $("#cat").value;
-    const category = "YouTube Thumbnail";
-    if(catSel !== category){
-      try{ $("#cat").value = category; }catch(_){}
-    }
-
+    const category = $("#cat").value;
     const style = $("#style").value;
     const prompt = ($("#prompt").value || "").trim();
 
-    // Primary: Canva-level generator (design.js). Keep the rich template for previews/export,
-    // convert ONLY when opening the editor (so we don't break visuals here).
+    // Phase I: client-side "Canva-style" generator (design.js) as the primary safe fallback.
     if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
       try{
-        const templates = window.NexoraDesign.generateTemplates({ category, style, prompt, count: n }) || [];
-        templates.forEach((tpl, i) => {
+        const raw = window.NexoraDesign.generateTemplates({ category, style, prompt, count: n });
+        const templates = (Array.isArray(raw) ? raw : []).map(t => toEditorTemplate(t));
+
+        templates.forEach((t, i) => {
           const div = document.createElement("div");
           div.className = "tile";
           div.tabIndex = 0;
-
-          const title = tpl.title || `${category} #${i+1}`;
-          const desc  = tpl.description || `${style} • Canva-style`;
-          div.innerHTML = `
-            <div class="thumb" aria-hidden="true"></div>
-            <b>${title}</b>
-            <span>${desc}</span>
-          `;
+          div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title || (category+" #"+(i+1))}</b><span>${t.description || (style+" • Canva-style")}</span>`;
 
           const thumb = div.querySelector(".thumb");
-          if(thumb){
-            if(typeof window.NexoraDesign.renderPreview === "function"){
-              window.NexoraDesign.renderPreview(tpl, thumb);
-            }else{
-              // fallback to legacy
-              drawThumb(thumb, tpl, tpl.bg);
-            }
-          }
+          if(thumb) drawThumb(thumb, t, t.bg);
 
-          __lastTemplates.push(tpl);
-
-          const open = ()=>openEditorWith(toEditorTemplate(tpl));
-          div.addEventListener("click", open);
-          div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") open(); });
-
+          __lastTemplates.push(t);
+          div.addEventListener("click", ()=>openEditorWith(t));
+          div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
           grid.appendChild(div);
         });
 
-        setStatus(`Generated ${__lastTemplates.length} YouTube Thumbnails`);
+        statusEl.textContent = `Generated ${templates.length}`;
         return;
-      }catch(err){
-        console.warn("NexoraDesign.generateTemplates failed; falling back.", err);
+      }catch(e){
+        // fall through to legacy seeds
       }
     }
 
-    // Fallback: legacy seed patterns (still corrected to YT canvas so previews aren't distorted).
-    const canvas = (window.NexoraSpine && typeof window.NexoraSpine.resolveCanvas === "function")
-      ? window.NexoraSpine.resolveCanvas(category)
-      : { w: 1280, h: 720 };
+    // Legacy ultra-safe seeds (never blank UI)
+    const patterns = [
+      (i)=> ([
+        { type: "background", x:0,y:0,w:980,h:620, title:"BG", sub:"", fill:"linear-gradient(135deg,#0b5fff,#7b5cff)" },
+        { type: "heading", x: 80, y: 70,  w: 820, h: 120, title: "Grow Your Brand", sub: "", fontSize: 72, fontWeight: 800, color:"#ffffff" },
+        { type: "text", x: 80, y: 210, w: 620, h: 110, title: "",  sub: "Premium design with clear hierarchy and focus." },
+        { type: "cta", x: 80, y: 350, w: 360, h: 110, title: "Shop Now", sub: "" },
+        { type: "image", x: 520,y: 260, w: 380, h: 300, title: "", sub: "" },
+      ]),
+      (i)=> ([
+        { type: "heading", x: 70, y: 80,  w: 420, h: 150, title: "New Collection", sub: "" },
+        { type: "text", x: 70, y: 250, w: 420, h: 170, title: "",  sub: "• Premium quality\n• Fast delivery\n• Limited offer" },
+        { type: "image", x: 520,y: 80,  w: 390, h: 360, title: "", sub: "" },
+      ]),
+      (i)=> ([
+        { type: "badge", x: 320,y: 70,  w: 320, h: 70,  title: "LIMITED", sub: "" },
+        { type: "heading", x: 160,y: 190, w: 660, h: 150, title: "Flash Sale", sub: "" },
+        { type: "cta", x: 250,y: 390, w: 480, h: 90, title: "Get 30% Off", sub: "" },
+      ]),
+    ];
 
     for(let i=1;i<=n;i++){
       const div = document.createElement("div");
@@ -699,35 +685,28 @@
         <span>${style} • ${layoutWord} layout • Click to edit</span>
       `;
 
-      const elements = patterns[i % patterns.length](i).map(e => ({
-        id: (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))),
-        ...e
-      }));
+      const elements = patterns[i % patterns.length](i).map(e => ({ id: (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))), ...e }));
 
-      const tpl = {
+      const thumb = div.querySelector('.thumb');
+      if(thumb){
+        drawThumb(thumb, { elements, canvas: { w: 980, h: 620 } });
+      }
+
+      const template = {
         id: `seed_${Date.now()}_${i}`,
         title: `${category} #${i}`,
         description: `${style} • ${layoutWord} layout`,
         category,
         style,
-        canvas: { w: canvas.w, h: canvas.h },
+        canvas: { w: 980, h: 620 },
         elements
       };
+      __lastTemplates.push(template);
 
-      const thumb = div.querySelector(".thumb");
-      if(thumb){
-        drawThumb(thumb, tpl, tpl.bg);
-      }
-
-      __lastTemplates.push(tpl);
-
-      const open = ()=>openEditorWith(toEditorTemplate(tpl));
-      div.addEventListener("click", open);
-      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") open(); });
+      div.addEventListener("click", ()=>openEditorWith(template));
+      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(template); });
       grid.appendChild(div);
     }
-
-    setStatus(`Generated ${__lastTemplates.length} YouTube Thumbnails (fallback)`);
   }
 
 function toEditorTemplate(tpl){
@@ -995,7 +974,12 @@ function renderTemplatesFromList(list){
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const restored = tryRestoreHome();
-    if(!restored){ seedTemplates(12); }
+    if(!restored){
+      // Always show something instantly.
+      seedTemplates(12);
+      // After all scripts load (including design.js), re-seed to upgrade previews to Canva-style.
+      window.addEventListener("load", ()=>{ try{ seedTemplates(12); }catch(_){} }, { once:true });
+    }
 
   const btn = document.getElementById("generateBtn");
   if (!btn) {
@@ -1003,168 +987,44 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  btn.addEventListener("click", async (event) => {
-currentLayout = "Modern";
-currentStyle = "Dark Premium";
-
+  btn.addEventListener("click", () => {
     const payload = {
-      category: document.getElementById("cat")?.value || "Instagram Post",
+      category: document.getElementById("cat")?.value || "YouTube Thumbnail",
       style: document.getElementById("style")?.value || "Dark Premium",
       count: parseInt(document.getElementById("count")?.value || "10", 10),
       prompt: document.getElementById("prompt")?.value || "",
       notes: document.getElementById("notes")?.value || ""
     };
 
-    try {
+    // Always generate locally first (Canva-style, instant)
+    try{ seedTemplates(payload.count); }catch(_){ /* seedTemplates already never throws, but keep safe */ }
+    try{ saveHomeState(); }catch(_){ }
 
-// === AE-3: instant local templates + async AI copy (no UI changes) ===
-// 1) Show high-quality client-side templates immediately (design.js).
-// 2) In background, fetch AI copy-only improvements and merge into existing templates.
-seedTemplates(payload.count);
-        try{ saveHomeState(); }catch(_){}
-
-statusEl.textContent = "Generating (instant)…";
-
-      
-// === AE-3.2 Silent backend (fire-and-forget) ===
-// Backend copy enrichment should NEVER block or surface errors.
-fetch("/api/generate", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ ...payload, mode: "copy" })
-}).then(res => {
-  if(!res || !res.ok) return null;
-  return res.json().catch(() => null);
-}).then(data => {
-  if(!data || !Array.isArray(data.templates)) return;
-  // merge happens only if data exists (safe)
-  if(Array.isArray(__lastTemplates)){
-    data.templates.forEach((ai, i) => {
-      const t = __lastTemplates[i];
-      if(!t) return;
-      if(ai?.title) t.title = String(ai.title);
-      if(ai?.description) t.description = String(ai.description);
-      if(ai?.cta) t.cta = String(ai.cta);
-    });
-  }
-}).catch(() => {});
-
-      const data = await res.json();
-      console.log("AI RESPONSE:", data);
-
-      // ✅ MINIMAL FIX: connect AI result to the existing renderer
-      // Render AI templates into the grid
-      const templates = Array.isArray(data?.templates) ? data.templates : [];
-
-// AE-3 merge: apply AI copy to the already-rendered client templates (keep visuals)
-if(Array.isArray(__lastTemplates) && __lastTemplates.length){
-  templates.forEach((ai, i) => {
-    const t = __lastTemplates[i];
-    if(!t) return;
-    if(ai?.title) t.title = String(ai.title);
-    if(ai?.description) t.description = String(ai.description);
-    // Update a few text elements for stronger previews (non-destructive)
-    if(Array.isArray(t.elements)){
-      for(const el of t.elements){
-        const kind = String(el.type||"").toLowerCase();
-        if(kind.includes("title") || kind==="text"){
-          if(ai?.title) el.title = String(ai.title);
-        }
-        if(kind.includes("subtitle") || kind.includes("caption")){
-          if(ai?.description) el.title = String(ai.description);
-        }
-        if(kind.includes("cta") || kind.includes("button")){
-          if(ai?.cta) el.title = String(ai.cta);
-        }
-        if(kind.includes("badge") || kind.includes("tag")){
-          if(ai?.badge) el.title = String(ai.badge);
-        }
-      }
-    }
-  });
-
-  // Re-render only the tile labels (keep thumbs as-is)
-  const tiles = grid.querySelectorAll(".tile");
-  tiles.forEach((tile, i) => {
-    const t = __lastTemplates[i];
-    if(!t) return;
-    const b = tile.querySelector("b");
-    const s = tile.querySelector("span");
-    if(b) b.textContent = t.title || b.textContent;
-    if(s) s.textContent = t.description || s.textContent;
-  });
-
-  statusEl.textContent = `Generated ${__lastTemplates.length} (AI copy applied)`;
-  return;
-}
-      grid.innerHTML = "";
-      const cat = payload.category;
-      const style = payload.style;
-
-      // Normalize templates to our editor-friendly schema
-      const normalized = (templates.length ? templates : []).map((t, i) => {
-        const elements = Array.isArray(t.elements) ? t.elements : [];
-        return {
-          id: t.id || `ai_${Date.now()}_${i+1}`,
-          title: t.title || `${cat} #${i+1}`,
-          description: t.description || t.subtitle || `${style} • AI generated`,
-          category: t.category || payload.category || cat,
-          style: t.style || payload.style || style,
-          canvas: t.canvas || { w: 980, h: 620 },
-          elements: elements.map(e => ({
-            id: e.id || (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))),
-            type: String(e.type ?? "card"),
-            x: Number(e.x ?? 80), y: Number(e.y ?? 80),
-            w: Number(e.w ?? e.width ?? 420), h: Number(e.h ?? e.height ?? 120),
-            title: String(e.title ?? e.text ?? (String(e.type??"").toLowerCase()==="image" ? "IMAGE" : "TEXT")),
-            sub: String(e.sub ?? e.caption ?? ""),
-            fontSize: (e.fontSize ?? null),
-            fontWeight: (e.fontWeight ?? null),
-            color: (e.color ?? null),
-            align: (e.align ?? null),
-            radius: (e.radius ?? null),
-            fill: (e.fill ?? null),
-            background: (e.background ?? null),
-            opacity: (e.opacity ?? null)
-          }))
-        };
-      });
-
-      
-      // Phase G: inject prompt into template elements for stronger previews/editor
-      applyPromptToTemplates(normalized, payload.prompt);
-// If AI returned nothing usable, fall back to seeded "real" templates
-      if(!normalized.length){
-        seedTemplates(payload.count);
-        statusEl.textContent = `Generated ${payload.count}`;
-        return;
-      }
-
-      __lastTemplates = normalized;
-      window.NEXORA.lastTemplates = __lastTemplates;
-      grid.innerHTML = "";
-
-      __lastTemplates.forEach((t) => {
-        const div = document.createElement("div");
-        div.className = "tile";
-        div.tabIndex = 0;
-        div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title}</b><span>${t.description}</span>`;
-
-      const thumb = div.querySelector('.thumb');
-      if(thumb){
-        drawThumb(thumb, t, t.bg);
-      }
-
-        div.addEventListener("click", ()=>openEditorWith(t));
-        div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
-        grid.appendChild(div);
-      });
-
-      statusEl.textContent = `Generated ${__lastTemplates.length}`;
-    } catch (e) {
-      // ✅ Fallback: never leave user with "nothing happened"
-      seedTemplates(payload.count);
-    }
+    // Optional: silently ask backend for copy-only improvements and merge into the shown tiles
+    fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, mode: "copy" })
+    }).then(r => (r && r.ok) ? r.json().catch(()=>null) : null)
+      .then(data => {
+        if(!data || !Array.isArray(data.templates) || !Array.isArray(__lastTemplates)) return;
+        data.templates.forEach((ai, i) => {
+          const t = __lastTemplates[i];
+          if(!t) return;
+          if(ai?.title) t.title = String(ai.title);
+          if(ai?.description) t.description = String(ai.description);
+        });
+        const tiles = grid.querySelectorAll(".tile");
+        tiles.forEach((tile, i) => {
+          const t = __lastTemplates[i];
+          if(!t) return;
+          const b = tile.querySelector("b");
+          const s = tile.querySelector("span");
+          if(b && t.title) b.textContent = t.title;
+          if(s && t.description) s.textContent = t.description;
+        });
+        statusEl.textContent = `Generated ${__lastTemplates.length} (AI copy applied)`;
+      }).catch(()=>{});
   });
 });
 </script>
