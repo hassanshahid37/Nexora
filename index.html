@@ -405,10 +405,16 @@
   function drawThumb(thumb, tplOrElements, bg){
     if(!thumb) return;
 
+    // Keep these in outer scope so the fallback renderer can always use them.
+    const tplOuter = Array.isArray(tplOrElements)
+      ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
+      : (tplOrElements || {});
+    const elementsOuter = Array.isArray(tplOuter?.elements) ? tplOuter.elements : [];
+
     // Fail-safe: never break the app if preview rendering has issues
     try{
-      const tpl = Array.isArray(tplOrElements) ? { elements: tplOrElements, canvas: { w: 980, h: 620 } } : (tplOrElements || {});
-      const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
+      const tpl = tplOuter;
+      const elements = elementsOuter;
       const W0 = Number(tpl?.canvas?.w || 980);
       const H0 = Number(tpl?.canvas?.h || 620);
       thumb.innerHTML = "";
@@ -604,7 +610,7 @@
         const w0 = 980, h0 = 620;
         const sx = (thumb.clientWidth||260) / w0;
         const sy = (thumb.clientHeight||84) / h0;
-        (elements||[]).slice(0,6).forEach((e) => {
+        (elementsOuter||[]).slice(0,6).forEach((e) => {
           const m = document.createElement("div");
           m.className = "mini";
           m.style.left = (Number(e.x||0)*sx) + "px";
