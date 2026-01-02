@@ -661,6 +661,22 @@
     const b = brandFromPrompt(prompt);
 
     const cm = contentModel(prompt, category, intent, seed);
+
+    // Spine-first: canonical doc for this template (P4 binding source of truth)
+    let spineDoc = null;
+    try{
+      if(window.NexoraSpine && typeof window.NexoraSpine.createDoc === 'function'){
+        spineDoc = window.NexoraSpine.createDoc({ category, style, prompt, notes: '', seed });
+        // If spine content exists, prefer it for binding
+        if(spineDoc && spineDoc.content){
+          cm.headline = String(spineDoc.content.headline || cm.headline || '');
+          cm.subhead  = String(spineDoc.content.subhead  || cm.subhead  || '');
+          cm.cta      = String(spineDoc.content.cta      || cm.cta      || '');
+          cm.badge    = String(spineDoc.content.badge    || cm.badge    || '');
+        }
+      }
+    }catch(_){ spineDoc = null; }
+
     const arch = archetypeWithIntent(seed, intent);
 
     const titleByCategory = {
@@ -753,8 +769,9 @@
     return {
       id: "tpl_"+seed.toString(16),
       contract,
-      title: titleish(cm.headline || prompt || (titleByCategory[category] || category), 42) || (titleByCategory[category] || (category+" #"+(idx+1))),
-      description: [normalizeStyleName(style), arch.name, (intent.type||"generic"), (cm.subhead?titleish(cm.subhead,48):null)].filter(Boolean).join(" • "),
+      doc: spineDoc || null,
+      title: titleByCategory[category] || (category+" #"+(idx+1)),
+      description: normalizeStyleName(style)+" • "+arch.name+" • "+(intent.type||"generic"),
       category,
       style,
       vibe: intent.type || "generic",
