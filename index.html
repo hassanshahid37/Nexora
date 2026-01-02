@@ -1,29 +1,1229 @@
 
-<!-- index.html (excerpt) -->
+
+
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nexora – AI Creative Director – Dark Premium AI Template Generator</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <style>
+    :root{
+      --primary:#0b5fff;
+      --muted:#aab0bd;
+
+      /* DARK (transparent) */
+      --bg:#050712;
+      --panel:rgba(15,18,32,.55);
+      --panel2:rgba(15,18,32,.35);
+      --stroke:rgba(255,255,255,.10);
+      --text:#f6f7fb;
+
+      --shadow:0 18px 50px rgba(0,0,0,.45);
+      --radius:18px;
+    }
+    [data-theme="light"]{
+      --bg:#f5f7ff;
+      --panel:rgba(255,255,255,.72);
+      --panel2:rgba(255,255,255,.55);
+      --stroke:rgba(10,20,60,.12);
+      --text:#0b1020;
+      --shadow:0 18px 40px rgba(10,20,60,.18);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:Poppins,system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      color:var(--text);
+      background:
+        radial-gradient(1200px 700px at 15% 10%, rgba(11,95,255,.22), transparent 60%),
+        radial-gradient(900px 600px at 85% 20%, rgba(136,71,255,.18), transparent 55%),
+        radial-gradient(900px 600px at 35% 95%, rgba(0,225,255,.10), transparent 55%),
+        var(--bg);
+      overflow-x:hidden;
+    }
+
+    .wrap{max-width:1200px;margin:0 auto;padding:26px 18px 60px}
+    header{
+      display:flex;align-items:center;justify-content:space-between;gap:12px;
+      padding:14px 16px;border:1px solid var(--stroke);
+      background:var(--panel);
+      backdrop-filter: blur(16px);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      position:sticky;top:14px;z-index:20;
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:38px;height:38px;border-radius:12px;
+      background:linear-gradient(135deg, rgba(11,95,255,.95), rgba(136,71,255,.88));
+      box-shadow:0 10px 26px rgba(11,95,255,.28);
+      border:1px solid rgba(255,255,255,.18);
+    }
+    .brand h1{font-size:15px;margin:0;font-weight:700;letter-spacing:.2px}
+    .brand p{margin:0;color:var(--muted);font-size:12px}
+    .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .btn{
+      appearance:none;border:1px solid var(--stroke);
+      background:var(--panel2);
+      color:var(--text);
+      padding:10px 12px;border-radius:14px;
+      font-weight:600;font-size:12.5px;
+      cursor:pointer;transition:.15s ease;
+      backdrop-filter: blur(16px);
+      display:inline-flex;align-items:center;gap:8px;
+    }
+    .btn:hover{transform:translateY(-1px);border-color:rgba(11,95,255,.35)}
+    .btn.primary{
+      background:linear-gradient(135deg, rgba(11,95,255,.95), rgba(136,71,255,.85));
+      border-color:rgba(255,255,255,.14);
+      box-shadow:0 12px 30px rgba(11,95,255,.22);
+    }
+    .btn:active{transform:translateY(0px)}
+    .tag{
+      padding:6px 10px;border:1px solid var(--stroke);
+      background:var(--panel2);
+      border-radius:999px;font-size:12px;color:var(--muted)
+    }
+
+    main{margin-top:18px;display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+    .card{
+      border:1px solid var(--stroke);
+      background:var(--panel);
+      backdrop-filter: blur(16px);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .hero{padding:26px}
+    .hero h2{margin:0 0 10px;font-size:34px;line-height:1.12}
+    .hero p{margin:0 0 16px;color:var(--muted);font-size:14px;line-height:1.55}
+    .grid{
+      display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:12px;margin-top:18px
+    }
+    .tile{
+      padding:14px;border:1px solid var(--stroke);
+      background:var(--panel2);
+      border-radius:16px;
+      min-height:92px;
+      position:relative;
+      overflow:hidden;
+    }
+    .thumb{
+      height:84px;
+      border-radius:12px;
+      margin-bottom:10px;
+      position:relative;
+      background:
+        radial-gradient(160px 80px at 20% 20%, rgba(11,95,255,.24), transparent 60%),
+        radial-gradient(140px 90px at 90% 35%, rgba(136,71,255,.18), transparent 60%),
+        linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+      border:1px solid rgba(255,255,255,.14);
+    }
+    [data-theme="light"] .thumb{
+      background:
+        radial-gradient(160px 80px at 20% 20%, rgba(11,95,255,.14), transparent 60%),
+        radial-gradient(140px 90px at 90% 35%, rgba(136,71,255,.10), transparent 60%),
+        linear-gradient(135deg, rgba(10,20,60,.06), rgba(10,20,60,.02));
+      border:1px solid rgba(10,20,60,.12);
+    }
+    .mini{
+      position:absolute;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.16);
+      background:rgba(255,255,255,.10);
+    }
+    [data-theme="light"] .mini{
+      border:1px solid rgba(10,20,60,.12);
+      background:rgba(10,20,60,.06);
+    }
+    .tile b{display:block;font-size:12.5px;margin-bottom:6px}
+    .tile span{font-size:12px;color:var(--muted);line-height:1.35}
+    .right{padding:18px}
+    .right h3{margin:2px 0 10px;font-size:14px}
+    .field{margin:10px 0}
+    .field label{display:block;font-size:12px;color:var(--muted);margin:0 0 6px}
+    .field input,.field select,.field textarea{
+      width:100%;padding:11px 12px;border-radius:14px;
+      border:1px solid var(--stroke);
+      background:rgba(0,0,0,.10);
+      color:var(--text);
+      outline:none;
+    }
+    [data-theme="light"] .field input,
+    [data-theme="light"] .field select,
+    [data-theme="light"] .field textarea{
+      background:rgba(255,255,255,.50);
+    }
+    textarea{min-height:96px;resize:vertical}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .foot{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:14px 18px;border-top:1px solid var(--stroke);
+      color:var(--muted);font-size:12px
+    }
+
+    @media (max-width: 980px){
+      main{grid-template-columns:1fr}
+      .hero h2{font-size:28px}
+      .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media (max-width: 520px){
+      header{position:relative;top:auto}
+      .grid{grid-template-columns:1fr}
+      .row{grid-template-columns:1fr}
+    }
+  
+    /* FIX: dropdown options visibility + borders */
+    
+    select{
+      border:1px solid rgba(10,20,60,.45);
+      background:#ffffff;
+      color:#0b1020;
+    }
+    select option{
+      color:#0b1020;
+      background:#ffffff;
+    }
+    [data-theme="dark"] select{
+      border:1px solid rgba(255,255,255,.25);
+      background:#0b1020;
+      color:#ffffff;
+    }
+    [data-theme="dark"] select option{
+      color:#ffffff;
+      background:#0b1020;
+    }
+    
+    [data-theme="dark"] select option{color:#ffffff;background:#0b1020;}
+    
+/* === Nexora Canva-style previews === */
+.tile .preview-canvas{
+  position: relative;
+  height: 120px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: rgba(255,255,255,.06);
+  border: 1px solid var(--stroke);
+  margin-bottom: 10px;
+}
+.tile .preview-canvas .pv-text{
+  position:absolute;
+  left:12px;
+  right:12px;
+  font-weight:700;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+
+/* === Header: match editor branding (icon + stacked text) === */
+.brand{display:flex;align-items:center;gap:12px}
+.brandText{display:flex;flex-direction:column;gap:2px;min-width:0}
+.brandText h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.2px;line-height:1.1}
+.brandText p{margin:0}
+
+/* editor-like circular badge with the NEW official logo cropped to the N mark */
+.logo{
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  background:
+    rgba(10,14,30,.92);
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 10px 26px rgba(0,0,0,.45);
+  flex-shrink:0;
+}
+
+/* stacked lines like editor */
+.brandTag{color:var(--muted);font-size:12px;line-height:1.2}
+.brandSub{color:var(--muted);font-size:12px;line-height:1.2;opacity:.95}
+
+/* keep header height stable on small screens */
+@media (max-width:520px){
+  .logo{width:40px;height:40px;border-radius:12px}
+  .brandText h1{font-size:14px}
+}
+
+</style>
+    
+</head>
+
+<body data-theme="dark">
+  <div class="wrap">
+    <header>
+      
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="brandText">
+          <h1>Nexora</h1>
+          <p class="brandTag">AI Creative Director</p>
+          <p class="brandSub">Dark Premium AI Template Generator + Ultimate Editor v1</p>
+        </div>
+      </div>
+    
+
+      <div class="actions">
+        <span class="tag">No auth • No subscriptions • Netlify-ready</span>
+        <button class="btn" id="themeBtn" type="button">🌗 Toggle theme</button>
+        <button class="btn primary" id="openEditor" type="button">Open Editor</button>
+        <button class="btn" id="btnTemplates" type="button">📚 Library</button>
+        <button class="btn" id="btnAnimate" type="button">🎬 Animate</button>
+
+      </div>
+    </header>
+
+    <main>
+      <section class="card hero">
+        <h2>Create hundreds of premium templates in minutes.</h2>
+        <p>
+          Generate designs fast, then fine‑tune in the editor with a Canva‑style workflow:
+          layers, properties, snap grid, multi‑select, duplicate, undo/redo, and autosave.
+        </p>
+
+        <div class="actions" style="margin-top:14px">
+          <button class="btn primary" id="generateBtn" type="button">⚡ Generate Templates</button>
+        <button class="btn" id="newLayoutBtn" type="button">🧩 New Layout</button>
+        <button class="btn" id="newStyleBtn" type="button">🎨 New Style</button>
+
+          <button class="btn" id="exportBtn" type="button">⬇ Export List (JSON)</button>
+        </div>
+
+        <div class="grid" id="previewGrid" aria-live="polite" style="margin-top:18px"></div>
+      </section>
+
+      <aside class="card right">
+        <h3>Generation settings</h3>
+
+        <div class="field">
+          <label>Category</label>
+          <select id="cat">
+            <option>Instagram Post</option>
+            <option>YouTube Thumbnail</option>
+            <option>Flyer</option>
+            <option>Business Card</option>
+            <option>Logo</option>
+            <option>Presentation Slide</option>
+            <option>Resume</option>
+            <option>Poster</option>
+            <option>Story</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <div class="field">
+            <label>Count (max 200)</label>
+            <input id="count" type="number" min="1" max="200" value="24" />
+          </div>
+          <div class="field">
+            <label>Style</label>
+            <select id="style">
+              <option>Dark Premium</option>
+              <option>Light Minimal</option>
+              <option>Neon</option>
+              <option>Glassmorphism</option>
+              <option>Corporate</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="field">
+          <label>Prompt</label>
+          <textarea id="prompt" placeholder="e.g., Premium real-estate carousel for luxury apartments, bold typography, modern shapes..."></textarea>
+        </div>
+
+        <div class="field">
+          <label>Notes</label>
+          <input id="notes" placeholder="(optional) brand name, colors, etc." />
+        </div>
+
+        <div class="foot">
+          <span>Tip: Click any preview to open it in the Editor.</span>
+          <span id="status">Ready</span>
+        </div>
+      </aside>
+    </main>
+  </div>
+
 <script>
-/*
- YouTube Thumbnail Preview Fix
- - Aspect-ratio aware scaling
- - Contain-fit for 16:9 canvases
-*/
+  const $ = (s)=>document.querySelector(s);
+  const grid = $("#previewGrid");
+  const statusEl = $("#status");
 
-function renderPreview(canvas, ctx, tpl) {
-  const pw = ctx.canvas.width;
-  const ph = ctx.canvas.height;
+  function setTheme(next){
+    document.body.setAttribute("data-theme", next);
+    localStorage.setItem("templify_theme", next);
+  }
+  function toggleTheme(){
+    const cur = document.body.getAttribute("data-theme") || "dark";
+    setTheme(cur === "dark" ? "light" : "dark");
+  }
 
-  const cw = canvas.w || canvas.width;
-  const ch = canvas.h || canvas.height;
+  // Phase G (Generator-side invisible editor helpers)
+  // Ensures prompt meaningfully maps into template elements BEFORE rendering/opening editor.
+  function applyPromptToTemplate(tpl, prompt){
+    if(!tpl || !prompt) return tpl;
+    const p = String(prompt).trim();
+    if(!p) return tpl;
 
-  const scale = Math.min(pw / cw, ph / ch);
-  const ox = (pw - cw * scale) / 2;
-  const oy = (ph - ch * scale) / 2;
+    // Title
+    tpl.title = tpl.title && tpl.title.startsWith("Instagram") ? p.slice(0, 32) : (tpl.title || p.slice(0, 32));
 
-  ctx.save();
-  ctx.translate(ox, oy);
-  ctx.scale(scale, scale);
+    // Elements mapping
+    const els = Array.isArray(tpl.elements) ? tpl.elements : [];
+    // FIX: use the correct local list variable (was `list` which caused ReferenceError)
+    const heading = els.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase()))
+        || els.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
+    if(heading) heading.title = p.slice(0, 60);
 
-  tpl.elements.forEach(el => drawElement(ctx, el));
+    const body = els.find(e => String(e.type||"").toLowerCase()==="text");
+    if(body) body.sub = p.slice(0, 90);
 
-  ctx.restore();
+    return tpl;
+  }
+
+  function applyPromptToTemplates(templates, prompt){
+    if(!Array.isArray(templates)) return templates;
+    templates.forEach(t => applyPromptToTemplate(t, prompt));
+    return templates;
+  }
+
+  // Expose for debugging / future bridge (non-destructive)
+  window.NEXORA = window.NEXORA || {};
+  window.NEXORA.applyPromptToTemplates = applyPromptToTemplates;
+
+
+  function drawThumb(thumb, tplOrElements, bg){
+    if(!thumb) return;
+
+    // Fail-safe: never break the app if preview rendering has issues
+    try{
+      const tpl = Array.isArray(tplOrElements) ? { elements: tplOrElements, canvas: { w: 980, h: 620 } } : (tplOrElements || {});
+      const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
+      const W0 = Number(tpl?.canvas?.w || 980);
+      const H0 = Number(tpl?.canvas?.h || 620);
+      thumb.innerHTML = "";
+      thumb.style.position = "relative";
+      thumb.style.overflow = "hidden";
+
+      const w = Math.max(1, thumb.clientWidth || 260);
+      const h = Math.max(1, thumb.clientHeight || 84);
+      const sx = w / W0;
+      const sy = h / H0;
+
+      // --- background ---
+      let bgCss = bg || null;
+      if(!bgCss && Array.isArray(elements)){
+        const bgEl = elements.find(e => ["background","bg"].includes(String(e.type||"").toLowerCase()));
+        bgCss = (bgEl && String(bgEl.type||"").toLowerCase()==="bg" && bgEl.style==="radial" && (bgEl.fill2||bgEl.fill))
+          ? `radial-gradient(120% 90% at 20% 10%, ${bgEl.fill2||bgEl.fill}, ${bgEl.fill||bgEl.fill2})`
+          : (bgEl?.fill || bgEl?.background || null);
+      }
+      if(bgCss){
+        const s = String(bgCss);
+        if(s.includes("gradient")){
+          thumb.style.backgroundImage = s;
+          thumb.style.backgroundColor = "";
+        }else{
+          thumb.style.backgroundImage = "";
+          thumb.style.backgroundColor = s;
+        }
+      }else{
+        // classy default
+        thumb.style.backgroundImage = "linear-gradient(135deg, rgba(11,95,255,.55), rgba(136,71,255,.45))";
+        thumb.style.backgroundColor = "";
+      }
+
+      // subtle vignette for contrast
+      const vignette = document.createElement("div");
+      vignette.style.position = "absolute";
+      vignette.style.inset = "0";
+      vignette.style.background = "radial-gradient(120px 80px at 20% 20%, rgba(255,255,255,.12), transparent 60%), linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.25))";
+      vignette.style.pointerEvents = "none";
+      thumb.appendChild(vignette);
+
+      const list = Array.isArray(elements) ? elements.slice(0, 18) : [];
+
+      // helper
+      const place = (el, e) => {
+        const x = Number(e.x ?? 0) * sx;
+        const y = Number(e.y ?? 0) * sy;
+        const ww = Number(e.w ?? e.width ?? 120) * sx;
+        const hh = Number(e.h ?? e.height ?? 40) * sy;
+        el.style.position = "absolute";
+        el.style.left = x + "px";
+        el.style.top = y + "px";
+        el.style.width = Math.max(2, ww) + "px";
+        el.style.height = Math.max(2, hh) + "px";
+      };
+
+      // --- render blocks first (image/cards/shapes) ---
+      const blockTypes = new Set(["image","photo","shape","card"]);
+      list.filter(e => blockTypes.has(String(e.type||"").toLowerCase())).slice(0, 4).forEach((e) => {
+        const type = String(e.type||"").toLowerCase();
+        const d = document.createElement("div");
+        place(d, e);
+
+        const r = Number(e.radius ?? (type==="image" ? 16 : 14));
+        d.style.borderRadius = Math.max(10, r * Math.min(sx,sy)) + "px";
+        d.style.border = "1px solid rgba(255,255,255,.18)";
+        d.style.boxShadow = "0 8px 18px rgba(0,0,0,.22)";
+
+        if(type === "image" || type === "photo"){
+          if(e.src){
+            d.style.backgroundImage = `url(${e.src})`;
+            d.style.backgroundSize = "cover";
+            d.style.backgroundPosition = "center";
+          }else{
+            d.style.background = e.background || "linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.06))";
+          }
+        }else{
+          d.style.background = e.fill || e.background || "rgba(255,255,255,.10)";
+        }
+        if(e.opacity!=null) d.style.opacity = String(e.opacity);
+        if(e.stroke) d.style.border = `1px solid ${e.stroke}`;
+        d.style.backdropFilter = "blur(6px)";
+        d.style.pointerEvents = "none";
+        thumb.appendChild(d);
+      });
+
+      // --- badge ---
+      const badge = list.find(e => ["badge","pill","chip"].includes(String(e.type||"").toLowerCase()));
+      if(badge){
+        const b = document.createElement("div");
+        place(b, badge);
+        b.style.height = Math.max(10, Number(badge.h ?? 46) * sy) + "px";
+        b.style.borderRadius = "999px";
+        b.style.border = "1px solid rgba(255,255,255,.20)";
+        b.style.background = "rgba(0,0,0,.18)";
+        b.style.display = "flex";
+        b.style.alignItems = "center";
+        b.style.padding = "0 10px";
+        b.style.fontSize = Math.max(9, (Number(badge.fontSize ?? 14) * Math.min(sx,sy))) + "px";
+        b.style.fontWeight = String(badge.fontWeight ?? 800);
+        b.style.letterSpacing = ".3px";
+        b.style.color = badge.color || "rgba(255,255,255,.92)";
+        b.style.textTransform = "uppercase";
+        b.style.whiteSpace = "nowrap";
+        b.style.overflow = "hidden";
+        b.style.textOverflow = "ellipsis";
+        b.textContent = (badge.title || badge.text || "").toString().slice(0, 32) || "NEW";
+        b.style.pointerEvents = "none";
+        thumb.appendChild(b);
+      }
+
+      // --- headline + subline ---
+      const heading = list.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase()))
+        || list.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
+      if(heading){
+        const t = document.createElement("div");
+        place(t, heading);
+        t.style.height = "auto";
+        t.style.maxHeight = (Math.max(18, Number(heading.h ?? 120) * sy)) + "px";
+        t.style.fontWeight = String(heading.fontWeight ?? 800);
+        t.style.color = heading.color || "#fff";
+        t.style.fontSize = Math.max(12, (Number(heading.fontSize ?? 54) * Math.min(sx,sy))) + "px";
+        t.style.lineHeight = "1.05";
+        t.style.textShadow = "0 8px 18px rgba(0,0,0,.35)";
+        t.style.display = "-webkit-box";
+        t.style.webkitLineClamp = "2";
+        t.style.webkitBoxOrient = "vertical";
+        t.style.overflow = "hidden";
+        t.textContent = (heading.title || heading.text || "").toString().trim() || "Premium Design";
+        t.style.pointerEvents = "none";
+        thumb.appendChild(t);
+      }
+
+      const body = list.find(e => {
+        const ty = String(e.type||"").toLowerCase();
+        if(ty==="subhead") return true;
+        if(ty!=="text") return false;
+        if(e===heading) return false;
+        const wt = Number(e.weight||e.fontWeight||0);
+        const sz = Number(e.size||e.fontSize||0);
+        return (wt < 800 && sz < 46);
+      });
+      if(body){
+        const t = document.createElement("div");
+        place(t, body);
+        t.style.height = "auto";
+        t.style.maxHeight = (Math.max(14, Number(body.h ?? 80) * sy)) + "px";
+        t.style.fontWeight = "500";
+        t.style.color = body.color || "rgba(255,255,255,.85)";
+        t.style.fontSize = Math.max(9, (Number(body.fontSize ?? 16) * Math.min(sx,sy))) + "px";
+        t.style.lineHeight = "1.15";
+        t.style.display = "-webkit-box";
+        t.style.webkitLineClamp = "2";
+        t.style.webkitBoxOrient = "vertical";
+        t.style.overflow = "hidden";
+        const s = (body.sub || body.title || body.text || "").toString().trim().replace(/\s+/g," ");
+        t.textContent = s.slice(0, 60);
+        t.style.pointerEvents = "none";
+        thumb.appendChild(t);
+      }
+
+      // --- CTA button ---
+      const cta = list.find(e => ["cta","button"].includes(String(e.type||"").toLowerCase()));
+      if(cta){
+        const b = document.createElement("div");
+        place(b, cta);
+        b.style.height = Math.max(10, Number(cta.h ?? 54) * sy) + "px";
+        b.style.borderRadius = Math.max(10, Number(cta.radius ?? 16) * Math.min(sx,sy)) + "px";
+        b.style.background = cta.background || "linear-gradient(135deg, rgba(11,95,255,.95), rgba(136,71,255,.85))";
+        b.style.border = "1px solid rgba(255,255,255,.18)";
+        b.style.boxShadow = "0 10px 20px rgba(11,95,255,.20)";
+        b.style.display = "flex";
+        b.style.alignItems = "center";
+        b.style.justifyContent = "center";
+        b.style.padding = "0 10px";
+        b.style.fontSize = Math.max(9, (Number(cta.fontSize ?? 14) * Math.min(sx,sy))) + "px";
+        b.style.fontWeight = String(cta.fontWeight ?? 800);
+        b.style.color = cta.color || "#fff";
+        b.style.whiteSpace = "nowrap";
+        b.style.overflow = "hidden";
+        b.style.textOverflow = "ellipsis";
+        b.textContent = (cta.title || "Get Started").toString().slice(0, 22);
+        b.style.pointerEvents = "none";
+        thumb.appendChild(b);
+      }
+
+    }catch(err){
+      console.warn("Preview render failed; using fallback boxes.", err);
+      try{
+        // fallback: simple minis (never crash)
+        thumb.innerHTML = "";
+        const w0 = 980, h0 = 620;
+        const sx = (thumb.clientWidth||260) / w0;
+        const sy = (thumb.clientHeight||84) / h0;
+        (elements||[]).slice(0,6).forEach((e) => {
+          const m = document.createElement("div");
+          m.className = "mini";
+          m.style.left = (Number(e.x||0)*sx) + "px";
+          m.style.top = (Number(e.y||0)*sy) + "px";
+          m.style.width = (Number(e.w||e.width||120)*sx) + "px";
+          m.style.height = (Number(e.h||e.height||40)*sy) + "px";
+          thumb.appendChild(m);
+        });
+      }catch(_){}
+    }
+  }
+
+
+  function seedTemplates(n){
+    grid.innerHTML = "";
+    __lastTemplates = [];
+    const category = $("#cat").value;
+    const style = $("#style").value;
+    const prompt = ($("#prompt").value || "").trim();
+
+    // Phase I: client-side "Canva-style" generator (design.js) as the primary safe fallback.
+    if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
+      try{
+        const raw = window.NexoraDesign.generateTemplates({ category, style, prompt, count: n });
+        const templates = (Array.isArray(raw) ? raw : []).map(t => toEditorTemplate(t));
+
+        templates.forEach((t, i) => {
+          const div = document.createElement("div");
+          div.className = "tile";
+          div.tabIndex = 0;
+          div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title || (category+" #"+(i+1))}</b><span>${t.description || (style+" • Canva-style")}</span>`;
+
+          const thumb = div.querySelector(".thumb");
+          if(thumb) drawThumb(thumb, t, t.bg);
+
+          __lastTemplates.push(t);
+          div.addEventListener("click", ()=>openEditorWith(t));
+          div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
+          grid.appendChild(div);
+        });
+
+        statusEl.textContent = `Generated ${templates.length}`;
+        return;
+      }catch(e){
+        // fall through to legacy seeds
+      }
+    }
+
+    // Legacy ultra-safe seeds (never blank UI)
+    const patterns = [
+      (i)=> ([
+        { type: "background", x:0,y:0,w:980,h:620, title:"BG", sub:"", fill:"linear-gradient(135deg,#0b5fff,#7b5cff)" },
+        { type: "heading", x: 80, y: 70,  w: 820, h: 120, title: "Grow Your Brand", sub: "", fontSize: 72, fontWeight: 800, color:"#ffffff" },
+        { type: "text", x: 80, y: 210, w: 620, h: 110, title: "",  sub: "Premium design with clear hierarchy and focus." },
+        { type: "cta", x: 80, y: 350, w: 360, h: 110, title: "Shop Now", sub: "" },
+        { type: "image", x: 520,y: 260, w: 380, h: 300, title: "", sub: "" },
+      ]),
+      (i)=> ([
+        { type: "heading", x: 70, y: 80,  w: 420, h: 150, title: "New Collection", sub: "" },
+        { type: "text", x: 70, y: 250, w: 420, h: 170, title: "",  sub: "• Premium quality\n• Fast delivery\n• Limited offer" },
+        { type: "image", x: 520,y: 80,  w: 390, h: 360, title: "", sub: "" },
+      ]),
+      (i)=> ([
+        { type: "badge", x: 320,y: 70,  w: 320, h: 70,  title: "LIMITED", sub: "" },
+        { type: "heading", x: 160,y: 190, w: 660, h: 150, title: "Flash Sale", sub: "" },
+        { type: "cta", x: 250,y: 390, w: 480, h: 90, title: "Get 30% Off", sub: "" },
+      ]),
+    ];
+
+    for(let i=1;i<=n;i++){
+      const div = document.createElement("div");
+      div.className = "tile";
+      div.tabIndex = 0;
+
+      const layoutWord = ["Bold","Clean","Modern","Vibrant","Minimal"][i%5];
+      div.innerHTML = `
+        <div class="thumb" aria-hidden="true"></div>
+        <b>${category} #${i}</b>
+        <span>${style} • ${layoutWord} layout • Click to edit</span>
+      `;
+
+      const elements = patterns[i % patterns.length](i).map(e => ({ id: (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))), ...e }));
+
+      const thumb = div.querySelector('.thumb');
+      if(thumb){
+        drawThumb(thumb, { elements, canvas: { w: 980, h: 620 } });
+      }
+
+      const template = {
+        id: `seed_${Date.now()}_${i}`,
+        title: `${category} #${i}`,
+        description: `${style} • ${layoutWord} layout`,
+        category,
+        style,
+        canvas: { w: 980, h: 620 },
+        elements
+      };
+      __lastTemplates.push(template);
+
+      div.addEventListener("click", ()=>openEditorWith(template));
+      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(template); });
+      grid.appendChild(div);
+    }
+  }
+
+function toEditorTemplate(tpl){
+    if(!tpl) return tpl;
+    const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
+    const looksLikeDesignJS = elements.some(e => ["bg","photo","pill","chip"].includes(String(e.type||"").toLowerCase()) || ("text" in (e||{}) && !("title" in (e||{}))));
+    if(!looksLikeDesignJS) return tpl;
+
+    const W = Number(tpl?.canvas?.w || 980);
+    const H = Number(tpl?.canvas?.h || 620);
+
+    const outEls = elements.map((e, idx)=> {
+      const type = String(e.type||"card").toLowerCase();
+      const id = e.id || (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16)));
+      const x = Number(e.x ?? 80), y = Number(e.y ?? 80);
+      const w = Number(e.w ?? 320), h = Number(e.h ?? 120);
+
+      let title = "";
+      let sub = "";
+
+      if(type === "text"){
+        title = String(e.text ?? "");
+        sub = "";
+      }else if(["pill","badge","chip"].includes(type)){
+        title = String(e.text ?? e.title ?? "BADGE");
+      }else if(type === "button" || type === "cta"){
+        title = String(e.text ?? e.title ?? "CTA");
+      }else if(type === "photo" || type === "image"){
+        title = "IMAGE";
+        sub = String(e.label ?? "");
+      }else if(type === "bg"){
+        title = "BG";
+      }else if(type === "shape"){
+        title = "SHAPE";
+      }else{
+        title = String(e.title ?? "");
+        sub = String(e.sub ?? "");
+      }
+
+      return { id, type, x, y, w, h, title, sub };
+    });
+
+    return {
+      id: tpl.id || `tpl_${Date.now()}`,
+      title: tpl.title || "Template",
+      description: tpl.description || tpl.subtitle || "",
+      category: tpl.category || "Instagram Post",
+      style: tpl.style || "Dark Premium",
+      bg: tpl.bg || null,
+      canvas: tpl.canvas || { w: W, h: H },
+      elements: outEls
+    };
+  }
+
+function openEditorWith(payload){
+    // payload can be {cat,style,i} OR a full template object
+    const cat = payload?.category || payload?.cat || $("#cat").value;
+    const style = payload?.style || $("#style").value;
+let tpl = payload?.elements ? toEditorTemplate(payload) : null;
+    // If called with settings-only payload (e.g., Open Editor button), default to latest generated template #1
+    if(!tpl && Array.isArray(__lastTemplates) && __lastTemplates.length){
+      tpl = toEditorTemplate(__lastTemplates[(payload?.i? (Number(payload.i)-1):0)] || __lastTemplates[0]);
+    }
+
+    // keep latest settings for editor intelligence
+    try{
+      localStorage.setItem("nexora_last_settings_v1", JSON.stringify({ category: cat, style, prompt: $("#prompt").value.trim(), notes: $("#notes").value.trim(), count: Number($("#count")?.value||24) }));
+    }catch(e){}
+
+    // Also store selected template in a stable key
+    try{
+      if(tpl) localStorage.setItem("nexora_selected_template_v1", JSON.stringify(tpl));
+    }catch(e){}
+
+    // Store draft so editor can load a REAL template (elements/positions)
+    localStorage.setItem("templify_draft", JSON.stringify({
+      meta: {
+        cat,
+        style,
+        i: payload?.i || 1,
+        prompt: $("#prompt").value.trim(),
+        notes: $("#notes").value.trim(),
+        title: (tpl?.title || payload?.title || null),
+        description: (tpl?.description || payload?.description || payload?.subtitle || null),
+      },
+      template: tpl,
+      createdAt: Date.now()
+    }));
+
+    // allow homepage to restore when user comes back from editor
+    try{ sessionStorage.setItem("nexora_restore_home_v1","1"); }catch(_){}
+    try{ saveHomeState && saveHomeState(); }catch(_){}
+    window.location.href = location.origin + "/editor.html";
+  }
+
+  // Keep latest generated templates (for tile click -> editor)
+  let __lastTemplates = [];
+
+  // --- Homepage state persistence (restore after returning from editor) ---
+  const HOME_STATE_KEY = "nexora_home_state_v1";
+
+  function getNavType(){
+    try{
+      const nav = performance.getEntriesByType && performance.getEntriesByType("navigation");
+      if(nav && nav[0] && nav[0].type) return nav[0].type;
+    }catch(_){}
+    try{
+      if(performance && performance.navigation){
+        const t = performance.navigation.type;
+        if(t === 1) return "reload";
+        if(t === 2) return "back_forward";
+      }
+    }catch(_){}
+    return "navigate";
+  }
+
+  function saveHomeState(){
+    try{
+      const catEl = document.getElementById("cat");
+      const countEl = document.getElementById("count");
+      const styleEl = document.getElementById("style");
+      const promptEl = document.getElementById("prompt");
+      const notesEl = document.getElementById("notes");
+      const state = {
+        v: 1,
+        ts: Date.now(),
+        scrollY: window.scrollY || 0,
+        settings: {
+          cat: catEl ? catEl.value : "",
+          count: countEl ? (Number(countEl.value||1) || 1) : 1,
+          style: styleEl ? styleEl.value : "",
+          prompt: promptEl ? (promptEl.value||"") : "",
+          notes: notesEl ? (notesEl.value||"") : ""
+        },
+        templates: Array.isArray(__lastTemplates) ? __lastTemplates : []
+      };
+      sessionStorage.setItem(HOME_STATE_KEY, JSON.stringify(state));
+    }catch(_){}
+  }
+
+  function loadHomeState(){
+    try{
+      const raw = sessionStorage.getItem(HOME_STATE_KEY);
+      if(!raw) return null;
+      const st = JSON.parse(raw);
+      if(!st || !Array.isArray(st.templates) || !st.settings) return null;
+      return st;
+    }catch(_){ return null; }
+  }
+
+  function clearHomeState(){
+    try{ sessionStorage.removeItem(HOME_STATE_KEY); }catch(_){}
+    try{ sessionStorage.removeItem("nexora_restore_home_v1"); }catch(_){}
+  }
+
+  
+function renderTemplatesFromList(list){
+    const grid = document.getElementById("previewGrid");
+    if(!grid) return;
+
+    grid.innerHTML = "";
+    __lastTemplates = [];
+
+    (list||[]).forEach((t, i)=>{
+      if(!t) return;
+      const tpl = toEditorTemplate(t);
+      __lastTemplates.push(tpl);
+
+      const div = document.createElement("div");
+      div.className = "tile";
+      div.tabIndex = 0;
+
+      const title = (tpl.title || (tpl.category||"Template") + " #" + (i+1));
+      const desc = (tpl.description || ((tpl.style||"")+" • Canva-style")).trim();
+
+      div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${escapeHtml(title)}</b><span>${escapeHtml(desc)}</span>`;
+
+      const thumb = div.querySelector(".thumb");
+      if(thumb) drawThumb(thumb, tpl, tpl.bg);
+
+      div.addEventListener("click", ()=>openEditorWith(tpl));
+      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(tpl); });
+      grid.appendChild(div);
+    });
+
+    // expose for debugging
+    window.NEXORA = window.NEXORA || {};
+    window.NEXORA.lastTemplates = __lastTemplates;
+  }
+
+  function tryRestoreHome(
+){
+    // only restore when we explicitly came back from editor; refresh should reset
+    const navType = getNavType();
+    if(navType === "reload"){ clearHomeState(); return false; }
+
+    try{
+      const flag = sessionStorage.getItem("nexora_restore_home_v1");
+      if(!flag) return false;
+
+      const st = loadHomeState();
+      if(!st) { sessionStorage.removeItem("nexora_restore_home_v1"); return false; }
+
+      const catEl = document.getElementById("cat");
+      const countEl = document.getElementById("count");
+      const styleEl = document.getElementById("style");
+      const promptEl = document.getElementById("prompt");
+      const notesEl = document.getElementById("notes");
+
+      if(catEl && st.settings.cat) catEl.value = st.settings.cat;
+      if(countEl && st.settings.count) countEl.value = String(st.settings.count);
+      if(styleEl && st.settings.style) styleEl.value = st.settings.style;
+      if(promptEl) promptEl.value = st.settings.prompt || "";
+      if(notesEl) notesEl.value = st.settings.notes || "";
+
+      renderTemplatesFromList(st.templates);
+
+      requestAnimationFrame(()=>{ try{ window.scrollTo(0, st.scrollY||0); }catch(_){} });
+
+      sessionStorage.removeItem("nexora_restore_home_v1");
+      return true;
+    }catch(_){
+      try{ sessionStorage.removeItem("nexora_restore_home_v1"); }catch(__){}
+      return false;
+    }
+  }
+
+  function escapeHtml(s){
+    return String(s||"")
+      .replace(/&/g,"&amp;")
+      .replace(/</g,"&lt;")
+      .replace(/>/g,"&gt;")
+      .replace(/"/g,"&quot;")
+      .replace(/'/g,"&#39;");
+  }
+
+
+  $("#openEditor").addEventListener("click", (ev)=>{
+    ev.preventDefault();
+    // If user didn't click a preview tile, open the latest generated template #1 (fallback to seeded)
+    const first = (Array.isArray(__lastTemplates) && __lastTemplates.length ? __lastTemplates[0] : null)
+      || (Array.isArray(seedTemplates) ? seedTemplates[0] : null);
+    openEditorWith(first || {cat:$("#cat").value, style:$("#style").value, i:1});
+  });
+  $("#themeBtn").addEventListener("click", toggleTheme);
+
+  $("#exportBtn").addEventListener("click", ()=>{
+    const items = [...grid.children].map((el, idx)=>({
+      title: el.querySelector("b")?.textContent || `Template #${idx+1}`,
+      desc: el.querySelector("span")?.textContent || ""
+    }));
+    const blob = new Blob([JSON.stringify({items}, null, 2)], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "templify_templates.json";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  });
+
+  // restore theme + initial previews
+  const saved = localStorage.getItem("templify_theme");
+  if(saved==="light"||saved==="dark") setTheme(saved);
+  // initial previews are rendered on DOMContentLoaded so restore can win
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const restored = tryRestoreHome();
+    if(!restored){ seedTemplates(12); }
+
+  const btn = document.getElementById("generateBtn");
+  if (!btn) {
+    alert("Generate button not found. UI mismatch.");
+    return;
+  }
+
+  btn.addEventListener("click", async (event) => {
+currentLayout = "Modern";
+currentStyle = "Dark Premium";
+
+    const payload = {
+      category: document.getElementById("cat")?.value || "Instagram Post",
+      style: document.getElementById("style")?.value || "Dark Premium",
+      count: parseInt(document.getElementById("count")?.value || "10", 10),
+      prompt: document.getElementById("prompt")?.value || "",
+      notes: document.getElementById("notes")?.value || ""
+    };
+
+    try {
+
+// === AE-3: instant local templates + async AI copy (no UI changes) ===
+// 1) Show high-quality client-side templates immediately (design.js).
+// 2) In background, fetch AI copy-only improvements and merge into existing templates.
+seedTemplates(payload.count);
+        try{ saveHomeState(); }catch(_){}
+
+statusEl.textContent = "Generating (instant)…";
+
+      
+// === AE-3.2 Silent backend (fire-and-forget) ===
+// Backend copy enrichment should NEVER block or surface errors.
+fetch("/api/generate", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ ...payload, mode: "copy" })
+}).then(res => {
+  if(!res || !res.ok) return null;
+  return res.json().catch(() => null);
+}).then(data => {
+  if(!data || !Array.isArray(data.templates)) return;
+  // merge happens only if data exists (safe)
+  if(Array.isArray(__lastTemplates)){
+    data.templates.forEach((ai, i) => {
+      const t = __lastTemplates[i];
+      if(!t) return;
+      if(ai?.title) t.title = String(ai.title);
+      if(ai?.description) t.description = String(ai.description);
+      if(ai?.cta) t.cta = String(ai.cta);
+    });
+  }
+}).catch(() => {});
+
+      const data = await res.json();
+      console.log("AI RESPONSE:", data);
+
+      // ✅ MINIMAL FIX: connect AI result to the existing renderer
+      // Render AI templates into the grid
+      const templates = Array.isArray(data?.templates) ? data.templates : [];
+
+// AE-3 merge: apply AI copy to the already-rendered client templates (keep visuals)
+if(Array.isArray(__lastTemplates) && __lastTemplates.length){
+  templates.forEach((ai, i) => {
+    const t = __lastTemplates[i];
+    if(!t) return;
+    if(ai?.title) t.title = String(ai.title);
+    if(ai?.description) t.description = String(ai.description);
+    // Update a few text elements for stronger previews (non-destructive)
+    if(Array.isArray(t.elements)){
+      for(const el of t.elements){
+        const kind = String(el.type||"").toLowerCase();
+        if(kind.includes("title") || kind==="text"){
+          if(ai?.title) el.title = String(ai.title);
+        }
+        if(kind.includes("subtitle") || kind.includes("caption")){
+          if(ai?.description) el.title = String(ai.description);
+        }
+        if(kind.includes("cta") || kind.includes("button")){
+          if(ai?.cta) el.title = String(ai.cta);
+        }
+        if(kind.includes("badge") || kind.includes("tag")){
+          if(ai?.badge) el.title = String(ai.badge);
+        }
+      }
+    }
+  });
+
+  // Re-render only the tile labels (keep thumbs as-is)
+  const tiles = grid.querySelectorAll(".tile");
+  tiles.forEach((tile, i) => {
+    const t = __lastTemplates[i];
+    if(!t) return;
+    const b = tile.querySelector("b");
+    const s = tile.querySelector("span");
+    if(b) b.textContent = t.title || b.textContent;
+    if(s) s.textContent = t.description || s.textContent;
+  });
+
+  statusEl.textContent = `Generated ${__lastTemplates.length} (AI copy applied)`;
+  return;
+}
+      grid.innerHTML = "";
+      const cat = payload.category;
+      const style = payload.style;
+
+      // Normalize templates to our editor-friendly schema
+      const normalized = (templates.length ? templates : []).map((t, i) => {
+        const elements = Array.isArray(t.elements) ? t.elements : [];
+        return {
+          id: t.id || `ai_${Date.now()}_${i+1}`,
+          title: t.title || `${cat} #${i+1}`,
+          description: t.description || t.subtitle || `${style} • AI generated`,
+          category: t.category || payload.category || cat,
+          style: t.style || payload.style || style,
+          canvas: t.canvas || { w: 980, h: 620 },
+          elements: elements.map(e => ({
+            id: e.id || (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))),
+            type: String(e.type ?? "card"),
+            x: Number(e.x ?? 80), y: Number(e.y ?? 80),
+            w: Number(e.w ?? e.width ?? 420), h: Number(e.h ?? e.height ?? 120),
+            title: String(e.title ?? e.text ?? (String(e.type??"").toLowerCase()==="image" ? "IMAGE" : "TEXT")),
+            sub: String(e.sub ?? e.caption ?? ""),
+            fontSize: (e.fontSize ?? null),
+            fontWeight: (e.fontWeight ?? null),
+            color: (e.color ?? null),
+            align: (e.align ?? null),
+            radius: (e.radius ?? null),
+            fill: (e.fill ?? null),
+            background: (e.background ?? null),
+            opacity: (e.opacity ?? null)
+          }))
+        };
+      });
+
+      
+      // Phase G: inject prompt into template elements for stronger previews/editor
+      applyPromptToTemplates(normalized, payload.prompt);
+// If AI returned nothing usable, fall back to seeded "real" templates
+      if(!normalized.length){
+        seedTemplates(payload.count);
+        statusEl.textContent = `Generated ${payload.count}`;
+        return;
+      }
+
+      __lastTemplates = normalized;
+      window.NEXORA.lastTemplates = __lastTemplates;
+      grid.innerHTML = "";
+
+      __lastTemplates.forEach((t) => {
+        const div = document.createElement("div");
+        div.className = "tile";
+        div.tabIndex = 0;
+        div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title}</b><span>${t.description}</span>`;
+
+      const thumb = div.querySelector('.thumb');
+      if(thumb){
+        drawThumb(thumb, t, t.bg);
+      }
+
+        div.addEventListener("click", ()=>openEditorWith(t));
+        div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
+        grid.appendChild(div);
+      });
+
+      statusEl.textContent = `Generated ${__lastTemplates.length}`;
+    } catch (e) {
+      // ✅ Fallback: never leave user with "nothing happened"
+      seedTemplates(payload.count);
+    }
+  });
+});
+</script>
+<script>
+  document.getElementById("btnTemplates")?.addEventListener("click", () => {
+    alert("Templates Library– coming soon");
+  });
+
+  document.getElementById("btnAnimate")?.addEventListener("click", () => {
+    alert("Animate – coming soon");
+  });
+</script>
+
+<script type="module">
+// Nexora: New Layout + New Style (SAFE)
+// UI unchanged. Only updates the preview tile text.
+
+const layouts = ["Bold","Clean","Modern","Minimal","Vibrant"];
+const styles  = ["Dark Premium","Light Minimal","Neon","Glassmorphism","Corporate"];
+
+const grid = document.getElementById("previewGrid");
+const statusEl = document.getElementById("status");
+
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function setStatus(msg){ if(statusEl) statusEl.textContent = msg; }
+
+function updateTilesText({layout=null, style=null}={}){
+  if(!grid) return;
+  const tiles = Array.from(grid.querySelectorAll(".tile"));
+  tiles.forEach((tile) => {
+    const span = tile.querySelector("span");
+    if(!span) return;
+    const curStyle = style || (document.getElementById("style")?.value) || "Dark Premium";
+    const curLayout = layout || span.textContent.match(/\b(Bold|Clean|Modern|Minimal|Vibrant)\b/)?.[0] || "Modern";
+    span.textContent = `${curStyle} • ${curLayout} layout • Click to edit`;
+  });
+}
+
+document.getElementById("newLayoutBtn")?.addEventListener("click", () => {
+  updateTilesText({ layout: pick(layouts) });
+  setStatus("New layout applied");
+});
+
+document.getElementById("newStyleBtn")?.addEventListener("click", () => {
+  const s = pick(styles);
+  const sel = document.getElementById("style");
+  if(sel){
+    const opt = Array.from(sel.options).find(o => o.textContent.trim() === s);
+    if(opt) sel.value = opt.textContent.trim();
+  }
+  updateTilesText({ style: s });
+  setStatus("New style applied");
+});
+
+</script>
+
+
+<script>
+function renderPreview(canvas, t){
+  if(!canvas) return;
+  canvas.innerHTML="";
+  if(t.bg) canvas.style.background=t.bg;
+  const texts=(t.elements||[]).filter(e=>e.type==="heading"||e.type==="text").slice(0,2);
+  texts.forEach((e,i)=>{
+    const d=document.createElement("div");
+    d.className="pv-text";
+    d.textContent=e.title||"";
+    d.style.top=(14+i*32)+"px";
+    d.style.fontSize=(i===0?16:12)+"px";
+    d.style.color=e.color||"#fff";
+    canvas.appendChild(d);
+  });
 }
 </script>
+
+
+<script src="template-contract.js"></script>
+  <script src="spine-core.js"></script>
+  <script src="design.js"></script>
+<script src="invisible-editor.js"></script>
+
+</body>
+</html>
