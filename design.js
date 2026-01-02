@@ -304,12 +304,12 @@
 
   if(cat.includes("youtube") || cat.includes("yt")){
     const yt = {
-      generic:  { splitHero: 0.30, photoCard: 0.25, posterHero: 0.20, featureGrid: 0.15, badgePromo: 0.10 },
-      tutorial: { splitHero: 0.35, photoCard: 0.25, featureGrid: 0.20, posterHero: 0.10, badgePromo: 0.10 },
-      listicle: { featureGrid: 0.35, splitHero: 0.25, posterHero: 0.15, badgePromo: 0.15, photoCard: 0.10 },
-      promo:    { badgePromo: 0.40, splitHero: 0.25, posterHero: 0.20, photoCard: 0.15, featureGrid: 0.00 },
-      offer:    { badgePromo: 0.40, splitHero: 0.25, posterHero: 0.20, photoCard: 0.15, featureGrid: 0.00 },
-      quote:    { posterHero: 0.35, minimalQuote: 0.25, splitHero: 0.20, photoCard: 0.20, featureGrid: 0.00 }
+      generic:  { splitHero: 0.30, photoCard: 0.25, youtubeBold: 0.20, featureGrid: 0.15, badgePromo: 0.10 },
+      tutorial: { splitHero: 0.35, photoCard: 0.25, featureGrid: 0.20, youtubeBold: 0.10, badgePromo: 0.10 },
+      listicle: { featureGrid: 0.35, splitHero: 0.25, youtubeBold: 0.15, badgePromo: 0.15, photoCard: 0.10 },
+      promo:    { badgePromo: 0.40, splitHero: 0.25, youtubeBold: 0.20, photoCard: 0.15, featureGrid: 0.00 },
+      offer:    { badgePromo: 0.40, splitHero: 0.25, youtubeBold: 0.20, photoCard: 0.15, featureGrid: 0.00 },
+      quote:    { youtubeBold: 0.35, minimalQuote: 0.25, splitHero: 0.20, photoCard: 0.20, featureGrid: 0.00 }
     };
 
     const weights = yt[type] || yt.generic;
@@ -320,7 +320,7 @@
       photoCard: "YouTube Photo",
       featureGrid: "YouTube List",
       badgePromo: "YouTube Badge",
-      posterHero: "YouTube Bold",
+      youtubeBold: "YouTube Bold",
       minimalQuote: "YouTube Quote"
     };
 
@@ -330,7 +330,7 @@
   // Non-YouTube: keep existing behavior (small type-based bias only).
   const w = {
     generic: 0.18,
-    posterHero: 0.22,
+    youtubeBold: 0.22,
     splitHero: 0.16,
     badgePromo: 0.14,
     featureGrid: 0.12,
@@ -339,14 +339,14 @@
     bigNumber: 0.04
   };
 
-  if(type === "quote") { w.minimalQuote += 0.20; w.posterHero += 0.05; }
-  if(type === "promo" || type === "offer") { w.badgePromo += 0.20; w.posterHero += 0.05; }
+  if(type === "quote") { w.minimalQuote += 0.20; w.youtubeBold += 0.05; }
+  if(type === "promo" || type === "offer") { w.badgePromo += 0.20; w.youtubeBold += 0.05; }
   if(type === "listicle") { w.featureGrid += 0.20; w.splitHero += 0.05; }
   if(type === "tutorial") { w.splitHero += 0.15; w.photoCard += 0.05; }
 
   const layout = pickLayout(w);
   const nameByLayout = {
-    posterHero: "Poster Hero",
+    youtubeBold: "Poster Hero",
     splitHero: "Split Hero",
     badgePromo: "Badge Promo",
     featureGrid: "Feature Grid",
@@ -503,7 +503,7 @@
     const photoSrcA = smartPhotoSrc((s^hash("A"))>>>0, pal, photoLabel);
     const photoSrcB = smartPhotoSrc((s^hash("B"))>>>0, pal, (tHeadline.split(" ")[0]||photoLabel));
 
-    if(layout==="posterHero"){
+    if(layout==="youtubeBold"){
       // Full-bleed hero photo with gradient overlay + strong typography.
       add({ type:"photo", src: photoSrcA, x:0,y:0,w,h, r:0, opacity:1 });
       add({ type:"shape", x:0,y:0,w,h, r:0, fill:"linear-gradient(180deg, rgba(0,0,0,0.15), rgba(0,0,0,0.60))", opacity:1 });
