@@ -510,61 +510,39 @@
     const photoSrcA = smartPhotoSrc((s^hash("A"))>>>0, pal, photoLabel);
     const photoSrcB = smartPhotoSrc((s^hash("B"))>>>0, pal, (tHeadline.split(" ")[0]||photoLabel));
 
-
-if(layout==="ytBrutalV1"){
-  // 16:9 YouTube Thumbnail — Brutal click-optimized layout (single hard-coded archetype).
-  // Intent: massive hierarchy, edge-breaking hero, left readability slab, fake-stroke headline.
+    if(layout==="ytBrutalV1"){
+  // 16:9 YouTube Thumbnail — Brutal: no polite card, giant headline, dark slab, edge-breaking hero.
   const pad = M;
-  const safe = Math.round(Math.min(w,h)*0.06);
-  const leftW = Math.round(w*0.38);
+  const leftW = Math.round(w*0.44);
+  const heroX = Math.round(w*0.40);
+  const heroY = Math.round(-h*0.06);
+  const heroW = Math.round(w*0.70);
+  const heroH = Math.round(h*1.12);
 
-  const heroX = leftW - Math.round(w*0.03);
-  const heroY = -Math.round(h*0.06);
-  const heroW = w - heroX + Math.round(w*0.06);
-  const heroH = h + Math.round(h*0.12);
+  add({ type:"shape", x:0, y:0, w:leftW, h:h, r:0, fill:"rgba(0,0,0,0.62)", opacity:1 });
+  add({ type:"photo", src: photoSrcA, x:heroX, y:heroY, w:heroW, h:heroH, r:0, stroke:"rgba(255,255,255,0.08)" });
 
-  const badgeTxt = (spec.badge||tKicker||"NEW").toUpperCase();
-  const kickerTxt = (tKicker||"SHOCKING").toUpperCase();
-  const headTxt = String(tHeadline||"WATCH THIS").toUpperCase();
+  add({ type:"badge", x:pad, y:pad, w:Math.round(w*0.24), h:Math.round(h*0.11), r:999,
+        fill: pal.accent2, text:(spec.badge||tKicker||"NEW").toUpperCase(), tcolor:"#0b1020",
+        tsize:Math.round(h*0.050), tweight:900 });
 
-  // Left dark slab (readability)
-  add({ type:"shape", x:0, y:0, w:leftW, h:h, r:0, fill:"rgba(0,0,0,0.60)", opacity:1 });
+  add({ type:"text", x:pad, y:pad + Math.round(h*0.14), text:(spec.kicker||"WATCH NOW").toUpperCase(),
+        size:Math.round(h*0.060), weight:900, color:"rgba(255,255,255,0.95)", letter:1.0 });
 
-  // Hero media (edge-breaking, right)
-  add({ type:"photo", src: photoSrcA, x:heroX, y:heroY, w:heroW, h:heroH, r:0, stroke:"rgba(255,255,255,0.14)" });
+  const HSIZE = clamp(Math.round(h*0.24), 150, 240);
+  const HY = pad + Math.round(h*0.24);
+  const head = (tHeadline||"WATCH THIS").toUpperCase();
 
-  // Subtle right vignette to boost subject contrast
-  add({ type:"shape", x:heroX, y:0, w:w-heroX, h:h, r:0, fill:"rgba(0,0,0,0.18)", opacity:1 });
+  add({ type:"text", x:pad+10, y:HY+10, text:head, size:HSIZE, weight:900, color:"rgba(0,0,0,0.92)", letter:-1.2 });
+  add({ type:"text", x:pad, y:HY, text:head, size:HSIZE, weight:900, color:"#ffffff", letter:-1.2 });
 
-  // Badge (top-left)
-  add({ type:"pill", x:safe, y:safe, w:Math.round(leftW*0.56), h:Math.round(h*0.09), r:999,
-        fill: pal.accent2 || pal.accent, text: badgeTxt, tcolor:"#0b1020",
-        tsize: clamp(Math.round(h*0.045), 22, 44), tweight:900 });
+  add({ type:"pill", x:pad, y:h - pad - Math.round(h*0.13), w:Math.round(w*0.30), h:Math.round(h*0.13), r:999,
+        fill: pal.accent, text:(spec.cta||"WATCH NOW").toUpperCase(), tcolor:"#0b1020",
+        tsize:Math.round(h*0.052), tweight:900 });
 
-  // Kicker line
-  add({ type:"text", x:safe, y:safe + Math.round(h*0.12), text: kickerTxt,
-        size: clamp(Math.round(h*0.052), 24, 52), weight:900, color:"rgba(255,255,255,0.92)", letter:1.2 });
-
-  // Headline (fake stroke via 2-layer text)
-  const headY = safe + Math.round(h*0.22);
-  const headW = leftW - safe*2;
-  const headSize = clamp(Math.round(h*0.23), 150, 240);
-
-  add({ type:"text", x:safe+10, y:headY+10, w:headW, text: headTxt,
-        size: headSize, weight:950, color:"rgba(0,0,0,0.92)", letter:-1.6, leading:0.92 });
-
-  add({ type:"text", x:safe, y:headY, w:headW, text: headTxt,
-        size: headSize, weight:950, color: "#ffffff", letter:-1.6, leading:0.92 });
-
-  // CTA pill (bottom-left)
-  add({ type:"pill", x:safe, y:h - safe - Math.round(h*0.11), w:Math.round(leftW*0.66), h:Math.round(h*0.11), r:999,
-        fill: pal.accent || pal.accent2, text: (spec.cta||"WATCH NOW").toUpperCase(), tcolor:"#0b1020",
-        tsize: clamp(Math.round(h*0.045), 20, 42), tweight:900 });
-
-  return els;
+  return elements;
 }
-
-    if(layout==="ytCanvaV1"){
+if(layout==="ytCanvaV1"){
   // 16:9 YouTube Thumbnail — Canva-style: bold headline, hero media, badge + CTA, strong contrast.
   const pad = M;
   const rightX = Math.round(w*0.56);
