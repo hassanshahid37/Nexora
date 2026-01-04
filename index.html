@@ -625,34 +625,47 @@
     const prompt = ($("#prompt").value || "").trim();
 
     // Phase I: client-side "Canva-style" generator (design.js) as the primary safe fallback.
-    if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
-      try{
-        const raw = window.NexoraDesign.generateTemplates({ category, style, prompt, count: n });
-        const templates = (Array.isArray(raw) ? raw : []).map(t => toEditorTemplate(t));
+// IMPORTANT: Keep RAW templates for correct previews + export sizing on the homepage.
+if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
+  try{
+    const rawTemplates = window.NexoraDesign.generateTemplates({ category, style, prompt, count: n });
+    const templates = Array.isArray(rawTemplates) ? rawTemplates : [];
 
-        templates.forEach((t, i) => {
-          const div = document.createElement("div");
-          div.className = "tile";
-          div.tabIndex = 0;
-          div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${t.title || (category+" #"+(i+1))}</b><span>${t.description || (style+" • Canva-style")}</span>`;
+    templates.forEach((t, i) => {
+      const div = document.createElement("div");
+      div.className = "tile";
+      div.tabIndex = 0;
 
-          const thumb = div.querySelector(".thumb");
-          if(thumb) drawThumb(thumb, t, t.bg);
+      const title = (t.title || (category+" #"+(i+1)));
+      const desc  = (t.description || (style+" • Canva-style"));
 
-          __lastTemplates.push(t);
-          div.addEventListener("click", ()=>openEditorWith(t));
-          div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
-          grid.appendChild(div);
-        });
+      div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${escapeHtml(title)}</b><span>${escapeHtml(desc)}</span>`;
 
-        statusEl.textContent = `Generated ${templates.length}`;
-        return;
-      }catch(e){
-        // fall through to legacy seeds
+      const thumb = div.querySelector(".thumb");
+      if(thumb){
+        // Prefer design.js renderer for Canva-level look (true 16:9 for YouTube).
+        if(window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
+          window.NexoraDesign.renderPreview(t, thumb);
+        }else{
+          // Fallback to legacy mini renderer (convert only for drawing)
+          drawThumb(thumb, toEditorTemplate(t), (t.bg || null));
+        }
       }
-    }
 
-    // Legacy ultra-safe seeds (never blank UI)
+      __lastTemplates.push(t);               // RAW
+      div.addEventListener("click", ()=>openEditorWith(t)); // conversion happens in openEditorWith()
+      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
+      grid.appendChild(div);
+    });
+
+    statusEl.textContent = `Generated ${templates.length}`;
+    return;
+  }catch(e){
+    // fall through to legacy seeds
+  }
+}
+
+// Legacy ultra-safe seeds (never blank UI)
     const patterns = [
       (i)=> ([
         { type: "background", x:0,y:0,w:980,h:620, title:"BG", sub:"", fill:"linear-gradient(135deg,#0b5fff,#7b5cff)" },
@@ -872,23 +885,31 @@ function renderTemplatesFromList(list){
 
     (list||[]).forEach((t, i)=>{
       if(!t) return;
-      const tpl = toEditorTemplate(t);
-      __lastTemplates.push(tpl);
+
+      // Keep RAW templates; convert only when opening the editor.
+      __lastTemplates.push(t);
 
       const div = document.createElement("div");
       div.className = "tile";
       div.tabIndex = 0;
 
-      const title = (tpl.title || (tpl.category||"Template") + " #" + (i+1));
-      const desc = (tpl.description || ((tpl.style||"")+" • Canva-style")).trim();
+      const title = (t.title || (t.category||"Template") + " #" + (i+1));
+      const desc = (t.description || ((t.style||"")+" • Canva-style")).trim();
 
       div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${escapeHtml(title)}</b><span>${escapeHtml(desc)}</span>`;
 
       const thumb = div.querySelector(".thumb");
-      if(thumb) drawThumb(thumb, tpl, tpl.bg);
+      if(thumb){
+        if(window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
+          window.NexoraDesign.renderPreview(t, thumb);
+        }else{
+          const tpl = toEditorTemplate(t);
+          drawThumb(thumb, tpl, tpl.bg);
+        }
+      }
 
-      div.addEventListener("click", ()=>openEditorWith(tpl));
-      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(tpl); });
+      div.addEventListener("click", ()=>openEditorWith(t));
+      div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
       grid.appendChild(div);
     });
 
@@ -974,12 +995,7 @@ function renderTemplatesFromList(list){
 <script>
 document.addEventListener("DOMContentLoaded", () => {
     const restored = tryRestoreHome();
-    if(!restored){
-      // Always show something instantly.
-      seedTemplates(12);
-      // After all scripts load (including design.js), re-seed to upgrade previews to Canva-style.
-      window.addEventListener("load", ()=>{ try{ seedTemplates(12); }catch(_){} }, { once:true });
-    }
+    if(!restored){ seedTemplates(12); }
 
   const btn = document.getElementById("generateBtn");
   if (!btn) {
@@ -987,44 +1003,62 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  btn.addEventListener("click", () => {
+  btn.addEventListener("click", async (event) => {
+currentLayout = "Modern";
+currentStyle = "Dark Premium";
+
     const payload = {
-      category: document.getElementById("cat")?.value || "YouTube Thumbnail",
+      category: document.getElementById("cat")?.value || "Instagram Post",
       style: document.getElementById("style")?.value || "Dark Premium",
       count: parseInt(document.getElementById("count")?.value || "10", 10),
       prompt: document.getElementById("prompt")?.value || "",
       notes: document.getElementById("notes")?.value || ""
     };
 
-    // Always generate locally first (Canva-style, instant)
-    try{ seedTemplates(payload.count); }catch(_){ /* seedTemplates already never throws, but keep safe */ }
-    try{ saveHomeState(); }catch(_){ }
+    try {
+      // Instant client-side templates (design.js) — never blocks UI.
+      seedTemplates(payload.count);
+      try{ saveHomeState(); }catch(_){ }
+      statusEl.textContent = `Generated ${payload.count}`;
 
-    // Optional: silently ask backend for copy-only improvements and merge into the shown tiles
-    fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...payload, mode: "copy" })
-    }).then(r => (r && r.ok) ? r.json().catch(()=>null) : null)
-      .then(data => {
-        if(!data || !Array.isArray(data.templates) || !Array.isArray(__lastTemplates)) return;
-        data.templates.forEach((ai, i) => {
-          const t = __lastTemplates[i];
-          if(!t) return;
-          if(ai?.title) t.title = String(ai.title);
-          if(ai?.description) t.description = String(ai.description);
-        });
-        const tiles = grid.querySelectorAll(".tile");
+      // Optional backend copy enrichment (fire-and-forget). Never blocks and never throws.
+      fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, mode: "copy" })
+      }).then(res => {
+        if(!res || !res.ok) return null;
+        return res.json().catch(() => null);
+      }).then(data => {
+        if(!data || !Array.isArray(data.templates)) return;
+        if(Array.isArray(__lastTemplates)){
+          data.templates.forEach((ai, i) => {
+            const t = __lastTemplates[i];
+            if(!t) return;
+            if(ai?.title) t.title = String(ai.title);
+            if(ai?.description) t.description = String(ai.description);
+            if(ai?.cta) t.cta = String(ai.cta);
+          });
+        }
+        // Update labels only (thumbs stay rendered).
+        const grid = document.getElementById("previewGrid");
+        if(!grid) return;
+        const tiles = grid.querySelectorAll('.tile');
         tiles.forEach((tile, i) => {
           const t = __lastTemplates[i];
           if(!t) return;
-          const b = tile.querySelector("b");
-          const s = tile.querySelector("span");
-          if(b && t.title) b.textContent = t.title;
-          if(s && t.description) s.textContent = t.description;
+          const b = tile.querySelector('b');
+          const s = tile.querySelector('span');
+          if(b) b.textContent = t.title || b.textContent;
+          if(s) s.textContent = t.description || s.textContent;
         });
-        statusEl.textContent = `Generated ${__lastTemplates.length} (AI copy applied)`;
-      }).catch(()=>{});
+        statusEl.textContent = `Generated ${__lastTemplates.length} (copy enhanced)`;
+      }).catch(() => {});
+
+} catch (e) {
+      // ✅ Fallback: never leave user with "nothing happened"
+      seedTemplates(payload.count);
+    }
   });
 });
 </script>
