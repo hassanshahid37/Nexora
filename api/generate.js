@@ -254,6 +254,32 @@ function brandFromPrompt(prompt) {
   return { brand, tagline };
 }
 
+function ytCleanHeadline(prompt){
+  const raw = String(prompt || "").trim();
+  if(!raw) return "WATCH THIS";
+  const cleaned = raw
+    .replace(/^[\s\-–—:]+/g,"")
+    .replace(/\?+$/g,"")
+    .replace(/^(why|how|what|when|where|the truth about|truth about)\s+/i,"")
+    .trim();
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  let head = words.slice(0, 5).join(" ");
+  if(!head) head = words.slice(0, 7).join(" ");
+  head = head.toUpperCase();
+  // hard cap for gigantic type
+  if(head.length > 34) head = head.slice(0, 34).trim();
+  return head || "WATCH THIS";
+}
+function ytPickBadge(seed){
+  const badges = ["NEW","TRUTH","SECRET","EXPOSED","TOP 5","WARNING","MISTAKES"];
+  return pick(badges, seed ^ 0x5151);
+}
+function ytPickKicker(seed){
+  const hooks = ["SHOCKING","REAL REASON","DON'T DO THIS","WATCH NOW","THIS CHANGED EVERYTHING"];
+  return pick(hooks, seed ^ 0x6161);
+}
+
+
 function pickCTA(vibe, seed) {
   const choices = {
     Branding: ["Learn More", "Discover", "Explore", "Get Started"],
@@ -467,6 +493,132 @@ function buildElements(layout, spec) {
     });
   }
 
+if (layout === "ytBrutalV1") {
+  // ===== Brutal YouTube Override (YT-C1) =====
+  // Goals: mobile-readable, aggressive hierarchy, edge-breaking hero, no polite card container.
+  const safe = Math.round(Math.min(w, h) * 0.06); // ~43px on 720p
+  const leftW = Math.round(w * 0.38);
+  const heroX = leftW - Math.round(w * 0.03); // slight overlap into text slab
+  const heroW = w - heroX + Math.round(w * 0.06); // overflow right
+  const heroY = -Math.round(h * 0.06);
+  const heroH = h + Math.round(h * 0.12);
+
+  const head = ytCleanHeadline(headline || "");
+  const badgeTxt = ytPickBadge(seed);
+  const kickerTxt = ytPickKicker(seed);
+
+  // background already added by common block above
+  // dark readability slab (left)
+  add({
+    type: "shape",
+    x: 0,
+    y: 0,
+    w: leftW,
+    h: h,
+    r: 0,
+    fill: "rgba(0,0,0,0.58)",
+    opacity: 1
+  });
+
+  // hero image (right, edge-breaking)
+  add({
+    type: "photo",
+    src: smartPhotoSrc(seed + 991, pal, brand),
+    x: heroX,
+    y: heroY,
+    w: heroW,
+    h: heroH,
+    r: 0,
+    stroke: "rgba(255,255,255,0.10)"
+  });
+
+  // subtle vignette to pop subject (overlay as shape)
+  add({
+    type: "shape",
+    x: heroX,
+    y: 0,
+    w: w - heroX,
+    h: h,
+    r: 0,
+    fill: "rgba(0,0,0,0.18)",
+    opacity: 1
+  });
+
+  // badge (top-left)
+  add({
+    type: "pill",
+    x: safe,
+    y: safe,
+    w: Math.round(leftW * 0.55),
+    h: Math.round(h * 0.09),
+    r: 999,
+    fill: pal.accent2 || pal.accent,
+    text: badgeTxt,
+    tcolor: "#0b1020",
+    tsize: clamp(Math.round(h * 0.045), 24, 44),
+    tweight: 900
+  });
+
+  // kicker (small line above headline)
+  add({
+    type: "text",
+    x: safe,
+    y: safe + Math.round(h * 0.12),
+    text: kickerTxt,
+    size: clamp(Math.round(h * 0.05), 26, 48),
+    weight: 900,
+    color: "rgba(255,255,255,0.92)",
+    letter: 1.2
+  });
+
+  // headline: fake stroke via 2-layer text
+  const headY = safe + Math.round(h * 0.22);
+  const headW = leftW - safe * 2;
+  const headSize = clamp(Math.round(h * 0.22), 140, 220); // 158–220 typical
+  // shadow/back layer (stroke-ish)
+  add({
+    type: "text",
+    x: safe + 10,
+    y: headY + 10,
+    w: headW,
+    text: head,
+    size: headSize,
+    weight: 900,
+    color: "rgba(0,0,0,0.92)",
+    letter: -1.4
+  });
+  // main
+  add({
+    type: "text",
+    x: safe,
+    y: headY,
+    w: headW,
+    text: head,
+    size: headSize,
+    weight: 900,
+    color: "#ffffff",
+    letter: -1.4
+  });
+
+  // CTA pill (bottom-left)
+  add({
+    type: "pill",
+    x: safe,
+    y: h - safe - Math.round(h * 0.11),
+    w: Math.round(leftW * 0.62),
+    h: Math.round(h * 0.11),
+    r: 999,
+    fill: pal.accent || "#2f7bff",
+    text: (cta || "WATCH NOW").toUpperCase(),
+    tcolor: "#0b1020",
+    tsize: clamp(Math.round(h * 0.045), 22, 40),
+    tweight: 900
+  });
+
+  // stop other layouts from stacking elements
+  return els;
+}
+
   return els;
 }
 
@@ -499,7 +651,83 @@ function materializeTemplate({ prompt, category, style, i, vibe, layoutHint, hea
 
 function makeTemplates({ prompt, category, style, count, divergenceIndex }) {
   const words = splitWords(prompt);
-  const base = prompt ? titleCase(prompt) : "New Collection";
+  const base = prompt ? titleCase(prompt) : "New Collection";// ===== Brutal YouTube Override (YT-C1) =====
+// ONE hard-coded YouTube layout that is intentionally aggressive.
+if (String(category || "") === "YouTube Thumbnail") {
+  const templates = [];
+  for (let i = 0; i < count; i++) {
+    const seed = hash32(`${prompt}|${category}|${style}|yt|${i}`);
+    const size = CATEGORIES["YouTube Thumbnail"];
+    const pal = paletteForStyle(style, seed);
+    const brand = brandFromPrompt(prompt).brand;
+
+    const headlineYT = ytCleanHeadline(prompt);
+    const subheadYT = "CLICK TO SEE THE FULL STORY";
+    const ctaYT = "WATCH NOW";
+
+    // Use the brutal layout key; buildElements stays compatible with preview/editor.
+    const elements = buildElements("ytBrutalV1", {
+      w: size.w,
+      h: size.h,
+      pal,
+      headline: headlineYT,
+      subhead: subheadYT,
+      cta: ctaYT,
+      brand,
+      seed
+    });
+
+    // Roles + ids (consistent with existing mapping)
+    let textSeen = 0;
+    for (const el of elements) {
+      const t = String(el && el.type ? el.type : "").toLowerCase();
+      if (t === "bg") { el.role = "background"; el.id = el.id || "bg"; continue; }
+      if (t === "photo" || t === "image") { el.role = "image"; el.id = el.id || "media"; continue; }
+      if (t === "pill") {
+        const txt = String((el && (el.text || el.title)) || "").trim();
+        if (txt && txt === ctaYT) { el.role = "cta"; el.id = el.id || "cta"; }
+        else { el.role = "badge"; el.id = el.id || "badge"; }
+        continue;
+      }
+      if (t === "badge" || t === "chip") { el.role = "badge"; el.id = el.id || "badge"; continue; }
+      if (t === "text") { textSeen += 1; el.role = textSeen <= 2 ? "headline" : "subhead"; el.id = el.id || (textSeen === 1 ? "headline" : `text_${textSeen}`); continue; }
+      el.role = el.role || "badge";
+      el.id = el.id || `el_${seed.toString(16)}_${i}_${Math.random().toString(16).slice(2)}`;
+    }
+
+    const templateId = `tpl_yt_${seed.toString(16)}_${i + 1}`;
+    const contract = {
+      version: "v1",
+      templateId,
+      category,
+      canvas: { width: size.w, height: size.h },
+      palette: pal ? { bg: pal.bg || null, accent: pal.accent || pal.accent2 || null, ink: pal.ink || null } : null,
+      layers: elements.map((e) => ({ id: String(e.id || "layer"), role: String(e.role || "badge"), locked: true })),
+      exportProfiles: [String(category).replace(/\s+/g, "_").toLowerCase()],
+      createdAt: Date.now(),
+    };
+
+    templates.push({
+      id: templateId,
+      contract,
+      title: `YouTube Thumbnail #${i + 1}`,
+      subtitle: `${style} • Brutal YT`,
+      category,
+      style,
+      headline: headlineYT,
+      subhead: subheadYT,
+      cta: ctaYT,
+      vibe: "YT",
+      layoutHint: "ytBrutalV1",
+      canvas: { w: size.w, h: size.h },
+      elements,
+      _layout: "ytBrutalV1",
+      _palette: pal && pal.name ? pal.name : null,
+      _seed: seed
+    });
+  }
+  return templates;
+}
 
   // Archetype set with layout hints (deterministic variety)
   const archetypes = [
