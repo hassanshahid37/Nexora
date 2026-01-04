@@ -139,7 +139,7 @@
     // You can disable later by setting: window.__NEXORA_FORCE_YT_CANVA_V1__ = false
     const __forceYT = (typeof window !== "undefined") ? (window.__NEXORA_FORCE_YT_CANVA_V1__ !== false) : true;
     if(__forceYT){
-      return { ...base, name: "YT Canva V1", layout: "ytCanvaV1" };
+      return { ...base, name: "YT Brutal V1", layout: "ytBrutalV1" };
     }
     const raw = (prompt||"").trim();
     const cleaned = raw
@@ -320,7 +320,7 @@
     };
 
     const weights = yt[type] || yt.generic;
-    const layout = (category === "YouTube Thumbnail") ? "ytBrutalV1" : pickLayout(weights);
+    const layout = pickLayout(weights);
 
     const nameByLayout = {
       splitHero: "YouTube Face",
@@ -510,7 +510,70 @@
     const photoSrcA = smartPhotoSrc((s^hash("A"))>>>0, pal, photoLabel);
     const photoSrcB = smartPhotoSrc((s^hash("B"))>>>0, pal, (tHeadline.split(" ")[0]||photoLabel));
 
-    if(layout==="ytCanvaV1"){
+    if(layout==="ytBrutalV1"){
+  // Brutal YouTube Thumbnail — click-optimized (mobile-first).
+  // Structure: left dark slab + huge headline + right edge-breaking hero + badge + CTA.
+  const pad = M;
+  const leftW = Math.round(w*0.40);
+  const heroX = Math.round(leftW*0.92);      // slight overlap into slab
+  const heroW = w - heroX + Math.round(w*0.08); // overflow off right
+  const heroY = -Math.round(h*0.08);
+  const heroH = h + Math.round(h*0.16);
+
+  // Left dark slab (readability)
+  add({ type:"shape", x:0, y:0, w:leftW, h:h, r:0, fill:"rgba(0,0,0,0.62)", opacity:1 });
+
+  // Hero (right, edge-breaking)
+  add({ type:"photo", src: photoSrcA, x:heroX, y:heroY, w:heroW, h:heroH, r:0, opacity:1 });
+
+  // Subtle vignette over hero for contrast
+  add({ type:"shape", x:heroX, y:0, w:(w-heroX), h:h, r:0, fill:"rgba(0,0,0,0.18)", opacity:1 });
+
+  // Badge
+  const badgeW = Math.round(leftW*0.62);
+  const badgeH = Math.round(h*0.10);
+  add({ type:"pill", x:pad, y:pad, w:badgeW, h:badgeH, r:999,
+        fill: pal.accent2 || pal.accent, text:(spec.badge || "NEW"), tcolor:"#071423",
+        tsize: clamp(Math.round(h*0.050), 22, 44), tweight:900 });
+
+  // Kicker line
+  const kicker = (spec.kicker || "").trim();
+  if(kicker){
+    add({ type:"text", x:pad, y:pad + badgeH + Math.round(h*0.04),
+          text:String(kicker).toUpperCase(), size: clamp(Math.round(h*0.055), 24, 48),
+          weight:900, color:"rgba(255,255,255,0.92)", letter:1.2 });
+  }
+
+  // Headline — huge + fake stroke
+  const headText = String(tHeadline || "").toUpperCase();
+  const headX = pad;
+  const headY = pad + badgeH + Math.round(h*0.14);
+  const headW = leftW - pad*2;
+  const headSize = clamp(Math.round(h*0.24), 140, 240);
+
+  // back layer
+  add({ type:"text", x:headX+10, y:headY+10, w:headW,
+        text: headText, size: headSize, weight: 900, color:"rgba(0,0,0,0.92)", letter:-1.6, lh:0.95 });
+
+  // main layer
+  add({ type:"text", x:headX, y:headY, w:headW,
+        text: headText, size: headSize, weight: 900, color:"#ffffff", letter:-1.6, lh:0.95 });
+
+  // CTA
+  add({ type:"pill", x:pad, y:h - pad - Math.round(h*0.12),
+        w: Math.round(leftW*0.72), h: Math.round(h*0.12), r:999,
+        fill: pal.accent || pal.accent2, text:(tCTA || "WATCH NOW").toUpperCase(),
+        tcolor:"#071423", tsize: clamp(Math.round(h*0.050), 22, 42), tweight:900 });
+
+  // Small brand tag
+  add({ type:"chip", x:pad, y:h - pad - Math.round(h*0.18), text:(brand||"").toString().slice(0,24),
+        fill:"rgba(255,255,255,0.10)", stroke:"rgba(255,255,255,0.18)",
+        size: clamp(Math.round(h*0.040), 18, 34), color:"rgba(255,255,255,0.78)" });
+
+  return elements;
+}
+
+if(layout==="ytCanvaV1"){
   // 16:9 YouTube Thumbnail — Canva-style: bold headline, hero media, badge + CTA, strong contrast.
   const pad = M;
   const rightX = Math.round(w*0.56);
@@ -1144,40 +1207,3 @@ function applyIntentScene(template, intent) {
     };
   }
 })();
-
-
-// ===============================
-// YT Brutal Layout (client-only)
-// ===============================
-function buildYTBrutalV1({ w, h, pal, seed, headline }) {
-  const els = [];
-  const add = (o)=>els.push(o);
-
-  const safe = Math.round(Math.min(w,h) * 0.06);
-  const leftW = Math.round(w * 0.38);
-  const heroX = leftW - Math.round(w * 0.03);
-  const heroW = w - heroX + Math.round(w * 0.06);
-  const heroY = -Math.round(h * 0.06);
-  const heroH = h + Math.round(h * 0.12);
-
-  const clean = String(headline||"WATCH THIS").toUpperCase().split(/\s+/).slice(0,5).join(" ");
-  const badgeTxt = ["NEW","TRUTH","SECRET","EXPOSED","TOP 5","WARNING"][seed%6];
-  const kickerTxt = ["SHOCKING","REAL REASON","WATCH NOW","DON'T DO THIS"][seed%4];
-
-  // dark slab
-  add({ type:"shape", x:0, y:0, w:leftW, h:h, fill:"rgba(0,0,0,0.58)" });
-  // hero
-  add({ type:"photo", x:heroX, y:heroY, w:heroW, h:heroH });
-  // badge
-  add({ type:"pill", x:safe, y:safe, w:leftW*0.55, h:h*0.09, fill: pal.accent||"#ffd400", text:badgeTxt });
-  // kicker
-  add({ type:"text", x:safe, y:safe+h*0.12, text:kickerTxt, size:h*0.05, weight:900, color:"#fff" });
-  // headline shadow
-  add({ type:"text", x:safe+10, y:safe+h*0.22+10, w:leftW-safe*2, text:clean, size:h*0.22, weight:900, color:"#000" });
-  // headline
-  add({ type:"text", x:safe, y:safe+h*0.22, w:leftW-safe*2, text:clean, size:h*0.22, weight:900, color:"#fff" });
-  // CTA
-  add({ type:"pill", x:safe, y:h-safe-h*0.11, w:leftW*0.62, h:h*0.11, fill: pal.accent2||pal.accent||"#2f7bff", text:"WATCH NOW" });
-
-  return els;
-}
