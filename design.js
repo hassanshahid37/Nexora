@@ -135,35 +135,35 @@
 
   // YouTube Thumbnail: stronger hooky copy defaults (Phase 6A / YT-1)
   if(cat.includes("youtube") || cat.includes("yt")){
-    const raw = String(prompt||"").trim();
-
-    // Clean prompt into a punchy hook (MrBeast-ish, but controlled)
+    // Phase YT-L1: hard-coded Canva-level YouTube thumbnail layout (single layout, strong hierarchy).
+    // You can disable later by setting: window.__NEXORA_FORCE_YT_CANVA_V1__ = false
+    const __forceYT = (typeof window !== "undefined") ? (window.__NEXORA_FORCE_YT_CANVA_V1__ !== false) : true;
+    if(__forceYT){
+      return { ...base, name: "YT Brutal V1", layout: "ytBrutalV1" };
+    }
+    const raw = (prompt||"").trim();
     const cleaned = raw
       .replace(/^[\s\-–—:]+/g,"")
-      .replace(/^(why|how|what|when|where|the truth about|truth about|everything about|all about)\s+/i,"")
+      .replace(/^(why|how|what|when|where|the truth about|truth about)\s+/i,"")
       .replace(/\?+$/,"")
       .trim();
 
-    // Headline: 2–4 words ideally, max 7 words, max 34 chars
-    let head = (cleaned || "WATCH THIS").toUpperCase();
-    head = head.replace(/[^A-Z0-9\s]/g,"").replace(/\s+/g," ").trim();
+    let head = cleaned || "WATCH THIS";
     const words = head.split(/\s+/).filter(Boolean);
     if(words.length > 7) head = words.slice(0,7).join(" ");
     if(head.length > 34) head = head.slice(0,34).trim();
 
-    // Badge: short & punchy
-    const badge = pick(["NEW","SHOCKING","TOP 5","SECRET","MUST SEE","EXPOSED","HACK"], seed ^ hash("yt_badge"));
+    const hooks = ["SHOCKING", "TRUTH", "SECRET", "MISTAKES", "WARNING", "REAL REASON"];
+    const micro = ["WATCH NOW", "DON'T MISS", "FULL STORY", "NEW VIDEO", "IN 5 MINUTES"];
+    const badge = ["NEW", "2025", "TOP 5", "BREAKDOWN", "EXPOSED", "HOW TO"];
 
-    // Subhead is optional (kept short)
-    const sub = pick(["DON'T MISS THIS","WATCH UNTIL END","BIG UPDATE","REAL TRUTH"], seed ^ hash("yt_sub"));
-
-    cm.headline = head;
-    cm.badge    = badge;
-    cm.subhead  = sub;
-    cm.cta      = pick(["WATCH NOW","CLICK NOW","FULL VIDEO"], seed ^ hash("yt_cta"));
-
-    // Tell downstream we want the single locked layout
-    cm.__layoutOverride = "ytCanvaV1";
+    cm.badge = pick(badge, seed ^ 0x5151);
+    cm.kicker = pick(hooks, seed ^ 0x6161);
+    cm.headline = (head).toUpperCase();
+    cm.subhead = pick(micro, seed ^ 0x7171);
+    cm.cta = "WATCH";
+    cm.body = "";
+    cm.features = [];
   }
 
   return cm;
@@ -310,28 +310,9 @@
   }
 
   if(cat.includes("youtube") || cat.includes("yt")){
-    const yt = {
-      generic:  { splitHero: 0.30, photoCard: 0.25, posterHero: 0.20, featureGrid: 0.15, badgePromo: 0.10 },
-      tutorial: { splitHero: 0.35, photoCard: 0.25, featureGrid: 0.20, posterHero: 0.10, badgePromo: 0.10 },
-      listicle: { featureGrid: 0.35, splitHero: 0.25, posterHero: 0.15, badgePromo: 0.15, photoCard: 0.10 },
-      promo:    { badgePromo: 0.40, splitHero: 0.25, posterHero: 0.20, photoCard: 0.15, featureGrid: 0.00 },
-      offer:    { badgePromo: 0.40, splitHero: 0.25, posterHero: 0.20, photoCard: 0.15, featureGrid: 0.00 },
-      quote:    { posterHero: 0.35, minimalQuote: 0.25, splitHero: 0.20, photoCard: 0.20, featureGrid: 0.00 }
-    };
-
-    const weights = yt[type] || yt.generic;
-    const layout = pickLayout(weights);
-
-    const nameByLayout = {
-      splitHero: "YouTube Face",
-      photoCard: "YouTube Photo",
-      featureGrid: "YouTube List",
-      badgePromo: "YouTube Badge",
-      posterHero: "YouTube Bold",
-      minimalQuote: "YouTube Quote"
-    };
-
-    return { ...base, name: nameByLayout[layout] || "YouTube", layout };
+    // Phase: single locked YouTube Thumbnail layout (requested): Canva-style baseline.
+    // This guarantees ONE visible, high-contrast thumbnail every time.
+    return { ...base, name: "YouTube Thumbnail", layout: "ytCanvaV1" };
   }
 
   // Non-YouTube: keep existing behavior (small type-based bias only).
@@ -434,7 +415,11 @@
     } else if(t==="promo"){
       pal.accent = pal.accent2 || pal.accent;
     }
-    return pal;
+    if(category?.toLowerCase().includes("youtube")){
+  pal.bg="#000000"; pal.bg2="#0f0f0f"; pal.ink="#ffffff";
+  pal.accent="#facc15"; pal.accent2="#ef4444";
+}
+return pal;
   }
 
   function pickCTA(intent, seed){
@@ -568,13 +553,10 @@ if(layout==="ytCanvaV1"){
         fill: pal.accent2, text:(spec.badge||tKicker||"NEW").toUpperCase(), tcolor:"#0b1020", tsize:Math.round(h*0.040), tweight:900 });
 
   // Headline
-  add({ type:"shape", x:pad+18, y:Math.round(h*0.18), w:Math.round(w*0.47), h:Math.round(h*0.22), r:34,
-        fill:"rgba(0,0,0,0.28)", opacity:1 });
-  add({ type:"text", x:pad+22, y:Math.round(h*0.20), text:tHeadline.toUpperCase(), size:Math.round(h*0.135), weight:950,
-        color:"#ffffff", letter:-1.2, shadow:true, stroke:true, strokeWidth:3, strokeColor:"rgba(0,0,0,.85)" });
+  add({ type:"text", x:pad+22, y:Math.round(h*0.20), text:tHeadline.toUpperCase(), size:Math.round(h*0.120), weight:950, color: pal.ink, letter:-1.2 });
 
   // Subhead
-  add({ type:"text", x:pad+22, y:Math.round(h*0.44), text:tSub, size:Math.round(h*0.050), weight:800, color:"rgba(255,255,255,0.92)", shadow:true });
+  add({ type:"text", x:pad+22, y:Math.round(h*0.44), text:tSub, size:Math.round(h*0.050), weight:700, color:"rgba(255,255,255,0.88)" });
 
   // CTA pill
   add({ type:"pill", x:pad+22, y:Math.round(h*0.62), w:Math.round(w*0.28), h:Math.round(h*0.11), r:999,
@@ -763,12 +745,7 @@ if(layout==="posterHero"){
       }
     }catch(_){ spineDoc = null; }
 
-    let arch = archetypeWithIntent(intent, seed);
-
-    // Lock YouTube to the single aggressive layout for now (Option A)
-    if(String(category||'').toLowerCase().includes('youtube')){
-      arch = { ...arch, name: 'YouTube Thumbnail', layout: (cm.__layoutOverride || 'ytCanvaV1') };
-    }
+    const arch = archetypeWithIntent(intent, seed);
 
     const titleByCategory = {
       "Instagram Post": "Instagram Post #"+(idx+1),
@@ -943,21 +920,6 @@ if(layout==="posterHero"){
         d.style.lineHeight="1.05";
         d.style.letterSpacing=(e.letter!=null? (e.letter*scale)+"px":"0px");
         d.style.whiteSpace="pre-wrap";
-        if(e.shadow){ d.style.textShadow = "0 2px 10px rgba(0,0,0,.65)"; }
-        if(e.stroke){
-          const sw = Math.max(1, Math.round((e.strokeWidth||3)*scale));
-          const sc = e.strokeColor || "rgba(0,0,0,.9)";
-          const sh = [];
-          for(const dx of [-sw,0,sw]){
-            for(const dy of [-sw,0,sw]){
-              if(dx===0 && dy===0) continue;
-              sh.push(`${dx}px ${dy}px 0 ${sc}`);
-            }
-          }
-          const prior = d.style.textShadow ? (d.style.textShadow + ", ") : "";
-          d.style.textShadow = prior + sh.join(", ");
-        }
-
         if(e.italic) d.style.fontStyle="italic";
         d.textContent=e.text||"";
         container.appendChild(d);
