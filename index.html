@@ -1033,6 +1033,9 @@ function renderTemplatesFromList(list){
 </script>
 <script>
 document.addEventListener("DOMContentLoaded", () => {
+  // Globals used by some UI modules (avoid ReferenceError)
+  let currentLayout = "";
+  let currentStyle = "";
     const restored = tryRestoreHome();
     if(!restored){ seedTemplates(12); }
 
@@ -1056,15 +1059,15 @@ currentStyle = "Dark Premium";
 
     try {
       // Instant client-side templates (design.js) — never blocks UI.
-      seedTemplates(payload.count);
+      seedTemplates(payload.category === "YouTube Thumbnail" ? 1 : payload.count);
       try{ saveHomeState(); }catch(_){ }
-      statusEl.textContent = `Generated ${payload.count}`;
+      statusEl.textContent = `Generated ${payload.category === "YouTube Thumbnail" ? 1 : payload.count}`;
 
       // Optional backend copy enrichment (fire-and-forget). Never blocks and never throws.
       fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, mode: "copy" })
+        body: JSON.stringify({ ...payload, count: (payload.category === "YouTube Thumbnail" ? 1 : payload.count), mode: "copy" })
       }).then(res => {
         if(!res || !res.ok) return null;
         return res.json().catch(() => null);
@@ -1096,7 +1099,7 @@ currentStyle = "Dark Premium";
 
 } catch (e) {
       // ✅ Fallback: never leave user with "nothing happened"
-      seedTemplates(payload.count);
+      seedTemplates(payload.category === "YouTube Thumbnail" ? 1 : payload.count);
     }
   });
 });
