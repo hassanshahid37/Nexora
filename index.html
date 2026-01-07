@@ -256,6 +256,36 @@
 
 </style>
     
+
+<!-- YT Preview Shell Fix (16:9 full-bleed) -->
+<style>
+  /* Generic preview card selectors (defensive) */
+  .preview-card, .template-card, .card {
+    box-sizing: border-box;
+  }
+
+  /* When YT mode is active, remove card chrome and force 16:9 */
+  .yt-preview .preview-card,
+  .yt-preview .template-card,
+  .yt-preview .card {
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  /* Force a 16:9 viewport for thumbnails */
+  .yt-preview .preview-viewport,
+  .yt-preview .canvas,
+  .yt-preview .thumb,
+  .yt-preview .preview {
+    aspect-ratio: 16 / 9;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100%;
+    overflow: hidden;
+  }
+</style>
+
 </head>
 
 <body data-theme="dark">
@@ -403,219 +433,227 @@
 
 
   function drawThumb(thumb, tplOrElements, bg){
-    if(!thumb) return;
+  if(!thumb) return;
 
-    // Fail-safe: never break the app if preview rendering has issues
-    try{
-      const tpl = Array.isArray(tplOrElements) ? { elements: tplOrElements, canvas: { w: 980, h: 620 } } : (tplOrElements || {});
-      const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
-      const W0 = Number(tpl?.canvas?.w || 980);
-      const H0 = Number(tpl?.canvas?.h || 620);
-      thumb.innerHTML = "";
-      thumb.style.position = "relative";
-      thumb.style.overflow = "hidden";
+  // Fail-safe: never break the app if preview rendering has issues
+  try{
+    const tpl = Array.isArray(tplOrElements)
+      ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
+      : (tplOrElements || {});
+    const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
+    const W0 = Number(tpl?.canvas?.w || 980);
+    const H0 = Number(tpl?.canvas?.h || 620);
 
-      const w = Math.max(1, thumb.clientWidth || 260);
-      const h = Math.max(1, thumb.clientHeight || 84);
-      const sx = w / W0;
-      const sy = h / H0;
+    // Make the preview box match the template aspect ratio (critical for YouTube 16:9)
+    thumb.innerHTML = "";
+    thumb.style.position = "relative";
+    thumb.style.overflow = "hidden";
+    thumb.style.width = "100%";
+    const w = Math.max(1, thumb.clientWidth || 260);
+    const desiredH = Math.max(1, Math.round(w * (H0 / W0)));
+    thumb.style.height = desiredH + "px";
+    const h = desiredH;
 
-      // --- background ---
-      let bgCss = bg || null;
-      if(!bgCss && Array.isArray(elements)){
-        const bgEl = elements.find(e => ["background","bg"].includes(String(e.type||"").toLowerCase()));
-        bgCss = (bgEl && String(bgEl.type||"").toLowerCase()==="bg" && bgEl.style==="radial" && (bgEl.fill2||bgEl.fill))
-          ? `radial-gradient(120% 90% at 20% 10%, ${bgEl.fill2||bgEl.fill}, ${bgEl.fill||bgEl.fill2})`
-          : (bgEl?.fill || bgEl?.background || null);
-      }
-      if(bgCss){
-        const s = String(bgCss);
-        if(s.includes("gradient")){
-          thumb.style.backgroundImage = s;
-          thumb.style.backgroundColor = "";
-        }else{
-          thumb.style.backgroundImage = "";
-          thumb.style.backgroundColor = s;
-        }
-      }else{
-        // classy default
-        thumb.style.backgroundImage = "linear-gradient(135deg, rgba(11,95,255,.55), rgba(136,71,255,.45))";
-        thumb.style.backgroundColor = "";
-      }
+    const sx = w / W0;
+    const sy = h / H0;
 
-      // subtle vignette for contrast
-      const vignette = document.createElement("div");
-      vignette.style.position = "absolute";
-      vignette.style.inset = "0";
-      vignette.style.background = "radial-gradient(120px 80px at 20% 20%, rgba(255,255,255,.12), transparent 60%), linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.25))";
-      vignette.style.pointerEvents = "none";
-      thumb.appendChild(vignette);
-
-      const list = Array.isArray(elements) ? elements.slice(0, 18) : [];
-
-      // helper
-      const place = (el, e) => {
-        const x = Number(e.x ?? 0) * sx;
-        const y = Number(e.y ?? 0) * sy;
-        const ww = Number(e.w ?? e.width ?? 120) * sx;
-        const hh = Number(e.h ?? e.height ?? 40) * sy;
-        el.style.position = "absolute";
-        el.style.left = x + "px";
-        el.style.top = y + "px";
-        el.style.width = Math.max(2, ww) + "px";
-        el.style.height = Math.max(2, hh) + "px";
-      };
-
-      // --- render blocks first (image/cards/shapes) ---
-      const blockTypes = new Set(["image","photo","shape","card"]);
-      list.filter(e => blockTypes.has(String(e.type||"").toLowerCase())).slice(0, 4).forEach((e) => {
-        const type = String(e.type||"").toLowerCase();
-        const d = document.createElement("div");
-        place(d, e);
-
-        const r = Number(e.radius ?? (type==="image" ? 16 : 14));
-        d.style.borderRadius = Math.max(10, r * Math.min(sx,sy)) + "px";
-        d.style.border = "1px solid rgba(255,255,255,.18)";
-        d.style.boxShadow = "0 8px 18px rgba(0,0,0,.22)";
-
-        if(type === "image" || type === "photo"){
-          if(e.src){
-            d.style.backgroundImage = `url(${e.src})`;
-            d.style.backgroundSize = "cover";
-            d.style.backgroundPosition = "center";
-          }else{
-            d.style.background = e.background || "linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.06))";
-          }
-        }else{
-          d.style.background = e.fill || e.background || "rgba(255,255,255,.10)";
-        }
-        if(e.opacity!=null) d.style.opacity = String(e.opacity);
-        if(e.stroke) d.style.border = `1px solid ${e.stroke}`;
-        d.style.backdropFilter = "blur(6px)";
-        d.style.pointerEvents = "none";
-        thumb.appendChild(d);
-      });
-
-      // --- badge ---
-      const badge = list.find(e => ["badge","pill","chip"].includes(String(e.type||"").toLowerCase()));
-      if(badge){
-        const b = document.createElement("div");
-        place(b, badge);
-        b.style.height = Math.max(10, Number(badge.h ?? 46) * sy) + "px";
-        b.style.borderRadius = "999px";
-        b.style.border = "1px solid rgba(255,255,255,.20)";
-        b.style.background = "rgba(0,0,0,.18)";
-        b.style.display = "flex";
-        b.style.alignItems = "center";
-        b.style.padding = "0 10px";
-        b.style.fontSize = Math.max(9, (Number(badge.fontSize ?? 14) * Math.min(sx,sy))) + "px";
-        b.style.fontWeight = String(badge.fontWeight ?? 800);
-        b.style.letterSpacing = ".3px";
-        b.style.color = badge.color || "rgba(255,255,255,.92)";
-        b.style.textTransform = "uppercase";
-        b.style.whiteSpace = "nowrap";
-        b.style.overflow = "hidden";
-        b.style.textOverflow = "ellipsis";
-        b.textContent = (badge.title || badge.text || "").toString().slice(0, 32) || "NEW";
-        b.style.pointerEvents = "none";
-        thumb.appendChild(b);
-      }
-
-      // --- headline + subline ---
-      const heading = list.find(e => ["heading","subhead"].includes(String(e.type||"").toLowerCase()))
-        || list.find(e => String(e.type||"").toLowerCase()==="text" && (Number(e.weight||0) >= 800 || Number(e.size||0) >= 46));
-      if(heading){
-        const t = document.createElement("div");
-        place(t, heading);
-        t.style.height = "auto";
-        t.style.maxHeight = (Math.max(18, Number(heading.h ?? 120) * sy)) + "px";
-        t.style.fontWeight = String(heading.fontWeight ?? 800);
-        t.style.color = heading.color || "#fff";
-        t.style.fontSize = Math.max(12, (Number(heading.fontSize ?? 54) * Math.min(sx,sy))) + "px";
-        t.style.lineHeight = "1.05";
-        t.style.textShadow = "0 8px 18px rgba(0,0,0,.35)";
-        t.style.display = "-webkit-box";
-        t.style.webkitLineClamp = "2";
-        t.style.webkitBoxOrient = "vertical";
-        t.style.overflow = "hidden";
-        t.textContent = (heading.title || heading.text || "").toString().trim() || "Premium Design";
-        t.style.pointerEvents = "none";
-        thumb.appendChild(t);
-      }
-
-      const body = list.find(e => {
-        const ty = String(e.type||"").toLowerCase();
-        if(ty==="subhead") return true;
-        if(ty!=="text") return false;
-        if(e===heading) return false;
-        const wt = Number(e.weight||e.fontWeight||0);
-        const sz = Number(e.size||e.fontSize||0);
-        return (wt < 800 && sz < 46);
-      });
-      if(body){
-        const t = document.createElement("div");
-        place(t, body);
-        t.style.height = "auto";
-        t.style.maxHeight = (Math.max(14, Number(body.h ?? 80) * sy)) + "px";
-        t.style.fontWeight = "500";
-        t.style.color = body.color || "rgba(255,255,255,.85)";
-        t.style.fontSize = Math.max(9, (Number(body.fontSize ?? 16) * Math.min(sx,sy))) + "px";
-        t.style.lineHeight = "1.15";
-        t.style.display = "-webkit-box";
-        t.style.webkitLineClamp = "2";
-        t.style.webkitBoxOrient = "vertical";
-        t.style.overflow = "hidden";
-        const s = (body.sub || body.title || body.text || "").toString().trim().replace(/\s+/g," ");
-        t.textContent = s.slice(0, 60);
-        t.style.pointerEvents = "none";
-        thumb.appendChild(t);
-      }
-
-      // --- CTA button ---
-      const cta = list.find(e => ["cta","button"].includes(String(e.type||"").toLowerCase()));
-      if(cta){
-        const b = document.createElement("div");
-        place(b, cta);
-        b.style.height = Math.max(10, Number(cta.h ?? 54) * sy) + "px";
-        b.style.borderRadius = Math.max(10, Number(cta.radius ?? 16) * Math.min(sx,sy)) + "px";
-        b.style.background = cta.background || "linear-gradient(135deg, rgba(11,95,255,.95), rgba(136,71,255,.85))";
-        b.style.border = "1px solid rgba(255,255,255,.18)";
-        b.style.boxShadow = "0 10px 20px rgba(11,95,255,.20)";
-        b.style.display = "flex";
-        b.style.alignItems = "center";
-        b.style.justifyContent = "center";
-        b.style.padding = "0 10px";
-        b.style.fontSize = Math.max(9, (Number(cta.fontSize ?? 14) * Math.min(sx,sy))) + "px";
-        b.style.fontWeight = String(cta.fontWeight ?? 800);
-        b.style.color = cta.color || "#fff";
-        b.style.whiteSpace = "nowrap";
-        b.style.overflow = "hidden";
-        b.style.textOverflow = "ellipsis";
-        b.textContent = (cta.title || "Get Started").toString().slice(0, 22);
-        b.style.pointerEvents = "none";
-        thumb.appendChild(b);
-      }
-
-    }catch(err){
-      console.warn("Preview render failed; using fallback boxes.", err);
-      try{
-        // fallback: simple minis (never crash)
-        thumb.innerHTML = "";
-        const w0 = 980, h0 = 620;
-        const sx = (thumb.clientWidth||260) / w0;
-        const sy = (thumb.clientHeight||84) / h0;
-        (elements||[]).slice(0,6).forEach((e) => {
-          const m = document.createElement("div");
-          m.className = "mini";
-          m.style.left = (Number(e.x||0)*sx) + "px";
-          m.style.top = (Number(e.y||0)*sy) + "px";
-          m.style.width = (Number(e.w||e.width||120)*sx) + "px";
-          m.style.height = (Number(e.h||e.height||40)*sy) + "px";
-          thumb.appendChild(m);
-        });
-      }catch(_){}
+    // --- background ---
+    let bgCss = bg || null;
+    if(!bgCss && Array.isArray(elements)){
+      const bgEl = elements.find(e => ["background","bg"].includes(String(e.type||"").toLowerCase()));
+      bgCss = (bgEl && String(bgEl.type||"").toLowerCase()==="bg" && bgEl.style==="radial" && (bgEl.fill2||bgEl.fill))
+        ? `radial-gradient(120% 90% at 20% 10%, ${bgEl.fill2||bgEl.fill}, ${bgEl.fill||bgEl.fill2})`
+        : (bgEl?.fill || bgEl?.background || null);
     }
+    if(bgCss){
+      const s = String(bgCss);
+      if(s.includes("gradient")){
+        thumb.style.backgroundImage = s;
+        thumb.style.backgroundColor = "";
+      }else{
+        thumb.style.backgroundImage = "";
+        thumb.style.backgroundColor = s;
+      }
+    }else{
+      // classy default
+      thumb.style.backgroundImage = "linear-gradient(135deg, rgba(11,95,255,.55), rgba(136,71,255,.45))";
+      thumb.style.backgroundColor = "";
+    }
+
+    // subtle vignette / depth
+    const vignette = document.createElement("div");
+    vignette.style.position = "absolute";
+    vignette.style.inset = "0";
+    vignette.style.background =
+      "radial-gradient(140px 100px at 75% 25%, rgba(255,255,255,.10), rgba(255,255,255,0) 55%)," +
+      "linear-gradient(180deg, rgba(0,0,0,.08), rgba(0,0,0,.28))";
+    vignette.style.pointerEvents = "none";
+    thumb.appendChild(vignette);
+
+    const list = Array.isArray(elements) ? elements.slice(0, 24) : [];
+
+    const toNum = (v, d=0) => {
+      const n = Number(v);
+      return Number.isFinite(n) ? n : d;
+    };
+
+    const place = (el, e) => {
+      const x = toNum(e.x, 0) * sx;
+      const y = toNum(e.y, 0) * sy;
+      const ww = toNum(e.w ?? e.width, 120) * sx;
+      const hh = toNum(e.h ?? e.height, 40) * sy;
+      el.style.position = "absolute";
+      el.style.left = x + "px";
+      el.style.top = y + "px";
+      el.style.width = Math.max(0, ww) + "px";
+      el.style.height = Math.max(0, hh) + "px";
+      if(e.r != null){
+        el.style.borderRadius = (toNum(e.r, 0) * Math.min(sx, sy)) + "px";
+      }
+      if(e.opacity != null){
+        el.style.opacity = String(e.opacity);
+      }
+      if(e.rotate != null){
+        el.style.transform = `rotate(${toNum(e.rotate,0)}deg)`;
+        el.style.transformOrigin = "center";
+      }
+    };
+
+    const mkRect = (e) => {
+      const d = document.createElement("div");
+      place(d, e);
+      if(e.fill){
+        d.style.background = String(e.fill);
+      }
+      if(e.stroke){
+        d.style.border = `${Math.max(1, Math.round(toNum(e.strokeW,2)*Math.min(sx,sy)))}px solid ${e.stroke}`;
+      }
+      if(e.shadow){
+        d.style.boxShadow = e.shadow;
+      }
+      return d;
+    };
+
+    const mkPhoto = (e) => {
+      const d = document.createElement("div");
+      place(d, e);
+      d.style.backgroundImage = e.src ? `url("${String(e.src).replace(/"/g,'%22')}")` : "";
+      d.style.backgroundSize = "cover";
+      d.style.backgroundPosition = "center";
+      d.style.filter = e.filter || "";
+      if(!e.src){
+        d.style.backgroundImage = "linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.02))";
+      }
+      if(e.stroke){
+        d.style.border = `${Math.max(1, Math.round(toNum(e.strokeW,2)*Math.min(sx,sy)))}px solid ${e.stroke}`;
+      }
+      if(e.shadow){
+        d.style.boxShadow = e.shadow;
+      }
+      return d;
+    };
+
+    const mkText = (e) => {
+      const d = document.createElement("div");
+      place(d, e);
+      d.style.display = "flex";
+      d.style.alignItems = e.alignY || "flex-start";
+      d.style.justifyContent = e.alignX || "flex-start";
+      d.style.padding = "0";
+      d.style.whiteSpace = "pre-wrap";
+      d.style.overflow = "hidden";
+      d.style.lineHeight = String(e.lineHeight || 1.05);
+      d.style.letterSpacing = (e.letterSpacing != null ? e.letterSpacing : 0) + "px";
+      d.style.textTransform = e.uppercase ? "uppercase" : "none";
+
+      const fontSize = toNum(e.size, 22) * Math.min(sx, sy);
+      d.style.fontSize = Math.max(10, fontSize) + "px";
+      d.style.fontWeight = String(e.weight || 800);
+      d.style.fontFamily = e.font || "system-ui, -apple-system, Segoe UI, Inter, Arial, sans-serif";
+      d.style.color = e.color || "#fff";
+      if(e.shadow){
+        d.style.textShadow = e.shadow;
+      }else if(e.stroke){
+        // quick faux stroke
+        d.style.textShadow = `0 0 2px ${e.stroke}, 0 0 6px ${e.stroke}`;
+      }
+      d.textContent = String(e.text || "");
+      return d;
+    };
+
+    const mkBadge = (e) => {
+      const d = document.createElement("div");
+      place(d, e);
+      d.style.display = "flex";
+      d.style.alignItems = "center";
+      d.style.justifyContent = "center";
+      d.style.background = e.fill || "rgba(0,0,0,.35)";
+      d.style.backdropFilter = "blur(2px)";
+      d.style.color = e.color || "#fff";
+      d.style.fontWeight = String(e.weight || 900);
+      d.style.fontFamily = e.font || "system-ui, -apple-system, Segoe UI, Inter, Arial, sans-serif";
+      d.style.fontSize = Math.max(10, toNum(e.size, 14) * Math.min(sx, sy)) + "px";
+      d.style.letterSpacing = (e.letterSpacing != null ? e.letterSpacing : 0.3) + "px";
+      d.style.textTransform = "uppercase";
+      if(e.stroke){
+        d.style.border = `${Math.max(1, Math.round(toNum(e.strokeW,2)*Math.min(sx,sy)))}px solid ${e.stroke}`;
+      }
+      if(e.shadow){
+        d.style.boxShadow = e.shadow;
+      }
+      d.textContent = String(e.text || "");
+      return d;
+    };
+
+    const mkPill = (e) => {
+      const d = document.createElement("div");
+      place(d, e);
+      d.style.display = "flex";
+      d.style.alignItems = "center";
+      d.style.justifyContent = "center";
+      d.style.background = e.fill || "rgba(255,255,255,.12)";
+      d.style.color = e.color || "#fff";
+      d.style.fontWeight = String(e.weight || 800);
+      d.style.fontFamily = e.font || "system-ui, -apple-system, Segoe UI, Inter, Arial, sans-serif";
+      d.style.fontSize = Math.max(10, toNum(e.size, 16) * Math.min(sx, sy)) + "px";
+      if(e.shadow){
+        d.style.boxShadow = e.shadow;
+      }
+      d.textContent = String(e.text || "");
+      return d;
+    };
+
+    // render in order; background handled separately already
+    for(const e of list){
+      const type = String(e?.type || "").toLowerCase();
+      if(type === "bg" || type === "background") continue;
+
+      let node = null;
+      if(type === "shape" || type === "rect"){
+        node = mkRect(e);
+      }else if(type === "photo" || type === "image"){
+        node = mkPhoto(e);
+      }else if(type === "text" || type === "headline" || type === "subhead"){
+        node = mkText(e);
+      }else if(type === "badge"){
+        node = mkBadge(e);
+      }else if(type === "pill" || type === "chip"){
+        node = mkPill(e);
+      }else{
+        // ignore unknown types (safe)
+        continue;
+      }
+      if(node) thumb.appendChild(node);
+    }
+
+  }catch(err){
+    // silent fail: show something instead of breaking
+    try{
+      thumb.innerHTML = "";
+      thumb.style.backgroundImage = "linear-gradient(135deg, rgba(11,95,255,.55), rgba(136,71,255,.45))";
+    }catch(_){}
   }
+}
 
 
   function seedTemplates(n){
@@ -646,7 +684,7 @@ if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "func
       if(thumb){
         // Prefer design.js renderer for Canva-level look (true 16:9 for YouTube).
         if(window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
-          window.NexoraDesign.renderPreview(thumb, t);
+          window.NexoraDesign.renderPreview(t, thumb);
         }else{
           // Fallback to legacy mini renderer (convert only for drawing)
           drawThumb(thumb, toEditorTemplate(t), (t.bg || null));
@@ -902,7 +940,7 @@ function renderTemplatesFromList(list){
       const thumb = div.querySelector(".thumb");
       if(thumb){
         if(window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
-          window.NexoraDesign.renderPreview(thumb, t);
+          window.NexoraDesign.renderPreview(t, thumb);
         }else{
           const tpl = toEditorTemplate(t);
           drawThumb(thumb, tpl, tpl.bg);
@@ -1140,6 +1178,46 @@ function renderPreview(canvas, t){
   <script src="spine-core.js"></script>
   <script src="design.js"></script>
 <script src="invisible-editor.js"></script>
+
+
+<!-- YT Preview Shell Toggle -->
+<script>
+(function(){
+  function isYouTubeSelected(){
+    const sel = document.querySelector('select');
+    if(!sel) return false;
+    return (sel.value || '').toLowerCase().includes('youtube');
+  }
+
+  function toggleYT(){
+    const root = document.body;
+    if(isYouTubeSelected()){
+      root.classList.add('yt-preview');
+    } else {
+      root.classList.remove('yt-preview');
+    }
+  }
+
+  // On generate button click
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    if(btn.textContent && btn.textContent.toLowerCase().includes('generate')){
+      setTimeout(toggleYT, 0);
+    }
+  });
+
+  // Also toggle on category change
+  document.addEventListener('change', function(e){
+    if(e.target && e.target.tagName === 'SELECT'){
+      setTimeout(toggleYT, 0);
+    }
+  });
+
+  // Initial check
+  setTimeout(toggleYT, 0);
+})();
+</script>
 
 </body>
 </html>
