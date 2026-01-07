@@ -2,6 +2,7 @@
 
 
 
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -255,6 +256,36 @@
 
 </style>
     
+
+<!-- YT Preview Shell Fix (16:9 full-bleed) -->
+<style>
+  /* Generic preview card selectors (defensive) */
+  .preview-card, .template-card, .card {
+    box-sizing: border-box;
+  }
+
+  /* When YT mode is active, remove card chrome and force 16:9 */
+  .yt-preview .preview-card,
+  .yt-preview .template-card,
+  .yt-preview .card {
+    padding: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+  }
+
+  /* Force a 16:9 viewport for thumbnails */
+  .yt-preview .preview-viewport,
+  .yt-preview .canvas,
+  .yt-preview .thumb,
+  .yt-preview .preview {
+    aspect-ratio: 16 / 9;
+    width: 100% !important;
+    height: auto !important;
+    max-width: 100%;
+    overflow: hidden;
+  }
+</style>
+
 </head>
 
 <body data-theme="dark">
@@ -1139,6 +1170,46 @@ function renderPreview(canvas, t){
   <script src="spine-core.js"></script>
   <script src="design.js"></script>
 <script src="invisible-editor.js"></script>
+
+
+<!-- YT Preview Shell Toggle -->
+<script>
+(function(){
+  function isYouTubeSelected(){
+    const sel = document.querySelector('select');
+    if(!sel) return false;
+    return (sel.value || '').toLowerCase().includes('youtube');
+  }
+
+  function toggleYT(){
+    const root = document.body;
+    if(isYouTubeSelected()){
+      root.classList.add('yt-preview');
+    } else {
+      root.classList.remove('yt-preview');
+    }
+  }
+
+  // On generate button click
+  document.addEventListener('click', function(e){
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    if(btn.textContent && btn.textContent.toLowerCase().includes('generate')){
+      setTimeout(toggleYT, 0);
+    }
+  });
+
+  // Also toggle on category change
+  document.addEventListener('change', function(e){
+    if(e.target && e.target.tagName === 'SELECT'){
+      setTimeout(toggleYT, 0);
+    }
+  });
+
+  // Initial check
+  setTimeout(toggleYT, 0);
+})();
+</script>
 
 </body>
 </html>
