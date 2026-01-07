@@ -132,31 +132,37 @@
       cm.subhead = cm.subhead || "Brand identity • Clean mark";
       cm.features = [];
     }
-  // YouTube Thumbnail: hooky, high-contrast copy defaults (safe: NO early-return, no base/layout objects here)
-  if(cat.toLowerCase().includes("youtube")){
-    const raw = (p||"").trim();
+
+  // YouTube Thumbnail: stronger hooky copy defaults (Phase 6A / YT-1)
+  if(cat.includes("youtube") || cat.includes("yt")){
+    // Phase YT-L1: hard-coded Canva-level YouTube thumbnail layout (single layout, strong hierarchy).
+    // You can disable later by setting: window.__NEXORA_FORCE_YT_CANVA_V1__ = false
+    const __forceYT = (typeof window !== "undefined") ? (window.__NEXORA_FORCE_YT_CANVA_V1__ !== false) : true;
+    if(__forceYT){
+      return { ...base, name: "YT Brutal V1", layout: "ytBrutalV1" };
+    }
+    const raw = (prompt||"").trim();
     const cleaned = raw
       .replace(/^[\s\-–—:]+/g,"")
       .replace(/^(why|how|what|when|where|the truth about|truth about)\s+/i,"")
       .replace(/\?+$/,"")
       .trim();
 
-    let head = cleaned || cm.headline || "WATCH THIS";
-    let ws = head.split(/\s+/).filter(Boolean);
-    if(ws.length > 7) head = ws.slice(0,7).join(" ");
+    let head = cleaned || "WATCH THIS";
+    const words = head.split(/\s+/).filter(Boolean);
+    if(words.length > 7) head = words.slice(0,7).join(" ");
     if(head.length > 34) head = head.slice(0,34).trim();
 
     const hooks = ["SHOCKING", "TRUTH", "SECRET", "MISTAKES", "WARNING", "REAL REASON"];
     const micro = ["WATCH NOW", "DON'T MISS", "FULL STORY", "NEW VIDEO", "IN 5 MINUTES"];
-    const badge = ["NEW", "2026", "TOP 5", "BREAKDOWN", "EXPOSED", "HOW TO"];
+    const badge = ["NEW", "2025", "TOP 5", "BREAKDOWN", "EXPOSED", "HOW TO"];
 
-    cm.badge = (cm.badge || pick(badge, seed ^ 0x5151));
-    cm.kicker = (cm.kicker || pick(hooks, seed ^ 0x6161));
-    cm.subhead = (cm.subhead || pick(micro, seed ^ 0x7171));
-
-    // Two-line headline for thumbnails (Canva-style)
-    cm.headline = ytBreak(head.toUpperCase());
-    cm.cta = cm.cta || "WATCH NOW";
+    cm.badge = pick(badge, seed ^ 0x5151);
+    cm.kicker = pick(hooks, seed ^ 0x6161);
+    cm.headline = (head).toUpperCase();
+    cm.subhead = pick(micro, seed ^ 0x7171);
+    cm.cta = "WATCH";
+    cm.body = "";
     cm.features = [];
   }
 
@@ -169,18 +175,6 @@
     // keep some natural casing but avoid huge strings
     const t = s.length > maxLen ? (s.slice(0, maxLen).replace(/\s+\S*$/,"")) : s;
     return t;
-  }
-
-
-  // YouTube helper: break a short hook into 1–2 lines for better thumbnail readability
-  function ytBreak(s){
-    const t = String(s||"").trim().replace(/\s+/g," ");
-    if(!t) return "";
-    const parts = t.split(" ").filter(Boolean);
-    if(parts.length <= 3) return t;
-    // Prefer a balanced split
-    const mid = Math.min(parts.length-1, Math.max(2, Math.ceil(parts.length/2)));
-    return parts.slice(0, mid).join(" ") + "\n" + parts.slice(mid).join(" ");
   }
 
 
@@ -421,20 +415,14 @@
     } else if(t==="promo"){
       pal.accent = pal.accent2 || pal.accent;
     }
-    
-    // YouTube Thumbnail: enforce high-contrast Option A palette (brand-neutral, prompt-driven layout still applies)
-    const cat = String(intent?.category || "").toLowerCase();
-    if(cat.includes("youtube")){
-      pal.bg = "#070a12";
-      pal.bg2 = "#101a33";
-      pal.ink = "#ffffff";
-      pal.muted = "rgba(255,255,255,0.78)";
-      pal.accent = "#f59e0b";   // strong amber
-      pal.accent2 = "#22c55e";  // pop green
-      pal.__glass = true;
-    }
-
-    return pal;
+    if(category && category.toLowerCase().includes("youtube")){
+  pal.bg = "#000000";
+  pal.bg2 = "#0f0f0f";
+  pal.ink = "#ffffff";
+  pal.accent = "#facc15";
+  pal.accent2 = "#ef4444";
+}
+return pal;
   }
 
   function pickCTA(intent, seed){
@@ -543,76 +531,45 @@
   return elements;
 }
 if(layout==="ytCanvaV1"){
-  // 16:9 YouTube Thumbnail — Option A (aggressive): big outlined headline + hero + badge + CTA.
-  // Designed to be usable immediately, even without a real face image (uses smartPhotoSrc placeholder).
+  // 16:9 YouTube Thumbnail — Canva-style: bold headline, hero media, badge + CTA, strong contrast.
   const pad = M;
+  const rightX = Math.round(w*0.56);
+  const rightW = Math.round(w*0.40);
+  const rightY = Math.round(h*0.08);
+  const rightH = Math.round(h*0.84);
 
-  // Layout geometry
-  const heroX = Math.round(w*0.54);
-  const heroY = Math.round(h*0.06);
-  const heroW = Math.round(w*0.42);
-  const heroH = Math.round(h*0.88);
+  // Back glow behind hero
+  add({ type:"shape", x:Math.round(w*0.48), y:Math.round(-h*0.10), w:Math.round(w*0.70), h:Math.round(h*1.20), r:140,
+        fill:`radial-gradient(circle at 30% 30%, ${pal.accent2}55, transparent 60%)`, opacity:1 });
 
-  const panelX = pad;
-  const panelY = pad;
-  const panelW = Math.round(w*0.50);
-  const panelH = Math.round(h*0.88);
+  // Glass panel for text (ensures readability over any bg)
+  add({ type:"card", x:pad, y:pad, w:Math.round(w*0.48), h:Math.round(h*0.74), r:46,
+        fill: glass ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.22)",
+        stroke:"rgba(255,255,255,0.18)" });
 
-  // Left text panel (glass for readability)
-  add({ type:"card", x:panelX, y:panelY, w:panelW, h:panelH, r:52,
-        fill:"rgba(0,0,0,0.30)", stroke:"rgba(255,255,255,0.18)", shadow:"0 18px 44px rgba(0,0,0,0.35)" });
-
-  // Accent stripe (diagonal-ish using a rotated rect)
-  add({ type:"shape", x:panelX+22, y:panelY+22, w:Math.round(panelW*0.70), h:Math.round(h*0.09), r:28,
-        fill:`linear-gradient(90deg, ${pal.accent}, ${pal.accent2})`, opacity:0.95 });
-
-  // Hero image (right) with frame + glow
-  add({ type:"shape", x:heroX-18, y:heroY+10, w:heroW+26, h:heroH+14, r:56,
-        fill:"rgba(0,0,0,0.28)", stroke:"rgba(255,255,255,0.14)", shadow:"0 18px 44px rgba(0,0,0,0.40)" });
-
-  add({ type:"photo", src: photoSrcA, x:heroX, y:heroY, w:heroW, h:heroH, r:54,
-        stroke:"rgba(255,255,255,0.22)", filter:"contrast(1.08) saturate(1.05)" });
-
-  // Subtle hero overlay to boost text/contrast near edges
-  add({ type:"shape", x:heroX, y:heroY, w:heroW, h:heroH, r:54,
-        fill:"linear-gradient(180deg, rgba(0,0,0,0.10), rgba(0,0,0,0.55))", opacity:1 });
+  // Hero media card (right)
+  add({ type:"shape", x:rightX-14, y:rightY+12, w:rightW+22, h:rightH+12, r:54, fill:"rgba(0,0,0,0.22)", opacity:1 });
+  add({ type:"photo", src: photoSrcA, x:rightX, y:rightY, w:rightW, h:rightH, r:52, stroke:"rgba(255,255,255,0.20)" });
 
   // Badge (top-left)
-  add({ type:"badge", x:panelX+26, y:panelY+30, w:Math.round(w*0.20), h:Math.round(h*0.10), r:999,
-        fill: pal.accent, text:(spec.badge||tKicker||"NEW").toUpperCase(),
-        color:"#071423", size:Math.round(h*0.040), weight:950, letterSpacing:0.6,
-        shadow:"0 10px 22px rgba(0,0,0,0.30)" });
+  add({ type:"badge", x:pad+22, y:pad+22, w:Math.round(w*0.22), h:Math.round(h*0.10), r:999,
+        fill: pal.accent2, text:(spec.badge||tKicker||"NEW").toUpperCase(), tcolor:"#0b1020", tsize:Math.round(h*0.040), tweight:900 });
 
-  // Kicker chip (small)
-  add({ type:"pill", x:panelX+26, y:panelY+Math.round(h*0.16), w:Math.round(w*0.28), h:Math.round(h*0.085), r:999,
-        fill:"rgba(255,255,255,0.10)", text:(spec.kicker||"TRUTH").toUpperCase(),
-        color:"rgba(255,255,255,0.92)", size:Math.round(h*0.036), weight:900 });
+  // Headline
+  add({ type:"text", x:pad+22, y:Math.round(h*0.20), text:tHeadline.toUpperCase(), size:Math.round(h*0.120), weight:950, color: pal.ink, letter:-1.2 });
 
-  // Headline (big, outlined)
-  const headline = (spec.headline || tHeadline || "WATCH THIS").toUpperCase();
-  add({ type:"text", x:panelX+32, y:panelY+Math.round(h*0.27), w:Math.round(panelW*0.92), h:Math.round(h*0.38),
-        text: headline,
-        size: clamp(Math.round(h*0.16), 78, 132), weight:950, letterSpacing:-1.2,
-        color:"#ffffff", stroke:"rgba(0,0,0,0.85)",
-        shadow:"0 10px 24px rgba(0,0,0,0.55)", lineHeight:0.96 });
+  // Subhead
+  add({ type:"text", x:pad+22, y:Math.round(h*0.44), text:tSub, size:Math.round(h*0.050), weight:700, color:"rgba(255,255,255,0.88)" });
 
-  // Supporting line (prompt-aware)
-  add({ type:"text", x:panelX+34, y:panelY+Math.round(h*0.64), w:Math.round(panelW*0.90), h:Math.round(h*0.12),
-        text: (tSub||"").trim(),
-        size: Math.round(h*0.050), weight:750, letterSpacing:0,
-        color:"rgba(255,255,255,0.82)", lineHeight:1.08 });
+  // CTA pill
+  add({ type:"pill", x:pad+22, y:Math.round(h*0.62), w:Math.round(w*0.28), h:Math.round(h*0.11), r:999,
+        fill: pal.accent, text:tCTA, tcolor:"#071423", tsize:Math.round(h*0.045), tweight:900 });
 
-  // CTA (bottom)
-  add({ type:"pill", x:panelX+30, y:panelY+panelH-Math.round(h*0.16), w:Math.round(w*0.30), h:Math.round(h*0.12), r:999,
-        fill: pal.accent2,
-        text: (tCTA||"WATCH NOW").toUpperCase(),
-        color:"#071423", size:Math.round(h*0.046), weight:950,
-        shadow:"0 14px 28px rgba(0,0,0,0.35)" });
+  // Small brand tag
+  add({ type:"chip", x:pad+26, y:Math.round(h*0.74), text:(brand||"Nexora").toUpperCase(), size:Math.round(h*0.034), color:"rgba(255,255,255,0.70)" });
 
-  // Brand tag (bottom-right of panel)
-  add({ type:"text", x:panelX+Math.round(panelW*0.60), y:panelY+panelH-Math.round(h*0.10),
-        text:(brand||"NEXORA").toUpperCase(),
-        size:Math.round(h*0.036), weight:850, letterSpacing:1.2, color:"rgba(255,255,255,0.55)" });
+  // Decorative dots
+  add({ type:"dots", x:Math.round(w*0.44), y:Math.round(h*0.10), w:Math.round(w*0.10), h:Math.round(h*0.12), fill:"rgba(255,255,255,0.18)" });
 
   return elements;
 }
@@ -1207,3 +1164,20 @@ function applyIntentScene(template, intent) {
     };
   }
 })();
+
+
+
+/* === YouTube AUTO helpers (spine-safe, deterministic) === */
+function ytAutoHero(prompt=""){
+  const p = prompt.toLowerCase();
+  const faceKeys = [" i ", " my ", " we ", "reaction", "react", "shocked", "experience", "review", "face", "human", "people", "tried"];
+  for(const k of faceKeys){ if(p.includes(k)) return "face"; }
+  return "product";
+}
+function ytHeadline(prompt=""){
+  const cleaned = prompt.replace(/^(why|how|what|the truth about)/i,"").trim();
+  const words = cleaned.toUpperCase().split(/\s+/).filter(Boolean);
+  if(words.length <= 2) return "BEST\n" + words.join(" ");
+  return "BEST\n" + words.slice(0,2).join(" ");
+}
+/* === end helpers === */
