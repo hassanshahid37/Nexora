@@ -135,21 +135,10 @@
 
   // YouTube Thumbnail: stronger hooky copy defaults (Phase 6A / YT-1)
   if(cat.includes("youtube") || cat.includes("yt")){
-    // Phase YT-L1: hard-coded Canva-level YouTube thumbnail layout (single layout, strong hierarchy).
-    // You can disable later by setting: window.__NEXORA_FORCE_YT_CANVA_V1__ = false
-    // Power phrase locked for now (later: per-template variation)
-    const POWER = "BEST";
-
-    // Headline builder: 2 lines max, 2–4 words, readable at small size
-    const wordsYT = ((cleaned||"DEV TOOLS").toUpperCase())
-      .replace(/[^A-Z0-9\s]/g," ")
-      .split(/\s+/).filter(Boolean);
-    const topic = (wordsYT.length >= 2) ? (wordsYT[0]+" "+wordsYT[1]) : (wordsYT[0]||"DEV");
-    cm.headline = POWER + "\n" + topic;
-    cm.badge = "NEW";
-    cm.subhead = (wordsYT.length > 2) ? (wordsYT.slice(2,4).join(" ")) : "YOU MUST USE";
-    cm.ctaText = "WATCH NOW";
-    cm.__heroMode = "product";
+    // IMPORTANT BUGFIX:
+    // Previous code returned `{...base}` here, but `base` is not defined inside contentModel.
+    // That crashed YouTube generation and forced the homepage to fall back to the old "blank" seed tiles.
+    // Content model should ONLY return the copy model (cm), not a layout object.
     const raw = (prompt||"").trim();
     const cleaned = raw
       .replace(/^[\s\-–—:]+/g,"")
@@ -281,15 +270,6 @@
       // corporate promos should be less loud
       intent.energy="medium";
     }
-    // YouTube thumbnails should NEVER be treated as "quote" (prevents "Thumbnail • quote" labels)
-    const catLC = (category||"").toLowerCase();
-    if(catLC.includes("youtube") || catLC.includes("yt")){
-      intent.type = "youtube";
-      intent.energy = "high";
-      intent.density = "visual";
-      intent.ctaMode = "generic";
-    }
-
     intent.category = category || "";
     return intent;
   }
@@ -328,28 +308,9 @@
   }
 
   if(cat.includes("youtube") || cat.includes("yt")){
-    const yt = {
-      generic:  { splitHero: 0.30, photoCard: 0.25, posterHero: 0.20, featureGrid: 0.15, badgePromo: 0.10 },
-      tutorial: { splitHero: 0.35, photoCard: 0.25, featureGrid: 0.20, posterHero: 0.10, badgePromo: 0.10 },
-      listicle: { featureGrid: 0.35, splitHero: 0.25, posterHero: 0.15, badgePromo: 0.15, photoCard: 0.10 },
-      promo:    { badgePromo: 0.40, splitHero: 0.25, posterHero: 0.20, photoCard: 0.15, featureGrid: 0.00 },
-      offer:    { badgePromo: 0.40, splitHero: 0.25, posterHero: 0.20, photoCard: 0.15, featureGrid: 0.00 },
-      quote:    { posterHero: 0.35, minimalQuote: 0.25, splitHero: 0.20, photoCard: 0.20, featureGrid: 0.00 }
-    };
-
-    const weights = yt[type] || yt.generic;
-    const layout = pickLayout(weights);
-
-    const nameByLayout = {
-      splitHero: "YouTube Face",
-      photoCard: "YouTube Photo",
-      featureGrid: "YouTube List",
-      badgePromo: "YouTube Badge",
-      posterHero: "YouTube Bold",
-      minimalQuote: "YouTube Quote"
-    };
-
-    return { ...base, name: nameByLayout[layout] || "YouTube", layout };
+    // Phase: single locked YouTube Thumbnail layout (requested): Canva-style baseline.
+    // This guarantees ONE visible, high-contrast thumbnail every time.
+    return { ...base, name: "YouTube Thumbnail", layout: "ytCanvaV1" };
   }
 
   // Non-YouTube: keep existing behavior (small type-based bias only).
@@ -778,7 +739,7 @@ if(layout==="posterHero"){
       }
     }catch(_){ spineDoc = null; }
 
-    const arch = archetypeWithIntent(seed, intent);
+    const arch = archetypeWithIntent(intent, seed);
 
     const titleByCategory = {
       "Instagram Post": "Instagram Post #"+(idx+1),
@@ -918,7 +879,8 @@ if(layout==="posterHero"){
         container.appendChild(d);
         continue;
       }
-      if(e.type==="shape"){
+      // "card" is used by newer layouts; render it like a shape.
+      if(e.type==="shape" || e.type==="card"){
         const d=mk("div");
         d.style.position="absolute";
         d.style.left=(e.x*scale)+"px"; d.style.top=(e.y*scale)+"px";
