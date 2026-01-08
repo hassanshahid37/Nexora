@@ -137,10 +137,19 @@
   if(cat.includes("youtube") || cat.includes("yt")){
     // Phase YT-L1: hard-coded Canva-level YouTube thumbnail layout (single layout, strong hierarchy).
     // You can disable later by setting: window.__NEXORA_FORCE_YT_CANVA_V1__ = false
-    const __forceYT = (typeof window !== "undefined") ? (window.__NEXORA_FORCE_YT_CANVA_V1__ !== false) : true;
-    if(__forceYT){
-      return { ...base, name: "YT Brutal V1", layout: "ytBrutalV1" };
-    }
+    // Power phrase locked for now (later: per-template variation)
+    const POWER = "BEST";
+
+    // Headline builder: 2 lines max, 2–4 words, readable at small size
+    const wordsYT = ((cleaned||"DEV TOOLS").toUpperCase())
+      .replace(/[^A-Z0-9\s]/g," ")
+      .split(/\s+/).filter(Boolean);
+    const topic = (wordsYT.length >= 2) ? (wordsYT[0]+" "+wordsYT[1]) : (wordsYT[0]||"DEV");
+    cm.headline = POWER + "\n" + topic;
+    cm.badge = "NEW";
+    cm.subhead = (wordsYT.length > 2) ? (wordsYT.slice(2,4).join(" ")) : "YOU MUST USE";
+    cm.ctaText = "WATCH NOW";
+    cm.__heroMode = "product";
     const raw = (prompt||"").trim();
     const cleaned = raw
       .replace(/^[\s\-–—:]+/g,"")
@@ -272,6 +281,15 @@
       // corporate promos should be less loud
       intent.energy="medium";
     }
+    // YouTube thumbnails should NEVER be treated as "quote" (prevents "Thumbnail • quote" labels)
+    const catLC = (category||"").toLowerCase();
+    if(catLC.includes("youtube") || catLC.includes("yt")){
+      intent.type = "youtube";
+      intent.energy = "high";
+      intent.density = "visual";
+      intent.ctaMode = "generic";
+    }
+
     intent.category = category || "";
     return intent;
   }
@@ -310,9 +328,28 @@
   }
 
   if(cat.includes("youtube") || cat.includes("yt")){
-    // Phase: single locked YouTube Thumbnail layout (requested): Canva-style baseline.
-    // This guarantees ONE visible, high-contrast thumbnail every time.
-    return { ...base, name: "YouTube Thumbnail", layout: "ytCanvaV1" };
+    const yt = {
+      generic:  { splitHero: 0.30, photoCard: 0.25, posterHero: 0.20, featureGrid: 0.15, badgePromo: 0.10 },
+      tutorial: { splitHero: 0.35, photoCard: 0.25, featureGrid: 0.20, posterHero: 0.10, badgePromo: 0.10 },
+      listicle: { featureGrid: 0.35, splitHero: 0.25, posterHero: 0.15, badgePromo: 0.15, photoCard: 0.10 },
+      promo:    { badgePromo: 0.40, splitHero: 0.25, posterHero: 0.20, photoCard: 0.15, featureGrid: 0.00 },
+      offer:    { badgePromo: 0.40, splitHero: 0.25, posterHero: 0.20, photoCard: 0.15, featureGrid: 0.00 },
+      quote:    { posterHero: 0.35, minimalQuote: 0.25, splitHero: 0.20, photoCard: 0.20, featureGrid: 0.00 }
+    };
+
+    const weights = yt[type] || yt.generic;
+    const layout = pickLayout(weights);
+
+    const nameByLayout = {
+      splitHero: "YouTube Face",
+      photoCard: "YouTube Photo",
+      featureGrid: "YouTube List",
+      badgePromo: "YouTube Badge",
+      posterHero: "YouTube Bold",
+      minimalQuote: "YouTube Quote"
+    };
+
+    return { ...base, name: nameByLayout[layout] || "YouTube", layout };
   }
 
   // Non-YouTube: keep existing behavior (small type-based bias only).
@@ -492,99 +529,37 @@
     const photoSrcB = smartPhotoSrc((s^hash("B"))>>>0, pal, (tHeadline.split(" ")[0]||photoLabel));
 
     if(layout==="ytBrutalV1"){
-      // AUTO YouTube Thumbnail v1 — single layout, prompt-aware (face vs product), Canva-level contrast
-      const p = (prompt||"").trim();
-      const pLow = p.toLowerCase();
+  // 16:9 YouTube Thumbnail — Brutal: no polite card, giant headline, dark slab, edge-breaking hero.
+  const pad = M;
+  const leftW = Math.round(w*0.44);
+  const heroX = Math.round(w*0.40);
+  const heroY = Math.round(-h*0.06);
+  const heroW = Math.round(w*0.70);
+  const heroH = Math.round(h*1.12);
 
-      const isProduct = /(review|unboxing|setup|vs\b|iphone|samsung|pixel|laptop|camera|headphone|mic|keyboard|mouse|gadget|tool|tools|app|apps|software|product|gear)/i.test(pLow);
-      const mode = isProduct ? "product" : "face";
+  add({ type:"shape", x:0, y:0, w:leftW, h:h, r:0, fill:"rgba(0,0,0,0.62)", opacity:1 });
+  add({ type:"photo", src: photoSrcA, x:heroX, y:heroY, w:heroW, h:heroH, r:0, stroke:"rgba(255,255,255,0.08)" });
 
-      // power headline
-      const tokens = p.replace(/\s+/g," ").trim();
-      const main = (tokens || "TECH TOOLS").toUpperCase();
-      const headline =
-        main.length <= 14 ? main :
-        (main.split(" ").slice(0,2).join(" ") || main).toUpperCase();
+  add({ type:"badge", x:pad, y:pad, w:Math.round(w*0.24), h:Math.round(h*0.11), r:999,
+        fill: pal.accent2, text:(spec.badge||tKicker||"NEW").toUpperCase(), tcolor:"#0b1020",
+        tsize:Math.round(h*0.050), tweight:900 });
 
-      const sub =
-        /(top|best|must|ultimate|secret)/i.test(pLow) ? "MUST WATCH" :
-        /(how|guide|learn|tutorial)/i.test(pLow) ? "FAST GUIDE" :
-        /(review|unboxing)/i.test(pLow) ? "HONEST REVIEW" :
-        "NEW";
+  add({ type:"text", x:pad, y:pad + Math.round(h*0.14), text:(spec.kicker||"WATCH NOW").toUpperCase(),
+        size:Math.round(h*0.060), weight:900, color:"rgba(255,255,255,0.95)", letter:1.0 });
 
-      const accent = /(beauty|skincare)/i.test(pLow) ? "#ff4fd8" :
-                     /(sports|fitness)/i.test(pLow) ? "#35ff6b" :
-                     /(gaming|game)/i.test(pLow) ? "#7c5cff" :
-                     /(finance|money|crypto)/i.test(pLow) ? "#ffd449" :
-                     "#ffb020";
+  const HSIZE = clamp(Math.round(h*0.24), 150, 240);
+  const HY = pad + Math.round(h*0.24);
+  const head = (tHeadline||"WATCH THIS").toUpperCase();
 
-      const bgA = "#0b0f19";
-      const bgB = "#111b2d";
+  add({ type:"text", x:pad+10, y:HY+10, text:head, size:HSIZE, weight:900, color:"rgba(0,0,0,0.92)", letter:-1.2 });
+  add({ type:"text", x:pad, y:HY, text:head, size:HSIZE, weight:900, color:"#ffffff", letter:-1.2 });
 
-      const safe = { x: 56, y: 44, w: 1280-112, h: 720-88 };
+  add({ type:"pill", x:pad, y:h - pad - Math.round(h*0.13), w:Math.round(w*0.30), h:Math.round(h*0.13), r:999,
+        fill: pal.accent, text:(spec.cta||"WATCH NOW").toUpperCase(), tcolor:"#0b1020",
+        tsize:Math.round(h*0.052), tweight:900 });
 
-      // Layout: left subject (face/product placeholder), right headline block, top badge bar, subtle border
-      base.bg = bgA;
-      base.elements = [
-        // background gradient approximation (2 shapes)
-        { type:"shape", x:0, y:0, w:1280, h:720, radius:0, fill:bgA },
-        { type:"shape", x:0, y:0, w:1280, h:720, radius:0, fill:bgB, opacity:0.55 },
-
-        // subtle inner border
-        { type:"shape", x:18, y:18, w:1244, h:684, radius:28, fill:"rgba(255,255,255,0.03)", stroke:"rgba(255,255,255,0.12)", strokeWidth:2 },
-
-        // subject frame (left)
-        { type:"shape", x:safe.x, y:safe.y+24, w:520, h: safe.h-48, radius:28, fill:"rgba(0,0,0,0.35)", stroke:"rgba(255,255,255,0.16)", strokeWidth:2 },
-
-        // subject placeholder
-        ...(mode==="face"
-          ? [
-              // big face circle placeholder
-              { type:"photo", x:safe.x+52, y:safe.y+70, w:416, h:416, radius:999, label:"FACE" },
-              // reaction ring
-              { type:"shape", x:safe.x+38, y:safe.y+56, w:444, h:444, radius:999, fill:"rgba(0,0,0,0)", stroke:accent, strokeWidth:10, opacity:0.9 },
-              // bottom name plate
-              { type:"pill", x:safe.x+96, y:safe.y+520, w:340, h:64, radius:999, fill:"rgba(255,255,255,0.10)", stroke:"rgba(255,255,255,0.18)", strokeWidth:2, text:"REACTION", color:"#ffffff", size:18, weight:900 }
-            ]
-          : [
-              // product card placeholder
-              { type:"photo", x:safe.x+62, y:safe.y+88, w:396, h:396, radius:28, label:"PRODUCT" },
-              // accent corner
-              { type:"shape", x:safe.x+62, y:safe.y+88, w:396, h:396, radius:28, fill:"rgba(0,0,0,0)", stroke:accent, strokeWidth:8, opacity:0.9 },
-              // specs pill
-              { type:"pill", x:safe.x+96, y:safe.y+520, w:340, h:64, radius:999, fill:"rgba(255,255,255,0.10)", stroke:"rgba(255,255,255,0.18)", strokeWidth:2, text:"NEW GEAR", color:"#ffffff", size:18, weight:900 }
-            ]
-        ),
-
-        // headline panel (right)
-        { type:"shape", x:620, y:safe.y+24, w: safe.w-564, h: safe.h-48, radius:28, fill:"rgba(0,0,0,0.28)", stroke:"rgba(255,255,255,0.14)", strokeWidth:2 },
-
-        // top badge bar
-        { type:"pill", x:650, y:safe.y+44, w:190, h:56, radius:999, fill:accent, text:sub, color:"#0b0f19", size:18, weight:950 },
-
-        // small secondary badge
-        { type:"pill", x:850, y:safe.y+44, w:160, h:56, radius:999, fill:"rgba(255,255,255,0.10)", stroke:"rgba(255,255,255,0.18)", strokeWidth:2, text:"2026", color:"#ffffff", size:18, weight:900 },
-
-        // headline text with stroke + shadow
-        { type:"text", x:650, y:safe.y+138, text:headline, size:96, weight:1000, color:"#ffffff",
-          stroke:"#000000", strokeWidth:14,
-          shadow:{ color:"rgba(0,0,0,0.65)", blur:16, dx:0, dy:10 }, align:"left" },
-
-        // supporting line
-        { type:"text", x:650, y:safe.y+264, text:"Click to see the best picks", size:34, weight:800, color:"rgba(255,255,255,0.85)", align:"left" },
-
-        // bottom CTA pill
-        { type:"pill", x:650, y:safe.y+540, w: 460, h:78, radius:999, fill:"rgba(255,255,255,0.12)", stroke:"rgba(255,255,255,0.22)", strokeWidth:2,
-          text:(mode==="face" ? "SHOCKING RESULTS" : "WORTH IT?"), color:"#ffffff", size:24, weight:950 },
-
-        // accent slash
-        { type:"shape", x:1120, y:safe.y+520, w: 120, h: 120, radius:24, fill:accent, opacity:0.95 },
-        { type:"text", x:1152, y:safe.y+548, text:"!", size:78, weight:1000, color:"#0b0f19", align:"left" },
-      ];
-
-      // metadata
-      base.subcategory = mode==="face" ? "youtube_thumbnail_face_auto" : "youtube_thumbnail_product_auto";
-    }
+  return elements;
+}
 if(layout==="ytCanvaV1"){
   // 16:9 YouTube Thumbnail — Canva-style: bold headline, hero media, badge + CTA, strong contrast.
   const pad = M;
@@ -803,7 +778,7 @@ if(layout==="posterHero"){
       }
     }catch(_){ spineDoc = null; }
 
-    const arch = archetypeWithIntent(intent, seed);
+    const arch = archetypeWithIntent(seed, intent);
 
     const titleByCategory = {
       "Instagram Post": "Instagram Post #"+(idx+1),
@@ -918,190 +893,126 @@ if(layout==="posterHero"){
     return out;
   }
 
-  function renderPreview(t, mount){
-  try{
-    if(!mount) return;
-    const canvasW = (t && t.canvas && (t.canvas.w||t.canvas.width)) || 1080;
-    const canvasH = (t && t.canvas && (t.canvas.h||t.canvas.height)) || 1080;
-    const targetW = Math.max(180, Math.min(340, mount.clientWidth||260));
-    const targetH = Math.round(targetW * (canvasH / canvasW));
-    mount.innerHTML = "";
-    const c = document.createElement("canvas");
-    c.width = targetW;
-    c.height = Math.max(120, targetH);
-    c.style.width = "100%";
-    c.style.height = "100%";
-    c.style.display = "block";
-    c.style.borderRadius = "10px";
-    mount.appendChild(c);
+  function renderPreview(template, container){
+    if(!container) return;
+    container.innerHTML = "";
+    const w=template?.canvas?.w||1080, h=template?.canvas?.h||1080;
+    const boxW=container.clientWidth||260;
+    const scale = boxW / w;
+    const boxH = Math.max(120, Math.round(h*scale));
+    container.style.height = boxH+"px";
+    container.style.position="relative";
+    container.style.overflow="hidden";
+    container.style.borderRadius="14px";
 
-    const ctx = c.getContext("2d");
-    const sx = c.width / canvasW;
-    const sy = c.height / canvasH;
-    const s = Math.min(sx, sy);
-
-    function rr(x,y,w,h,r){
-      r = Math.max(0, Math.min(r||0, Math.min(w,h)/2));
-      ctx.beginPath();
-      ctx.moveTo(x+r,y);
-      ctx.arcTo(x+w,y,x+w,y+h,r);
-      ctx.arcTo(x+w,y+h,x,y+h,r);
-      ctx.arcTo(x,y+h,x,y,r);
-      ctx.arcTo(x,y,x+w,y,r);
-      ctx.closePath();
-    }
-
-    // background
-    ctx.clearRect(0,0,c.width,c.height);
-    const bg = (t && (t.bg || t.background)) || "#101217";
-    ctx.fillStyle = typeof bg==="string" ? bg : (bg.fill||"#101217");
-    ctx.fillRect(0,0,c.width,c.height);
-
-    const els = (t && t.elements) ? t.elements : [];
-    for(const e0 of els){
-      if(!e0) continue;
-      // normalize a few legacy types/props
-      const e = Object.assign({}, e0);
-      if(e.type==="rect") e.type="shape";
-      if(e.type==="image") e.type="photo";
-      if(e.type==="text" && e.text==null && e.value!=null) e.text = e.value;
-      if(e.type==="shape" && e.radius==null && e.r!=null) e.radius = e.r;
-
-      const x = (e.x||0)*s;
-      const y = (e.y||0)*s;
-      const w = (e.w||e.width||0)*s;
-      const h = (e.h||e.height||0)*s;
-
+    const mk = (tag)=>document.createElement(tag);
+    const els = template?.elements || [];
+    for(const e of els){
       if(e.type==="bg"){
-        ctx.globalAlpha = (e.opacity==null?1:e.opacity);
-        ctx.fillStyle = e.fill || e.color || "#101217";
-        ctx.fillRect(0,0,c.width,c.height);
-        ctx.globalAlpha = 1;
+        const d=mk("div");
+        d.style.position="absolute"; d.style.left="0"; d.style.top="0";
+        d.style.width="100%"; d.style.height="100%";
+        d.style.background = e.style==="radial"
+          ? `radial-gradient(120% 90% at 20% 10%, ${e.fill2}, ${e.fill})`
+          : e.fill;
+        container.appendChild(d);
         continue;
       }
-
       if(e.type==="shape"){
-        ctx.save();
-        ctx.globalAlpha = (e.opacity==null?1:e.opacity);
-        const r = (e.radius||0)*s;
-        rr(x,y,w,h,r);
-        if(e.fill){
-          ctx.fillStyle = e.fill;
-          ctx.fill();
-        }
-        if(e.stroke){
-          ctx.lineWidth = (e.strokeWidth||2)*s;
-          ctx.strokeStyle = e.stroke;
-          ctx.stroke();
-        }
-        ctx.restore();
+        const d=mk("div");
+        d.style.position="absolute";
+        d.style.left=(e.x*scale)+"px"; d.style.top=(e.y*scale)+"px";
+        d.style.width=(e.w*scale)+"px"; d.style.height=(e.h*scale)+"px";
+        d.style.borderRadius=((e.r||0)*scale)+"px";
+        d.style.background=e.fill||"transparent";
+        if(e.stroke) d.style.border=`${Math.max(1,Math.round(1.2*scale))}px solid ${e.stroke}`;
+        if(e.opacity!=null) d.style.opacity=String(e.opacity);
+        container.appendChild(d);
         continue;
       }
-
-      if(e.type==="line"){
-        ctx.save();
-        ctx.globalAlpha = (e.opacity==null?1:e.opacity);
-        ctx.strokeStyle = e.stroke || "#ffffff";
-        ctx.lineWidth = (e.strokeWidth||3)*s;
-        ctx.beginPath();
-        ctx.moveTo((e.x1||0)*s,(e.y1||0)*s);
-        ctx.lineTo((e.x2||0)*s,(e.y2||0)*s);
-        ctx.stroke();
-        ctx.restore();
-        continue;
-      }
-
       if(e.type==="photo"){
-        // We intentionally don't load remote images in preview (CORS). Draw a premium placeholder.
-        ctx.save();
-        ctx.globalAlpha = (e.opacity==null?1:e.opacity);
-        const r = (e.radius||18)*s;
-        rr(x,y,w,h,r);
-        ctx.clip();
-        // gradient placeholder
-        const g = ctx.createLinearGradient(x,y,x+w,y+h);
-        g.addColorStop(0, "#2a2f3a");
-        g.addColorStop(1, "#141822");
-        ctx.fillStyle = g;
-        ctx.fillRect(x,y,w,h);
-        // highlight border
-        ctx.globalAlpha = 1;
-        ctx.strokeStyle = "rgba(255,255,255,0.18)";
-        ctx.lineWidth = 2*s;
-        rr(x,y,w,h,r);
-        ctx.stroke();
-
-        // label
-        ctx.fillStyle = "rgba(255,255,255,0.65)";
-        ctx.font = `${Math.max(12, Math.round(16*s))}px system-ui, -apple-system, Segoe UI, Roboto`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(e.label || "IMAGE", x+w/2, y+h/2);
-        ctx.restore();
+        const d=mk("div");
+        d.style.position="absolute";
+        d.style.left=(e.x*scale)+"px"; d.style.top=(e.y*scale)+"px";
+        d.style.width=(e.w*scale)+"px"; d.style.height=(e.h*scale)+"px";
+        d.style.borderRadius=((e.r||0)*scale)+"px";
+        d.style.background = e.src ? `url(${e.src})` : "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02))";
+        if(e.src){ d.style.backgroundSize="cover"; d.style.backgroundPosition="center"; }
+        d.style.border=`${Math.max(1,Math.round(1.2*scale))}px dashed ${e.stroke||"rgba(255,255,255,0.18)"}`;
+        container.appendChild(d);
         continue;
       }
-
-      if(e.type==="badge" || e.type==="pill"){
-        ctx.save();
-        ctx.globalAlpha = (e.opacity==null?1:e.opacity);
-        const r = (e.radius!=null?e.radius:999)*s;
-        rr(x,y,w,h,r);
-        ctx.fillStyle = e.fill || "#ffcc00";
-        ctx.fill();
-        if(e.stroke){
-          ctx.lineWidth = (e.strokeWidth||2)*s;
-          ctx.strokeStyle = e.stroke;
-          ctx.stroke();
-        }
-        // text
-        const txt = (e.text||"").toString();
-        ctx.fillStyle = e.color || "#0b0d12";
-        const fs = (e.size||Math.max(14, Math.round(18*s)))*s;
-        const weight = e.weight || 800;
-        ctx.font = `${weight} ${Math.max(10, Math.round(fs))}px system-ui, -apple-system, Segoe UI, Roboto`;
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(txt, x+w/2, y+h/2);
-        ctx.restore();
-        continue;
-      }
-
       if(e.type==="text"){
-        const txt = (e.text||"").toString();
-        if(!txt) continue;
-        ctx.save();
-        ctx.globalAlpha = (e.opacity==null?1:e.opacity);
-        const fs = (e.size||48)*s;
-        const weight = e.weight || 900;
-        const align = e.align || "left";
-        ctx.textAlign = align;
-        ctx.textBaseline = "top";
-        if(e.shadow){
-          ctx.shadowColor = e.shadow.color || "rgba(0,0,0,0.6)";
-          ctx.shadowBlur = (e.shadow.blur||10)*s;
-          ctx.shadowOffsetX = (e.shadow.dx||0)*s;
-          ctx.shadowOffsetY = (e.shadow.dy||6)*s;
+        const d=mk("div");
+        d.style.position="absolute";
+        d.style.left=(e.x*scale)+"px"; d.style.top=(e.y*scale)+"px";
+        d.style.right="8px";
+        d.style.color=e.color||"#fff";
+        d.style.fontSize=Math.max(10, Math.round((e.size||28)*scale))+"px";
+        d.style.fontWeight=e.weight||700;
+        d.style.lineHeight="1.05";
+        d.style.letterSpacing=(e.letter!=null? (e.letter*scale)+"px":"0px");
+        d.style.whiteSpace="pre-wrap";
+        if(e.italic) d.style.fontStyle="italic";
+        d.textContent=e.text||"";
+        container.appendChild(d);
+        continue;
+      }
+      if(e.type==="pill" || e.type==="badge"){
+        const d=mk("div");
+        d.style.position="absolute";
+        d.style.left=(e.x*scale)+"px"; d.style.top=(e.y*scale)+"px";
+        d.style.width=(e.w*scale)+"px"; d.style.height=(e.h*scale)+"px";
+        d.style.borderRadius=((e.r||999)*scale)+"px";
+        d.style.background=e.fill||"rgba(255,255,255,0.1)";
+        if(e.stroke) d.style.border=`${Math.max(1,Math.round(1.2*scale))}px solid ${e.stroke}`;
+        d.style.display="flex";
+        d.style.alignItems="center";
+        d.style.justifyContent="center";
+        d.style.color=e.tcolor||"#0b1020";
+        d.style.fontWeight=e.tweight||900;
+        d.style.fontSize=Math.max(10, Math.round((e.tsize||22)*scale))+"px";
+        d.textContent=e.text||"";
+        container.appendChild(d);
+        continue;
+      }
+      if(e.type==="chip"){
+        const d=mk("div");
+        d.style.position="absolute";
+        d.style.left=(e.x*scale)+"px"; d.style.top=(e.y*scale)+"px";
+        d.style.color=e.color||"rgba(255,255,255,0.75)";
+        d.style.fontSize=Math.max(10, Math.round((e.size||18)*scale))+"px";
+        d.style.fontWeight="700";
+        d.textContent=e.text||"";
+        container.appendChild(d);
+        continue;
+      }
+      if(e.type==="dots" || e.type==="dot"){
+        const d=mk("div");
+        d.style.position="absolute";
+        d.style.left=(e.x*scale)+"px"; d.style.top=(e.y*scale)+"px";
+        if(e.type==="dot"){
+          d.style.width=(e.r*2*scale)+"px"; d.style.height=(e.r*2*scale)+"px";
+          d.style.borderRadius="999px";
+          d.style.background=e.fill||"rgba(255,255,255,0.2)";
+        } else {
+          d.style.width=(e.w*scale)+"px"; d.style.height=(e.h*scale)+"px";
+          d.style.backgroundImage="radial-gradient(currentColor 1px, transparent 1px)";
+          d.style.backgroundSize=`${Math.max(6,Math.round(10*scale))}px ${Math.max(6,Math.round(10*scale))}px`;
+          d.style.color=e.color||"rgba(255,255,255,0.16)";
         }
-        ctx.font = `${weight} ${Math.max(10, Math.round(fs))}px system-ui, -apple-system, Segoe UI, Roboto`;
-        // simple stroke outline for punch
-        if(e.stroke){
-          ctx.lineWidth = (e.strokeWidth||10)*s;
-          ctx.strokeStyle = e.stroke;
-          ctx.strokeText(txt, x, y);
-        }
-        ctx.fillStyle = e.color || "#ffffff";
-        ctx.fillText(txt, x, y);
-        ctx.restore();
+        container.appendChild(d);
         continue;
       }
     }
-  }catch(err){
-    // ultra-safe fallback
-    try{
-      if(mount) mount.textContent = "Preview unavailable";
-    }catch(_){}
+
+    const g=mk("div");
+    g.style.position="absolute"; g.style.left="-20%"; g.style.top="-30%";
+    g.style.width="60%"; g.style.height="160%";
+    g.style.transform="rotate(20deg)";
+    g.style.background="linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)";
+    container.appendChild(g);
   }
-}
 
   window.NexoraDesign = { CATEGORIES, generateTemplates, renderPreview };
 })();
