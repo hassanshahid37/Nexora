@@ -681,9 +681,7 @@ function blocksToElements(blocks, canvas, pal, seed, labelText) {
         lineHeight: Number(b?.style?.lineHeight ?? 1.05),
         letterSpacing: Number(b?.style?.letterSpacing ?? 0),
         opacity: Number(b?.style?.opacity ?? 1),
-        shadow: b?.style?.shadow || null
-      
-        })
+	        shadow: b?.style?.shadow || null,
       });
       continue;
     }
