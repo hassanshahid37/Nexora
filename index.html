@@ -595,7 +595,7 @@
     d.style.textShadow = `0 0 2px ${e.stroke}, 0 0 6px ${e.stroke}`;
   }
 
-  d.textContent = String(e.text || "");
+  d.textContent = String(e.text ?? e.title ?? e.subtitle ?? "");
   return d;
 };
 
@@ -619,7 +619,7 @@
       if(e.shadow){
         d.style.boxShadow = e.shadow;
       }
-      d.textContent = String(e.text || "");
+      d.textContent = String(e.text ?? e.title ?? e.subtitle ?? "");
       return d;
     };
 
@@ -637,7 +637,7 @@
       if(e.shadow){
         d.style.boxShadow = e.shadow;
       }
-      d.textContent = String(e.text || "");
+      d.textContent = String(e.text ?? e.title ?? e.subtitle ?? "");
       return d;
     };
 
