@@ -2258,4 +2258,3 @@ function estimateLines(text, widthPx, fontSizePx, letterSpacing) {
     selectArchetype,
     nextArchetype
 };
-})();
