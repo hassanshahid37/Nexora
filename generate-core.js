@@ -2251,7 +2251,7 @@ function estimateLines(text, widthPx, fontSizePx, letterSpacing) {
 }
 
 
-  return {
+  const core = {
     ARCHETYPE_FACTORY_FNS,
     buildAllArchetypes,
     resolveCanvas,
@@ -2259,6 +2259,6 @@ function estimateLines(text, widthPx, fontSizePx, letterSpacing) {
     nextArchetype
   };
 	
- export fucntion generateTemplates(pay)
-   return buildALLArchetypes(payload);
+ export fucntion generateTemplates(payload)
+   return core.buildALLArchetypes(payload);
 }
