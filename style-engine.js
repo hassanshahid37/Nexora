@@ -1,8 +1,7 @@
-// style-engine.js
-// Nexora Style Execution Layer (v1)
-// Decides HOW things should look (no rendering here)
+// style-engine.js (CommonJS)
+// Decides HOW elements should look
 
-export function applyStyle({ category, archetype, elementType }) {
+function applyStyle({ category, archetype, elementType }) {
   const style = {
     fontSize: 48,
     fontWeight: 600,
@@ -21,13 +20,11 @@ export function applyStyle({ category, archetype, elementType }) {
       style.casing = "uppercase";
       style.stroke = { width: 6, color: "#000000" };
     }
-
     if (archetype === "EDUCATIONAL_EXPLAINER") {
       style.fontSize = 72;
       style.fontWeight = 700;
       style.casing = "capitalize";
     }
-
     if (archetype === "NEWS_URGENT") {
       style.fontSize = 88;
       style.fontWeight = 900;
@@ -35,6 +32,7 @@ export function applyStyle({ category, archetype, elementType }) {
       style.stroke = { width: 4, color: "#ff0000" };
     }
   }
-
   return style;
 }
+
+module.exports = { applyStyle };
