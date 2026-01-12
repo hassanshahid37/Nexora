@@ -57,8 +57,33 @@ async function handler(req, res) {
     let divergenceIndex = Number(divergenceIndexRaw);
     if (!Number.isFinite(divergenceIndex)) divergenceIndex = -1;
 
-    const templates = makeTemplates({ prompt, category, style, count, divergenceIndex });
-    return res.end(JSON.stringify({ success: true, templates }));
+    
+    const withContracts = templates.map(t => {
+      const size = CATEGORIES[category] || { w: 1080, h: 1080 };
+      const content = {
+        headline: (t.elements||[]).find(e=>e.type==="text")?.text || "",
+        subhead: (t.elements||[]).filter(e=>e.type==="text")[1]?.text || "",
+        cta: (t.elements||[]).find(e=>e.type==="pill"||e.type==="chip")?.text || ""
+      };
+      const layers = (t.elements||[]).map(e => ({
+        role:
+          e.type==="bg" ? "background" :
+          e.type==="photo" ? "image" :
+          e.type==="pill" || e.type==="chip" ? "cta" :
+          "headline"
+      }));
+      return Object.assign({}, t, {
+        contract: {
+          version: 1,
+          category,
+          canvas: { width: size.w, height: size.h },
+          layers
+        },
+        content
+      });
+    });
+    return res.end(JSON.stringify({ success: true, templates: withContracts }));
+    
   } catch (err) {
     // Hard-safe: NEVER return 500
     try {
