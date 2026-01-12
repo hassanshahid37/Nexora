@@ -2251,28 +2251,14 @@ function estimateLines(text, widthPx, fontSizePx, letterSpacing) {
   return Math.ceil(text.length / charsPerLine);
 }
 
-
-  const core = {
+  return {
     ARCHETYPE_FACTORY_FNS,
     buildAllArchetypes,
     resolveCanvas,
     selectArchetype,
-    nextArchetype
+    nextArchetype,
   };
-	
- export fucntion generateTemplates(payload)
-   return core.buildALLArchetypes(payload);
-}
-
-// ---- Archetype readiness guard (single source of truth) ----
-const __NEXORA_ARCHETYPES_READY__ =
-  typeof NexoraArchetypes === "object" &&
-  NexoraArchetypes &&
-  typeof NexoraArchetypes.buildAllArchetypes === "function" &&
-  typeof NexoraArchetypes.selectArchetype === "function" &&
-  typeof NexoraArchetypes.nextArchetype === "function" &&
-  typeof NexoraArchetypes.resolveCanvas === "function";
-
+})();
 
 // ---------------------------------------------------------------------------
 // Public API for reuse by wrappers (e.g., /api/generate.js thin handler) 
