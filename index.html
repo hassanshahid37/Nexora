@@ -390,8 +390,7 @@
   const $ = (s)=>document.querySelector(s);
   const grid = $("#previewGrid");
   const statusEl = $("#status");
-
-  // Preview authority lock: once AI templates are committed, legacy/seed renders must never run again
+  // Preview authority lock (global)
   window.__NEXORA_AI_COMMITTED__ = window.__NEXORA_AI_COMMITTED__ || false;
 
   function setTheme(next){
@@ -792,7 +791,6 @@
 
 
   function seedTemplates(n){
-    // Block any legacy/seed renders after AI templates are committed
     if (window.__NEXORA_AI_COMMITTED__) return;
 grid.innerHTML = "";
     __lastTemplates = [];
@@ -819,23 +817,13 @@ if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "func
 
       const thumb = div.querySelector(".thumb");
       if(thumb){
-        // Preview Renderer v1 (contract-based) is the single authority when a contract exists
-let __nrDidRender = false;
-try{
-  if(t && t.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
-    thumb.innerHTML = "";
-    __nrDidRender = (window.NexoraPreview.renderTo(thumb, { contract: t.contract, content: t.content || t.doc?.content || {}, meta: { style: t.style || null, category: t.category || category || null, palette: t.contract?.palette || null } }) === true);
-  }
-}catch(_){}
-if(!__nrDidRender){
-// Prefer design.js renderer for non-YouTube. For YouTube, use drawThumb so backend archetype styles can show.
+        // Prefer design.js renderer for non-YouTube. For YouTube, use drawThumb so backend archetype styles can show.
 const isYT = String(category).toLowerCase().includes("youtube");
 if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
   window.NexoraDesign.renderPreview(t, thumb);
 }else{
   // Use our renderer (supports element.style bridge via mkText)
   drawThumb(thumb, toEditorTemplate(t), (t.bg || null));
-}
 }
       }
 
@@ -1070,9 +1058,6 @@ function renderTemplatesFromList(list){
     grid.innerHTML = "";
     __lastTemplates = [];
 
-    // If restored/loaded templates include contracts, treat as committed AI templates
-    try{ if(Array.isArray(list) && list.some(t=>t && t.contract)) window.__NEXORA_AI_COMMITTED__ = true; }catch(_){ }
-
     (list||[]).forEach((t, i)=>{
       if(!t) return;
 
@@ -1090,16 +1075,7 @@ function renderTemplatesFromList(list){
 
       const thumb = div.querySelector(".thumb");
       if(thumb){
-    // Preview Renderer v1 (contract-based) is the single authority when a contract exists
-let __nrDidRender = false;
-try{
-  if(t && t.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
-    thumb.innerHTML = "";
-    __nrDidRender = (window.NexoraPreview.renderTo(thumb, { contract: t.contract, content: t.content || t.doc?.content || {}, meta: { style: t.style || null, category: t.category || null, palette: t.contract?.palette || null } }) === true);
-  }
-}catch(_){}
-if(!__nrDidRender){
-const cat = String(t.category || document.getElementById("cat")?.value || "");
+    const cat = String(t.category || document.getElementById("cat")?.value || "");
     const isYT = cat.toLowerCase().includes("youtube");
     const hasStyle = Array.isArray(t.elements) && t.elements.some(e => e && typeof e === "object" && e.style);
     if(isYT || hasStyle){
@@ -1225,9 +1201,6 @@ currentStyle = "Dark Premium";
     };
 
     try {
-      // New generation cycle: allow seed renders before AI results, then lock after commit
-      window.__NEXORA_AI_COMMITTED__ = false;
-
       // Instant client-side templates (design.js) — never blocks UI.
       // Use the requested count for ALL categories (YouTube included)
       seedTemplates(payload.count);
@@ -1245,10 +1218,8 @@ currentStyle = "Dark Premium";
       }).then(data => {
     if(!data || !Array.isArray(data.templates) || !data.templates.length) return;
 
-    // Commit AI templates: after this point, block ALL legacy/seed/fallback re-renders
-    window.__NEXORA_AI_COMMITTED__ = true;
-
     // Replace seeded templates with REAL backend templates (archetypes + style-engine).
+    window.__NEXORA_AI_COMMITTED__ = true;
     __lastTemplates = data.templates;
 
     // Re-render the grid using the same UI (template boxes remain identical).
@@ -1385,5 +1356,4 @@ function renderPreview(canvas, t){
 </script>
 
 </body>
-</html>}
-
+</html>
