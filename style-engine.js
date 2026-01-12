@@ -1,3 +1,4 @@
+
 // style-engine.js (CommonJS)
 // Decides HOW elements should look
 
@@ -35,4 +36,10 @@ function applyStyle({ category, archetype, elementType }) {
   return style;
 }
 
-module.exports = { applyStyle };
+// UMD-ish export: Node (server) + Browser (client)
+try {
+  if (typeof module !== "undefined" && module.exports) module.exports = { applyStyle };
+} catch (_) {}
+try {
+  if (typeof window !== "undefined") window.applyStyle = window.applyStyle || applyStyle;
+} catch (_) {}
