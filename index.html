@@ -1051,6 +1051,7 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
   }
 
   
+
 function renderTemplatesFromList(list){
     const grid = document.getElementById("previewGrid");
     if(!grid) return;
@@ -1061,7 +1062,6 @@ function renderTemplatesFromList(list){
     (list||[]).forEach((t, i)=>{
       if(!t) return;
 
-      // Keep RAW templates; convert only when opening the editor.
       __lastTemplates.push(t);
 
       const div = document.createElement("div");
@@ -1074,31 +1074,42 @@ function renderTemplatesFromList(list){
       div.innerHTML = `<div class="thumb" aria-hidden="true"></div><b>${escapeHtml(title)}</b><span>${escapeHtml(desc)}</span>`;
 
       const thumb = div.querySelector(".thumb");
+
       if(thumb){
-    const cat = String(t.category || document.getElementById("cat")?.value || "");
-    const isYT = cat.toLowerCase().includes("youtube");
-    const hasStyle = Array.isArray(t.elements) && t.elements.some(e => e && typeof e === "object" && e.style);
-    if(isYT || hasStyle){
-      // Use our renderer so archetype/style-engine output is visible in previews.
-      const tpl = toEditorTemplate(t);
-      drawThumb(thumb, tpl, tpl.bg);
-    }else if(window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
-      window.NexoraDesign.renderPreview(t, thumb);
-    }else{
-      const tpl = toEditorTemplate(t);
-      drawThumb(thumb, tpl, tpl.bg);
-    }
-  }
+        let rendered = false;
+
+        // ✅ AI templates: render via contract-based Preview Renderer v1
+        if(t.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
+          rendered = window.NexoraPreview.renderTo(thumb, {
+            contract: t.contract,
+            content: t.content || {},
+            meta: {
+              category: t.category,
+              style: t.style
+            }
+          });
+        }
+
+        // 🔁 Safe fallback (never blank)
+        if(!rendered){
+          const tpl = toEditorTemplate(t);
+          if(window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
+            window.NexoraDesign.renderPreview(t, thumb);
+          }else{
+            drawThumb(thumb, tpl, tpl.bg);
+          }
+        }
+      }
 
       div.addEventListener("click", ()=>openEditorWith(t));
       div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
       grid.appendChild(div);
     });
 
-    // expose for debugging
     window.NEXORA = window.NEXORA || {};
     window.NEXORA.lastTemplates = __lastTemplates;
-  }
+}
+
 
   function tryRestoreHome(
 ){
