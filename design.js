@@ -1,11 +1,14 @@
-
-
+// === Nexora Preview Authority Flag ===
+// Once AI templates are committed, no legacy/seed re-render is allowed.
+let __NEXORA_AI_COMMITTED__ = false;
 
 /* Nexora – design.js
    Visual template generator (client-side fallback + preview layouts)
    No external deps. Exposes window.NexoraDesign.
 */
 (function(){
+  // Prevent double / late renders after AI preview
+
   const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
   const pick=(arr,seed)=>arr[(seed%arr.length+arr.length)%arr.length];
   const hash=(s)=>{
@@ -855,9 +858,13 @@ if(layout==="posterHero"){
   }
 
   function renderPreview(template, container) {
+  // HARD STOP: no redraw after AI render
   if (!container) return;
 
-  // === Preview Renderer v1 HARD GUARD ===
+  // HARD STOP: no preview redraws after AI render
+  if (!container) return;
+
+// === Preview Renderer v1 HARD GUARD ===
   // If contract exists, legacy preview MUST NOT run
   try {
     if (template && template.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === 'function') {
@@ -992,7 +999,6 @@ if(layout==="posterHero"){
     container.appendChild(g);
   }
 
-  window.NexoraDesign = { CATEGORIES, generateTemplates, renderPreview };
 })();
 
 
@@ -1107,6 +1113,8 @@ function applyIntentScene(template, intent) {
 
 // Wrap generateOne to ensure scene wiring (explicit, no silent fallback)
 (function(){
+  // Prevent double / late renders after AI preview
+
   if (typeof generateOne === "function" && !generateOne.__intentWrapped) {
     const _gen = generateOne;
     // Preserve original signature: generateOne(opts, idx)
@@ -1127,6 +1135,8 @@ function applyIntentScene(template, intent) {
 /* ===== Phase AD-2 & AD-3 : Depth, Contrast, Accent Dominance ===== */
 
 (function(){
+  // Prevent double / late renders after AI preview
+
   if(window.__NEXORA_AD23__) return;
   window.__NEXORA_AD23__ = true;
 
@@ -1172,3 +1182,4 @@ function applyIntentScene(template, intent) {
     };
   }
 })();
+
