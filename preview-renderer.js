@@ -107,54 +107,64 @@
     return wrap;
   }
 
+  
+  function normalizeCanvas(contract){
+    try{
+      if(window.NexoraSpine && typeof window.NexoraSpine.normalizeCanvas === "function"){
+        return window.NexoraSpine.normalizeCanvas(contract?.canvas) || null;
+      }
+    }catch(_){}
+    const w = Number(contract?.canvas?.width ?? contract?.canvas?.w);
+    const h = Number(contract?.canvas?.height ?? contract?.canvas?.h);
+    if(!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0) return null;
+    return { width: Math.round(w), height: Math.round(h) };
+  }
+
+  function renderInto(root, payload){
+    try{
+      const contract = payload?.contract;
+      const content  = payload?.content || {};
+      const metaIn   = payload?.meta || {};
+
+      if (!root) return false;
+      if (!validate(contract)) return false;
+
+      clear(root);
+
+      const cv = normalizeCanvas(contract);
+      if (cv?.width && cv?.height) {
+        root.style.aspectRatio = cv.width + " / " + cv.height;
+      }
+
+      const meta = {
+        category: metaIn.category || contract.category,
+        style: metaIn.style || contract.style || contract.archetype || null,
+        palette: metaIn.palette || contract.palette || {}
+      };
+
+      const layers = Array.isArray(contract.layers) ? contract.layers : [];
+      layers.forEach(layer => {
+        const node = renderLayer(layer, content, meta);
+        if (node) root.appendChild(node);
+      });
+
+      return true;
+    }catch(_){
+      return false;
+    }
+  }
+
   window.NexoraPreview = {
-    // Render into #canvas (default)
-    render({ contract, content }) {
+    // Render into the homepage editor canvas (back-compat)
+    render(payload) {
       const root = document.getElementById("canvas");
-      if (!root) return;
-      return this.renderTo(root, { contract, content });
+      return renderInto(root, payload);
     },
 
-    // Render into any container element (used for grid tiles)
-    renderTo(root, { contract, content }) {
-      try {
-        if (!root) return;
-
-        // Allow passing a full template object too: {contract, doc, ...}
-        const tpl = (contract && contract.contract && !content) ? contract : null;
-        if (tpl) {
-          content = tpl?.doc?.content || tpl?.content || content;
-          contract = tpl?.contract || contract;
-        }
-
-        if (!validate(contract)) return;
-
-        clear(root);
-
-        const { width, height } = contract.canvas || {};
-        if (width && height) {
-          // keep layout stable in different containers
-          root.style.position = root.style.position || "relative";
-          root.style.aspectRatio = width + " / " + height;
-        }
-
-        const meta = {
-          category: contract.category,
-          style: contract.style,
-          palette: contract.palette || {}
-        };
-
-        // Ensure background is first and actually fills container
-        const layers = Array.isArray(contract.layers) ? contract.layers.slice() : [];
-        layers.sort((a, b) => (a.role === "background" ? -1 : 0) - (b.role === "background" ? -1 : 0));
-
-        layers.forEach(layer => {
-          const node = renderLayer(layer, content || {}, meta);
-          if (node) root.appendChild(node);
-        });
-      } catch {
-        // silent fail
-      }
+    // Render into any container (thumb tiles)
+    renderTo(target, payload) {
+      return renderInto(target, payload);
     }
   };
+
 })();
