@@ -1,26 +1,25 @@
-
-
 /* template-contract.js — Nexora TemplateContract v1 (System Spine)
    Purpose: Shared contract builder + validator for templates.
    - Works in plain <script> environments (no bundler).
    - Does NOT touch UI.
    - Safe: never throws; returns null/false on invalid.
 
-   Exposes: window.NexoraSpine
-     - createContract({ templateId, category, canvas:{w,h}|{width,height}, palette, layers })
+   Exposes (MERGE-SAFE): window.NexoraSpine.*
+     - createContract({ templateId, category, canvas:{w,h}|{width,height}, palette, layers, layoutFamily, layoutVariant })
      - validateContract(contract)
-     - normalizeCanvas(obj) -> { width, height }
+     - normalizeCanvas(obj) -> { width, height } | null
      - stableId(prefix)
+     - VERSION
+     - ROLE_SET (Set)
 */
 
 (function () {
-  window.NexoraSpine = window.NexoraSpine || {};
+  const root = window.NexoraSpine = window.NexoraSpine || {};
 
   const VERSION = "v1";
   const ROLE_SET = new Set(["background", "headline", "subhead", "image", "cta", "badge"]);
 
-  // Layout Families v1 (Instagram) — explicit structural archetypes.
-  // Non-breaking: optional fields only; validator ignores unknown keys.
+  // Layout Families v1 (Instagram) — optional metadata only (validator ignores unknown keys)
   const LAYOUT_FAMILIES = {
     instagram: [
       { family: "text-first", variants: ["quote", "announcement"] },
@@ -54,9 +53,12 @@
 
   function stableId(prefix) {
     try {
-      return (globalThis.crypto?.randomUUID?.() || (String(prefix || "id") + "_" + Math.random().toString(16).slice(2) + Date.now().toString(16)));
+      return (
+        globalThis.crypto?.randomUUID?.() ||
+        (String(prefix || "id") + "_" + Math.random().toString(16).slice(2) + Date.now().toString(16))
+      );
     } catch {
-      return (String(prefix || "id") + "_" + Math.random().toString(16).slice(2) + Date.now().toString(16));
+      return String(prefix || "id") + "_" + Math.random().toString(16).slice(2) + Date.now().toString(16);
     }
   }
 
@@ -73,8 +75,10 @@
       if (contract.version !== VERSION) return false;
       if (!contract.templateId) return false;
       if (!contract.category || typeof contract.category !== "string") return false;
+
       const cv = normalizeCanvas(contract.canvas);
       if (!cv) return false;
+
       if (!Array.isArray(contract.layers) || contract.layers.length < 1) return false;
       for (const l of contract.layers) {
         if (!l || typeof l !== "object") return false;
@@ -82,6 +86,7 @@
         if (!ROLE_SET.has(String(l.role || ""))) return false;
         if (typeof l.locked !== "boolean") return false;
       }
+
       if (!Array.isArray(contract.exportProfiles)) return false;
       return true;
     } catch {
@@ -93,16 +98,20 @@
     try {
       const cv = normalizeCanvas(canvas);
       if (!cv) return null;
+
       const tid = String(templateId || stableId("tpl"));
       const cat = String(category || "Unknown");
 
       const lc = normalizeLayoutChoice(cat, layoutFamily, layoutVariant);
 
-      const safePalette = palette && typeof palette === "object" ? {
-        bg: palette.bg ?? palette.bg2 ?? null,
-        accent: palette.accent ?? palette.accent2 ?? null,
-        ink: palette.ink ?? null
-      } : null;
+      const safePalette =
+        palette && typeof palette === "object"
+          ? {
+              bg: palette.bg ?? palette.bg2 ?? null,
+              accent: palette.accent ?? palette.accent2 ?? null,
+              ink: palette.ink ?? null
+            }
+          : null;
 
       const ls = Array.isArray(layers) ? layers : [];
       const normalizedLayers = ls
@@ -134,13 +143,9 @@
     }
   }
 
-  window.NexoraSpine = {
-    VERSION,
-    ROLE_SET,
-    LAYOUT_FAMILIES,
-    stableId,
-    normalizeCanvas,
-    validateContract,
-    createContract
-  };
+  // MERGE-SAFE export (never overwrites existing spine keys)
+  const api = { VERSION, ROLE_SET, stableId, normalizeCanvas, validateContract, createContract };
+  Object.keys(api).forEach((k) => {
+    if (!(k in root)) root[k] = api[k];
+  });
 })();
