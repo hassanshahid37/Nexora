@@ -23,6 +23,47 @@ try {
 // - CommonJS handler for Vercel/Netlify-style /api directory.
 // - Deterministic (no external AI calls), never throws: always 200 JSON.
 
+// Vercel/Node serverless nuance:
+// Some deployments do NOT populate req.body automatically.
+// In that case, the request itself is a readable stream and the JSON payload
+// must be read manually. If we don't, category/style/prompt silently fall back
+// to defaults (e.g., Instagram), which is exactly the "why did my category
+// change" issue.
+
+async function readJsonBody(req) {
+  // If a framework already parsed it, trust that.
+  if (req && req.body != null) {
+    if (typeof req.body === "object") return req.body;
+    if (typeof req.body === "string") {
+      try { return JSON.parse(req.body || "{}"); } catch { return {}; }
+    }
+  }
+
+  // Otherwise, read from the stream.
+  try {
+    const chunks = [];
+    let total = 0;
+    const MAX = 1_000_000; // 1MB hard cap (templates payload is tiny)
+    await new Promise((resolve, reject) => {
+      req.on("data", (c) => {
+        total += c.length;
+        if (total > MAX) {
+          reject(new Error("Request body too large"));
+          return;
+        }
+        chunks.push(c);
+      });
+      req.on("end", resolve);
+      req.on("error", reject);
+    });
+    const raw = Buffer.concat(chunks).toString("utf8").trim();
+    if (!raw) return {};
+    try { return JSON.parse(raw); } catch { return {}; }
+  } catch {
+    return {};
+  }
+}
+
 async function handler(req, res) {
   let count = 1; // default if missing/invalid; UI should pass 1–200
   try {
@@ -36,13 +77,8 @@ async function handler(req, res) {
     if (req.method === "OPTIONS") return res.end();
     if (req.method !== "POST") return res.end(JSON.stringify({ success: true, templates: [] }));
 
-    // Parse body safely (platforms may give object or string)
-    let body = {};
-    try {
-      body = req.body && typeof req.body === "object" ? req.body : JSON.parse(req.body || "{}");
-    } catch {
-      body = {};
-    }
+    // Parse body safely across runtimes (object, string, or raw stream)
+    const body = await readJsonBody(req);
 
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
     const category = typeof body.category === "string" ? body.category : "Instagram Post";
