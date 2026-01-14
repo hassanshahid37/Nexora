@@ -1,3 +1,4 @@
+
 /**
  * preview-renderer.js — Nexora Preview Renderer v1
  * Spine-correct, client-only, deterministic renderer
@@ -109,6 +110,14 @@
 
   
   function normalizeCanvas(contract){
+    try{
+      if(window.CategorySpecV1 && typeof window.normalizeCategory === "function"){
+        const spec = window.normalizeCategory(contract?.category);
+        if(spec && spec.canvas && spec.canvas.w && spec.canvas.h){
+          return { width: spec.canvas.w, height: spec.canvas.h };
+        }
+      }
+    }catch(_){}
     try{
       if(window.NexoraSpine && typeof window.NexoraSpine.normalizeCanvas === "function"){
         return window.NexoraSpine.normalizeCanvas(contract?.canvas) || null;
