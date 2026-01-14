@@ -19,8 +19,9 @@ try {
   }
 }
 
+
 // CategorySpecV1 normalizer is optional at runtime.
-// We load it lazily via dynamic import so this CommonJS handler never crashes if the file is missing.
+// We load it lazily so this CommonJS handler never crashes if the file is missing.
 let __normalizeCategory = null;
 let __normalizeCategoryTried = false;
 async function getNormalizeCategory() {
@@ -102,8 +103,7 @@ async function handler(req, res) {
     }
 
     const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-    
-const rawCategory = typeof body.category === "string" ? body.category : "Instagram Post";
+    const rawCategory = typeof body.category === "string" ? body.category : "Instagram Post";
 let category = rawCategory;
 
 // P5.1: normalize category through CategorySpecV1 when available (label stays backwards-compatible)
@@ -2365,25 +2365,22 @@ async function generateTemplates(payload) {
   body = body || {};
   const normalized = {
     prompt: body.prompt || '',
-    
-category: (function(){
-  const raw = body.category || 'Instagram Post';
-  return raw;
-})(),
+    category: body.category || 'Instagram Post',
     style: body.style || 'Dark Premium',
     count: Number.isFinite(Number(body.count)) ? Number(body.count) : 3,
     divergenceIndex: Number.isFinite(Number(body.divergenceIndex)) ? Number(body.divergenceIndex) : 0,
   };
 
-// P5.1: normalize category label via CategorySpecV1 when available
-try {
-  const norm = await getNormalizeCategory();
-  if (typeof norm === "function") {
-    const spec = norm(normalized.category);
-    if (spec && typeof spec.label === "string" && spec.label.trim()) normalized.category = spec.label.trim();
-  }
-} catch (_) {}
-return makeTemplates(normalized);
+  // P5.1: normalize category label via CategorySpecV1 when available
+  try {
+    const norm = await getNormalizeCategory();
+    if (typeof norm === "function") {
+      const spec = norm(normalized.category);
+      if (spec && typeof spec.label === "string" && spec.label.trim()) normalized.category = spec.label.trim();
+    }
+  } catch (_) {}
+
+  return makeTemplates(normalized);
 }
 
 module.exports = handler;
