@@ -1,6 +1,7 @@
 
 
 
+
 // spine-core.js
 // Nexora Spine Core (S0–S7) — deterministic, extension-friendly.
 // Works in both Browser (window.NexoraSpine) and Node (module.exports).
@@ -83,6 +84,14 @@
   };
 
   function resolveCanvas(category){
+    try{
+      if(root?.CategorySpecV1 && typeof root.normalizeCategory === "function"){
+        const spec = root.normalizeCategory(category);
+        if(spec && spec.canvas && spec.canvas.w && spec.canvas.h){
+          return { w: spec.canvas.w, h: spec.canvas.h };
+        }
+      }
+    }catch(_){}
     return CANVAS_SIZES[category] || CANVAS_SIZES["Instagram Post"];
   }
 
