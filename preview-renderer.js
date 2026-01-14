@@ -1,4 +1,5 @@
 
+
 /**
  * preview-renderer.js — Nexora Preview Renderer v1
  * Spine-correct, client-only, deterministic renderer
@@ -13,9 +14,19 @@
 
   function validate(contract) {
     try {
-      return !!(window.NexoraSpine &&
-        typeof window.NexoraSpine.validateContract === "function" &&
-        window.NexoraSpine.validateContract(contract));
+      const ns = window.NexoraSpine || {};
+      if (typeof ns.validateContract === "function") return !!ns.validateContract(contract);
+
+      // Fallback validator (keeps preview working even if script order changes)
+      if (!contract || typeof contract !== "object") return false;
+      if (contract.version && String(contract.version) !== "v1") return false;
+      if (!contract.templateId) return false;
+      if (!contract.category) return false;
+      const w = Number(contract?.canvas?.width ?? contract?.canvas?.w);
+      const h = Number(contract?.canvas?.height ?? contract?.canvas?.h);
+      if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return false;
+      if (!Array.isArray(contract.layers)) return false;
+      return true;
     } catch {
       return false;
     }
