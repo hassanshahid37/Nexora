@@ -1881,6 +1881,34 @@ function close(){ overlay.style.display = 'none'; }
 })();
 </script>
 
+
+  <!-- P5.1: Robust CategorySpec loader (handles Vercel/public subfolders) -->
+  <script>
+    (function(){
+      var paths = [
+        "/category-spec-v1.js",
+        "./category-spec-v1.js",
+        "category-spec-v1.js",
+        "/public/category-spec-v1.js",
+        "./public/category-spec-v1.js",
+        "/assets/category-spec-v1.js",
+        "./assets/category-spec-v1.js"
+      ];
+      function tryLoad(i){
+        if(i >= paths.length){
+          console.error("[P5.1] Failed to load category-spec-v1.js from all known paths. " +
+            "Fix: ensure category-spec-v1.js is deployed next to index.html (or in /public).");
+          return;
+        }
+        var s = document.createElement("script");
+        s.src = paths[i];
+        s.onload = function(){ window.__P5_1_CAT_SPEC_LOADED__ = true; };
+        s.onerror = function(){ tryLoad(i+1); };
+        document.head.appendChild(s);
+      }
+      tryLoad(0);
+    })();
+  </script>
+
 </body>
 </html>
-<script src="./category-spec-v1.js"></script>
