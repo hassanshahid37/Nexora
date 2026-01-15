@@ -6,6 +6,7 @@
 
 
 
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -1335,7 +1336,7 @@ function renderPreview(canvas, t){
   texts.forEach((e,i)=>{
     const d=document.createElement("div");
     d.className="pv-text";
-    d.textContent=e.title||"";
+    d.textContent=(e.text ?? e.title ?? "");
     d.style.top=(14+i*32)+"px";
     d.style.fontSize=(i===0?16:12)+"px";
     d.style.color=e.color||"#fff";
