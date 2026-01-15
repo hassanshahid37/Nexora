@@ -131,8 +131,7 @@ try {
     const divergenceIndexRaw = body.divergenceIndex ?? body.forkIndex ?? body.variantIndex ?? body.i;
     let divergenceIndex = Number(divergenceIndexRaw);
     if (!Number.isFinite(divergenceIndex)) divergenceIndex = -1;
-
-    
+    // P6: generate ONE base template, then expand to exactly `count` variations.
     const variationCount = count;
     const baseCount = 1;
     const templates = makeTemplates({ prompt, category, style, count: baseCount, divergenceIndex });
@@ -174,7 +173,7 @@ size = size || CATEGORIES[category] || { w:1080, h:1080 };
     const expanded = [];
     const base = withContracts[0] || null;
     if (!base) return res.end(JSON.stringify({ success: true, templates: [] }));
-    for (let i = 0; i < requestedCount; i++) {
+    for (let i = 0; i < variationCount; i++) {
       const p = VARIATION_PROFILES[i % VARIATION_PROFILES.length];
       expanded.push(applyVariation(base, p, i));
     }
@@ -221,7 +220,7 @@ function applyVariation(base, profile, idx){
     const t = JSON.parse(JSON.stringify(base || {}));
 
     // Unique ids to avoid UI/editor collisions
-    const baseId = String((t && (t.id || t.templateId)) || "tpl");
+    const baseId = String((t && (t.id || t.templateId || (t.contract && t.contract.templateId))) || "tpl");
     const vid = `__v${idx+1}_${String(profile && profile.id || "VAR")}`;
     t.id = baseId + vid;
     t.templateId = t.id;
@@ -231,45 +230,48 @@ function applyVariation(base, profile, idx){
     t.meta.variationId = String(profile && profile.id || "VAR");
     t.meta.variationIndex = idx;
 
-    // Content density adjustments (NO role changes)
-    const headline = (t.content && t.content.headline) ? String(t.content.headline) : "";
-    const subhead  = (t.content && t.content.subhead) ? String(t.content.subhead) : "";
-    let newHeadline = headline;
-    let newSubhead  = subhead;
+    // Pull visible text from elements (authoritative for preview)
+    const textEls = Array.isArray(t.elements) ? t.elements.filter(e => e && e.type === "text") : [];
+    const baseHeadline = (textEls[0] && typeof textEls[0].text === "string") ? textEls[0].text : (t.content && t.content.headline) ? String(t.content.headline) : "";
+    const baseSubhead  = (textEls[1] && typeof textEls[1].text === "string") ? textEls[1].text : (t.content && t.content.subhead) ? String(t.content.subhead) : "";
 
-    const words = headline.split(/\s+/).filter(Boolean);
+    const words = String(baseHeadline).split(/\s+/).filter(Boolean);
+
+    let newHeadline = baseHeadline;
+    let newSubhead = baseSubhead;
 
     if(profile && profile.id === "MINIMAL"){
       newHeadline = words.slice(0, 4).join(" ");
       newSubhead = "";
     } else if(profile && profile.id === "URGENT"){
-      newHeadline = (words.slice(0, 2).join(" ").toUpperCase()) || headline.toUpperCase();
-      newSubhead = (subhead ? subhead : "DON'T MISS").toUpperCase();
+      newHeadline = (words.slice(0, 2).join(" ").toUpperCase()) || String(baseHeadline).toUpperCase();
+      newSubhead = (baseSubhead ? baseSubhead : "DON'T MISS").toUpperCase();
     } else if(profile && profile.id === "IMAGE_FOCUS"){
-      newHeadline = words.slice(0, 5).join(" ");
+      newHeadline = words.slice(0, 5).join(" ") || baseHeadline;
     } else if(profile && profile.id === "HEADLINE_FOCUS"){
-      newHeadline = (headline ? headline : "NEW").toUpperCase();
+      newHeadline = (baseHeadline ? baseHeadline : "NEW").toUpperCase();
     } else {
-      newHeadline = words.slice(0, 7).join(" ") || headline;
+      newHeadline = words.slice(0, 7).join(" ") || baseHeadline;
     }
 
+    // Update content mirror (harmless if ignored)
     t.content = t.content || {};
     t.content.headline = newHeadline;
     t.content.subhead = newSubhead;
 
-    // Apply visible text into elements[] (so previews actually change)
+    // Update visible elements so preview actually changes
     if(Array.isArray(t.elements)){
-      let textSeen = 0;
+      let seen = 0;
       for(const el of t.elements){
         if(el && el.type === "text"){
-          if(textSeen === 0) el.text = newHeadline;
-          else if(textSeen === 1) el.text = newSubhead;
-          textSeen++;
+          if(seen === 0) el.text = newHeadline;
+          else if(seen === 1) el.text = newSubhead;
+          seen++;
         }
       }
     }
 
-    // Keep contract aligned with id
+    // Keep contract aligned with id to avoid collisions in editor/export
     if(t.contract && typeof t.contract === "object"){
       t.contract.templateId = t.id;
       t.contract.meta = t.contract.meta || {};
