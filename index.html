@@ -423,7 +423,7 @@
     if(heading) heading.title = p.slice(0, 60);
 
     const body = els.find(e => String(e.type||"").toLowerCase()==="text");
-    if(body) body.sub = p.slice(0, 90);
+    if(body) { body.subtitle = p.slice(0, 90); body.sub = body.sub ?? body.subtitle; }
 
     return tpl;
   }
@@ -699,7 +699,7 @@
   }
 
   // Content
-  const txt = String(e.text ?? e.title ?? e.subtitle ?? "");
+  const txt = String(e.text ?? e.title ?? e.subtitle ?? e.sub ?? e.label ?? "");
   d.textContent = txt;
 
   // Auto-fit: shrink font until it fits box (Canva-like safety)
@@ -772,13 +772,21 @@
         node = mkPhoto(e);
       }else if(type === "text" || type === "headline" || type === "subhead" || type === "heading"){
         node = mkText(e);
+      }else if(type === "cta" || type === "button"){
+        // Render CTAs as pills (common across many categories)
+        node = mkPill(e);
       }else if(type === "badge"){
         node = mkBadge(e);
       }else if(type === "pill" || type === "chip"){
         node = mkPill(e);
       }else{
-        // ignore unknown types (safe)
-        continue;
+        // unknown type/role: allow fallback (text-like elements) before skipping
+        node = null;
+      }
+      // Fallback: if element has text-like content but an unrecognized type/role, render it as text.
+      if(!node){
+        const _t = (e?.text ?? e?.title ?? e?.subtitle ?? e?.sub ?? e?.label);
+        if(_t != null && String(_t).trim() !== "") node = mkText(e);
       }
       if(node) thumb.appendChild(node);
     }
@@ -800,7 +808,12 @@ function renderThumb(thumb, tplOrElements, bg){
       ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
       : (tplOrElements || {});
     const content = tpl && (tpl.content || tpl.doc?.content);
-    const hasContent = !!(content && typeof content === "object" && Object.keys(content).length);
+    const hasContent = !!(content && typeof content === "object" && (
+      (typeof content.headline === "string" && content.headline.trim()) ||
+      (typeof content.subhead === "string" && content.subhead.trim()) ||
+      (typeof content.cta === "string" && content.cta.trim()) ||
+      (typeof content.badge === "string" && content.badge.trim())
+    ));
     // Use Preview Renderer v1 ONLY when a real doc/content exists.
     // Otherwise, fall back to element-based thumb renderer to avoid blank previews.
     if(tpl && tpl.contract && hasContent && window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
