@@ -448,8 +448,55 @@
       ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
       : (tplOrElements || {});
     const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
-    const W0 = Number(tpl?.canvas?.w || 980);
-    const H0 = Number(tpl?.canvas?.h || 620);
+
+    // Category-aware canvas resolution (critical for correct preview aspect ratios).
+    // - Prefer explicit tpl.canvas.
+    // - Otherwise, derive from CategorySpecV1 based on tpl.category (or current UI selection).
+    // - Final fallback: 980x620.
+    const resolveCanvas = (maybeTpl) => {
+      try{
+        const cw = Number(maybeTpl?.canvas?.w);
+        const ch = Number(maybeTpl?.canvas?.h);
+        if(Number.isFinite(cw) && cw > 0 && Number.isFinite(ch) && ch > 0){
+          return { w: cw, h: ch };
+        }
+
+        const catFromTpl = String(maybeTpl?.category || "").trim();
+        const catFromUI = String(document.getElementById("cat")?.value || "").trim();
+        const cat = catFromTpl || catFromUI;
+
+        if(typeof window.normalizeCategory === "function"){
+          const spec = window.normalizeCategory(cat);
+          const w = Number(spec?.canvas?.w);
+          const h = Number(spec?.canvas?.h);
+          if(Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0) return { w, h };
+        }
+
+        // Minimal fallback map (in case normalizeCategory isn't loaded yet)
+        const key = cat.toLowerCase();
+        const map = {
+          "instagram post": { w: 1080, h: 1080 },
+          "instagram_post": { w: 1080, h: 1080 },
+          "youtube thumbnail": { w: 1280, h: 720 },
+          "youtube_thumbnail": { w: 1280, h: 720 },
+          "story": { w: 1080, h: 1920 },
+          "flyer": { w: 1080, h: 1350 },
+          "poster": { w: 1414, h: 2000 },
+          "business card": { w: 1050, h: 600 },
+          "business_card": { w: 1050, h: 600 },
+          "presentation slide": { w: 1920, h: 1080 },
+          "presentation_slide": { w: 1920, h: 1080 },
+          "resume": { w: 1240, h: 1754 },
+          "logo": { w: 1000, h: 1000 },
+        };
+        if(map[key]) return map[key];
+      }catch(_){ }
+      return { w: 980, h: 620 };
+    };
+
+    const cnv = resolveCanvas(tpl);
+    const W0 = Number(cnv.w || 980);
+    const H0 = Number(cnv.h || 620);
 
     // Make the preview box match the template aspect ratio (critical for YouTube 16:9)
     thumb.innerHTML = "";
@@ -866,14 +913,28 @@ if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "func
 
       const thumb = div.querySelector(".thumb");
       if(thumb){
-        // Prefer design.js renderer for non-YouTube. For YouTube, use drawThumb so backend archetype styles can show.
-const isYT = String(category).toLowerCase().includes("youtube");
-if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
-  window.NexoraDesign.renderPreview(t, thumb);
-}else{
-  // Use our renderer (supports element.style bridge via mkText)
-  renderThumb(thumb, toEditorTemplate(t), (t.bg || null));
-}
+        // Category preview correctness:
+        // - design.js preview is optimized for square IG cards.
+        // - non-square categories (YT 16:9, Story 9:16, print ratios) must use renderThumb()
+        //   so resolveCanvas() drives the aspect ratio.
+        const catLower = String(category).toLowerCase();
+        const isYT = catLower.includes("youtube");
+        let isSquare = catLower.includes("instagram");
+        try{
+          if(typeof window.normalizeCategory === "function"){
+            const spec = window.normalizeCategory(category);
+            const w = Number(spec?.canvas?.w);
+            const h = Number(spec?.canvas?.h);
+            if(Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) isSquare = (w === h);
+          }
+        }catch(_){ }
+
+        if(!isYT && isSquare && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
+          window.NexoraDesign.renderPreview(t, thumb);
+        }else{
+          // Render RAW so canvas + element.style are preserved and category aspect ratio is correct.
+          renderThumb(thumb, t, (t.bg || null));
+        }
       }
 
       __lastTemplates.push(t);               // RAW
@@ -922,11 +983,38 @@ if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === 
         <span>${style} • ${layoutWord} layout • Click to edit</span>
       `;
 
-      const elements = patterns[i % patterns.length](i).map(e => ({ id: (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))), ...e }));
+      // Seed patterns are authored in a 980x620 coordinate system.
+      // Scale them into the target category canvas so previews match the category aspect ratio.
+      const baseW = 980;
+      const baseH = 620;
+      let targetCanvas = { w: baseW, h: baseH };
+      try{
+        if(typeof window.normalizeCategory === "function"){
+          const spec = window.normalizeCategory(category);
+          const w = Number(spec?.canvas?.w);
+          const h = Number(spec?.canvas?.h);
+          if(Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0){
+            targetCanvas = { w, h };
+          }
+        }
+      }catch(_){ }
+
+      const sxSeed = targetCanvas.w / baseW;
+      const sySeed = targetCanvas.h / baseH;
+
+      const elements = patterns[i % patterns.length](i).map(e => {
+        const id = (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16)));
+        // scale positional fields only
+        const x = (Number(e.x ?? 0) * sxSeed);
+        const y = (Number(e.y ?? 0) * sySeed);
+        const w = (Number(e.w ?? e.width ?? 0) * sxSeed);
+        const h = (Number(e.h ?? e.height ?? 0) * sySeed);
+        return { ...e, id, x, y, w, h };
+      });
 
       const thumb = div.querySelector('.thumb');
       if(thumb){
-        drawThumb(thumb, { elements, canvas: { w: 980, h: 620 } });
+        drawThumb(thumb, { elements, canvas: targetCanvas, category }, null);
       }
 
       const template = {
@@ -935,7 +1023,7 @@ if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === 
         description: `${style} • ${layoutWord} layout`,
         category,
         style,
-        canvas: { w: 980, h: 620 },
+        canvas: targetCanvas,
         elements
       };
       __lastTemplates.push(template);
@@ -1129,24 +1217,33 @@ function renderTemplatesFromList(list){
       if(thumb){
         const cat = String(t.category || document.getElementById("cat")?.value || "");
         const isYT = cat.toLowerCase().includes("youtube");
+        // design.js preview is only safe for square canvases (IG). Non-square categories must use renderThumb()
+        // so resolveCanvas() drives correct aspect ratio.
+        let isSquare = cat.toLowerCase().includes("instagram");
+        try{
+          if(typeof window.normalizeCategory === "function"){
+            const spec = window.normalizeCategory(cat);
+            const w = Number(spec?.canvas?.w);
+            const h = Number(spec?.canvas?.h);
+            if(Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) isSquare = (w === h);
+          }
+        }catch(_){ }
         const hasStyle = Array.isArray(t.elements) && t.elements.some(e => e && typeof e === "object" && e.style);
         const hasContract = !!t.contract;
 
 
-        const catLower = String(cat || '').toLowerCase();
-
-
-        const forceRawPreview = catLower.includes('flyer') || catLower.includes('story');
-
-
-        const tplForPreview = forceRawPreview ? (t || {}) : toEditorTemplate(t);
+        // CRITICAL FIX (category preview correctness):
+        // Always preview using RAW template objects.
+        // Converting via toEditorTemplate() strips element.style (typography/filters)
+        // and causes wrong/blank previews for multiple categories (not just YT).
+        const tplForPreview = (t || {});
 
         // SINGLE AUTHORITY ROUTING:
         // - Contract ALWAYS uses unified renderer
         // - After AI commit, legacy renderer is NEVER allowed (prevents renderer fights / flashing)
         if (hasContract || window.__NEXORA_AI_COMMITTED__) {
           renderThumb(thumb, tplForPreview, (tplForPreview.bg || null));
-        } else if (!isYT && !hasStyle && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function") {
+        } else if (!isYT && isSquare && !hasStyle && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function") {
           window.NexoraDesign.renderPreview(t, thumb);
         } else {
           renderThumb(thumb, tplForPreview, (tplForPreview.bg || null));
