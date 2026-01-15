@@ -257,6 +257,16 @@ size = size || CATEGORIES[category] || { w:1080, h:1080 };
         subhead: (t.elements||[]).filter(e=>e.type==="text")[1]?.text || "",
         cta: (t.elements||[]).find(e=>e.type==="pill"||e.type==="chip")?.text || ""
       };
+      // --- Ensure preview content is never empty for YouTube + Logo ---
+      try{
+        const catLower = String(category||"").toLowerCase();
+        const ptxt = String(prompt||"").trim();
+        if(ptxt){
+          if(catLower.includes("youtube") && !content.headline) content.headline = ptxt;
+          if(catLower.includes("logo")) content.headline = ptxt; // wordmark
+        }
+      }catch(_){}
+
       const layers = (t.elements||[]).map(e => ({
         role:
           e.type==="bg" ? "background" :
@@ -266,19 +276,36 @@ size = size || CATEGORIES[category] || { w:1080, h:1080 };
       }));
             let contract = (t && t.contract) ? t.contract : buildContractV1(String(t?.id || ('tpl_'+String(i+1))), category, { w: size.w, h: size.h }, (t.elements||[]));
       // P5.2: Template Shape Normalization (category-safe layers)
+      // NOTE: Logo uses a temporary wordmark fallback, so we skip role-forbidding normalization here
+      // to allow headline rendering in previews. (Icon-based logo generation can re-enable strict mode later.)
       try{
-        if(typeof __normalizeCategory === "function"){
-          const spec = __normalizeCategory(category);
-          if(spec) contract = normalizeContractToSpec(contract, spec);
+        if(!String(category||"").toLowerCase().includes("logo")){
+          if(typeof __normalizeCategory === "function"){
+            const spec = __normalizeCategory(category);
+            if(spec) contract = normalizeContractToSpec(contract, spec);
+          }
         }
       }catch(_){}
-      // ---- P7: persist layout family (non-breaking) ----
+// ---- P7: persist layout family (non-breaking) ----
       if(layoutFamily){
         contract.meta = contract.meta || {};
         contract.meta.layoutFamily = layoutFamily;
         t.meta = t.meta || {};
         t.meta.layoutFamily = layoutFamily;
       }
+      
+      // --- Layer safety: ensure headline layer exists when we expect text preview ---
+      try{
+        const catLower = String(category||"").toLowerCase();
+        if(catLower.includes("youtube") || catLower.includes("logo")){
+          contract.layers = Array.isArray(contract.layers) ? contract.layers : [];
+          const hasHL = contract.layers.some(l => l && String(l.role||"")==="headline");
+          if(!hasHL){
+            contract.layers.push({ id: "auto_headline_fallback", role: "headline", locked: false });
+          }
+        }
+      }catch(_){}
+
       return Object.assign({}, t, { contract, content });
 
     });
