@@ -20,6 +20,30 @@ try {
 }
 
 
+
+// ---- P7: Layout Family Selector (SAFE, ADDITIVE) ----
+let __selectLayoutFamily = null;
+let __selectLayoutFamilyTried = false;
+async function getSelectLayoutFamily(){
+  try{
+    if(typeof __selectLayoutFamily === "function") return __selectLayoutFamily;
+    if(__selectLayoutFamilyTried) return null;
+    __selectLayoutFamilyTried = true;
+    try{
+      const mod = require("../layout-family-selector.js");
+      __selectLayoutFamily = (mod && typeof mod.selectLayoutFamily==="function") ? mod.selectLayoutFamily : null;
+      return __selectLayoutFamily;
+    }catch(_){}
+    try{
+      const mod = await import("../layout-family-selector.js");
+      __selectLayoutFamily = (mod && typeof mod.selectLayoutFamily==="function") ? mod.selectLayoutFamily : null;
+      return __selectLayoutFamily;
+    }catch(_){}
+    return null;
+  }catch(_){ return null; }
+}
+// ---- END P7 ----
+
 // CategorySpecV1 normalizer is optional at runtime.
 // We load it lazily so this CommonJS handler never crashes if the file is missing.
 let __normalizeCategory = null;
@@ -137,7 +161,16 @@ try {
     const baseCount = 1;
     const templates = makeTemplates({ prompt, category, style, count: baseCount, divergenceIndex });
 
+    // ---- P7: decide layout family ONCE per request (safe + deterministic) ----
+    let __p7LayoutFamily = null;
+    try{
+      const fn = await getSelectLayoutFamily();
+      if(typeof fn === "function") __p7LayoutFamily = fn({ category, prompt });
+    }catch(_){}
     const withContracts = templates.map((t, i) => {
+      // ---- P7: layout family chosen above (no await inside map) ----
+      const layoutFamily = __p7LayoutFamily;
+
       let size = { w: 1080, h: 1080 };
 try{
   if(typeof __normalizeCategory === "function"){
@@ -168,7 +201,15 @@ size = size || CATEGORIES[category] || { w:1080, h:1080 };
           if(spec) contract = normalizeContractToSpec(contract, spec);
         }
       }catch(_){}
+      // ---- P7: persist layout family (non-breaking) ----
+      if(layoutFamily){
+        contract.meta = contract.meta || {};
+        contract.meta.layoutFamily = layoutFamily;
+        t.meta = t.meta || {};
+        t.meta.layoutFamily = layoutFamily;
+      }
       return Object.assign({}, t, { contract, content });
+
     });
     // ---- P6: Expand deterministic variations (no structural change) ----
     const expanded = [];
