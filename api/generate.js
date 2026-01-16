@@ -21,29 +21,38 @@ try {
 
 
 
-// ---- P7: Layout Family Selector (SAFE, ADDITIVE) ----
+
+// Layout Family selector is optional at runtime (P7).
+// Loaded lazily so this CommonJS handler never crashes if the file is missing.
 let __selectLayoutFamily = null;
 let __selectLayoutFamilyTried = false;
-async function getSelectLayoutFamily(){
+function getSelectLayoutFamily(){
   try{
-    if(typeof __selectLayoutFamily === "function") return __selectLayoutFamily;
-    if(__selectLayoutFamilyTried) return null;
+    if (typeof __selectLayoutFamily === "function") return __selectLayoutFamily;
+    if (__selectLayoutFamilyTried) return null;
     __selectLayoutFamilyTried = true;
-    try{
-      const mod = require("../layout-family-selector.js");
-      __selectLayoutFamily = (mod && typeof mod.selectLayoutFamily==="function") ? mod.selectLayoutFamily : null;
-      return __selectLayoutFamily;
-    }catch(_){}
-    try{
-      const mod = await import("../layout-family-selector.js");
-      __selectLayoutFamily = (mod && typeof mod.selectLayoutFamily==="function") ? mod.selectLayoutFamily : null;
-      return __selectLayoutFamily;
-    }catch(_){}
-    return null;
-  }catch(_){ return null; }
-}
-// ---- END P7 ----
 
+    try{
+      // Vercel serverless: /api/generate.js -> ../layout-family-selector.js
+      // eslint-disable-next-line global-require
+      const mod = require("../layout-family-selector.js");
+      __selectLayoutFamily = (mod && typeof mod.selectLayoutFamily === "function") ? mod.selectLayoutFamily : null;
+      if (typeof __selectLayoutFamily === "function") return __selectLayoutFamily;
+    }catch(_){ }
+
+    try{
+      // Local/dev alt path
+      // eslint-disable-next-line global-require
+      const mod = require("./layout-family-selector.js");
+      __selectLayoutFamily = (mod && typeof mod.selectLayoutFamily === "function") ? mod.selectLayoutFamily : null;
+      if (typeof __selectLayoutFamily === "function") return __selectLayoutFamily;
+    }catch(_){ }
+
+    return null;
+  }catch(_){
+    return null;
+  }
+}
 // CategorySpecV1 normalizer is optional at runtime.
 // We load it lazily so this CommonJS handler never crashes if the file is missing.
 let __normalizeCategory = null;
@@ -161,87 +170,7 @@ try {
     const baseCount = 1;
     const templates = makeTemplates({ prompt, category, style, count: baseCount, divergenceIndex });
 
-    // ---- VISIBILITY FALLBACKS (YouTube + Logo) ----
-    // Goal: ensure previews never look "empty" even if some layouts omit text roles.
-    // This is additive-only: we only inject a visible text element when required.
-    try {
-      templates.forEach(t => {
-        const cat = String(category || "").toLowerCase();
-        const promptText = String(prompt || "").trim();
-        if(!promptText) return;
-
-        // Best-effort canvas size (for positioning)
-        const cw =
-          (t && t.canvas && (t.canvas.w || t.canvas.width)) ||
-          (t && t.contract && t.contract.canvas && (t.contract.canvas.w || t.contract.canvas.width)) ||
-          (cat.includes("youtube") ? 1280 : (cat.includes("logo") ? 1000 : 1080));
-        const ch =
-          (t && t.canvas && (t.canvas.h || t.canvas.height)) ||
-          (t && t.contract && t.contract.canvas && (t.contract.canvas.h || t.contract.canvas.height)) ||
-          (cat.includes("youtube") ? 720 : (cat.includes("logo") ? 1000 : 1080));
-
-        const els = Array.isArray(t.elements) ? t.elements : (t.elements = []);
-
-        const hasHeadline = els.some(e => e && String(e.role || e.type || "").toLowerCase() === "headline" && (e.text || e.value));
-        const hasAnyText = els.some(e => e && e.type === "text" && (e.text || e.value));
-
-        // YouTube Thumbnail: ensure a BIG readable headline exists
-        if (cat.includes("youtube") && !hasHeadline) {
-          els.unshift({
-            id: "yt_headline_fallback",
-            type: "text",
-            role: "headline",
-            x: Math.round(cw * 0.06),
-            y: Math.round(ch * 0.10),
-            w: Math.round(cw * 0.88),
-            h: Math.round(ch * 0.42),
-            text: promptText,
-            size: Math.max(44, Math.round(ch * 0.14)),
-            weight: 900,
-            color: "#ffffff",
-            align: "left",
-            lineHeight: 1.02,
-            letterSpacing: -0.5,
-            shadow: { x: 0, y: Math.round(ch * 0.01), blur: Math.round(ch * 0.03), color: "rgba(0,0,0,0.55)" }
-          });
-        }
-
-        // Logo: wordmark fallback (centered headline)
-        if (cat.includes("logo") && !hasAnyText) {
-          els.unshift({
-            id: "logo_wordmark_fallback",
-            type: "text",
-            role: "headline",
-            x: Math.round(cw * 0.08),
-            y: Math.round(ch * 0.40),
-            w: Math.round(cw * 0.84),
-            h: Math.round(ch * 0.22),
-            text: promptText,
-            size: Math.max(48, Math.round(ch * 0.12)),
-            weight: 900,
-            color: "#ffffff",
-            align: "center",
-            lineHeight: 1.05,
-            letterSpacing: -0.2,
-            shadow: { x: 0, y: Math.round(ch * 0.008), blur: Math.round(ch * 0.02), color: "rgba(0,0,0,0.35)" }
-          });
-        }
-      });
-    } catch (_) {}
-    // ---- END VISIBILITY FALLBACKS ----
-
-
-
-    // ---- P7: decide layout family ONCE per request (safe + deterministic) ----
-    let __p7LayoutFamily = null;
-    try{
-      const fn = await getSelectLayoutFamily();
-      if(typeof fn === "function") __p7LayoutFamily = fn({ category, prompt });
-    }catch(_){}
     const withContracts = templates.map((t, i) => {
-      // ---- P7: layout family chosen above (no await inside map) ----
-      const layoutFamily = __p7LayoutFamily;
-
       let size = { w: 1080, h: 1080 };
 try{
   if(typeof __normalizeCategory === "function"){
@@ -257,16 +186,6 @@ size = size || CATEGORIES[category] || { w:1080, h:1080 };
         subhead: (t.elements||[]).filter(e=>e.type==="text")[1]?.text || "",
         cta: (t.elements||[]).find(e=>e.type==="pill"||e.type==="chip")?.text || ""
       };
-      // --- Ensure preview content is never empty for YouTube + Logo ---
-      try{
-        const catLower = String(category||"").toLowerCase();
-        const ptxt = String(prompt||"").trim();
-        if(ptxt){
-          if(catLower.includes("youtube") && !content.headline) content.headline = ptxt;
-          if(catLower.includes("logo")) content.headline = ptxt; // wordmark
-        }
-      }catch(_){}
-
       const layers = (t.elements||[]).map(e => ({
         role:
           e.type==="bg" ? "background" :
@@ -276,38 +195,13 @@ size = size || CATEGORIES[category] || { w:1080, h:1080 };
       }));
             let contract = (t && t.contract) ? t.contract : buildContractV1(String(t?.id || ('tpl_'+String(i+1))), category, { w: size.w, h: size.h }, (t.elements||[]));
       // P5.2: Template Shape Normalization (category-safe layers)
-      // NOTE: Logo uses a temporary wordmark fallback, so we skip role-forbidding normalization here
-      // to allow headline rendering in previews. (Icon-based logo generation can re-enable strict mode later.)
       try{
-        if(!String(category||"").toLowerCase().includes("logo")){
-          if(typeof __normalizeCategory === "function"){
-            const spec = __normalizeCategory(category);
-            if(spec) contract = normalizeContractToSpec(contract, spec);
-          }
+        if(typeof __normalizeCategory === "function"){
+          const spec = __normalizeCategory(category);
+          if(spec) contract = normalizeContractToSpec(contract, spec);
         }
       }catch(_){}
-// ---- P7: persist layout family (non-breaking) ----
-      if(layoutFamily){
-        contract.meta = contract.meta || {};
-        contract.meta.layoutFamily = layoutFamily;
-        t.meta = t.meta || {};
-        t.meta.layoutFamily = layoutFamily;
-      }
-      
-      // --- Layer safety: ensure headline layer exists when we expect text preview ---
-      try{
-        const catLower = String(category||"").toLowerCase();
-        if(catLower.includes("youtube") || catLower.includes("logo")){
-          contract.layers = Array.isArray(contract.layers) ? contract.layers : [];
-          const hasHL = contract.layers.some(l => l && String(l.role||"")==="headline");
-          if(!hasHL){
-            contract.layers.push({ id: "auto_headline_fallback", role: "headline", locked: false });
-          }
-        }
-      }catch(_){}
-
       return Object.assign({}, t, { contract, content });
-
     });
     // ---- P6: Expand deterministic variations (no structural change) ----
     const expanded = [];
@@ -1220,6 +1114,12 @@ function makeTemplates({ prompt, category, style, count, divergenceIndex }) {
       palette: pal ? { bg: pal.bg || null, accent: pal.accent || pal.accent2 || null, ink: pal.ink || null } : null,
       layers: elements.map((e) => ({ id: String(e.id || "layer"), role: String(e.role || "badge"), locked: true })),
       exportProfiles: [String(category).replace(/\s+/g, "_").toLowerCase()],
+      layoutFamily: (function(){
+        try{
+          const sel = getSelectLayoutFamily();
+          return (typeof sel === "function") ? String(sel({ category, prompt }) || "") : null;
+        }catch(_){ return null; }
+      })(),
       createdAt: Date.now()
 };
 
