@@ -3,6 +3,7 @@
 
 
 
+
 // spine-core.js
 // Nexora Spine Core (S0–S7) — deterministic, extension-friendly.
 // Works in both Browser (window.NexoraSpine) and Node (module.exports).
@@ -37,10 +38,41 @@
       h ^= s.charCodeAt(i);
       h = Math.imul(h, 16777619);
     }
+
+
+
     return (h >>> 0);
   }
+  // Normalize canvas shape differences across modules ({w,h} vs {width,height})
+  function canvasWH(c){
+    const w = Number(c?.w ?? c?.width);
+    const h = Number(c?.h ?? c?.height);
+    if(!Number.isFinite(w) || !Number.isFinite(h) || w<=0 || h<=0) return null;
+    return { w: Math.round(w), h: Math.round(h) };
+  }
 
-  // ---------- Canonical Doc ----------
+
+  
+  // ---------- P7: Layout Family Integration (spine-first) ----------
+  function selectFamilySafe(input){
+    try{
+      // Prefer explicit selector if present
+      if(typeof root.selectLayoutFamily === "function"){
+        return root.selectLayoutFamily(input);
+      }
+      // Node / bundled fallback
+      try{
+        const mod = require("./layout-family-selector.js");
+        if(mod && typeof mod.selectLayoutFamily === "function"){
+          return mod.selectLayoutFamily(input);
+        }
+      }catch(_){}
+    }catch(_){}
+    return null;
+  }
+
+
+// ---------- Canonical Doc ----------
   // NexoraDoc is the single source of truth.
   // All consumers (editor/export/studio) read this doc, never invent state.
   function createEmptyDoc(input){
@@ -163,15 +195,24 @@
   }
 
   // ---------- Stage S3: LayoutResolve ----------
+  
   function stageLayoutResolve(doc){
     const cat = str(doc?.meta?.category);
-    const canvas = doc?.contract?.canvas || resolveCanvas(cat);
+    const canvas = canvasWH(doc?.contract?.canvas) || resolveCanvas(cat);
+
+    // P7: select layout family deterministically (no side effects)
+    let familyId = null;
+    try{
+      familyId = selectFamilySafe({ category: cat, prompt: doc?.input?.prompt || "" });
+    }catch(_){}
+
     // Minimal deterministic layouts (extendable).
     // Layout defines zones by semantic role.
     const layoutId = (cat === "YouTube Thumbnail") ? "yt_layout_01" : "base_layout_01";
 
     doc.layout = {
       id: layoutId,
+      family: familyId || null,
       canvas: { w: canvas.w, h: canvas.h },
       zones: {
         background: { x:0,y:0,w:canvas.w,h:canvas.h },
@@ -184,6 +225,7 @@
     };
     return doc;
   }
+
 
   // ---------- Stage S4: ContentBind (P4 Gate) ----------
   function stageContentBind(doc){
@@ -217,7 +259,7 @@
   // ---------- Stage S5: GraphBuild ----------
   function stageGraphBuild(doc){
     const layout = doc.layout;
-    const canvas = layout?.canvas || doc.contract?.canvas || resolveCanvas(doc.meta.category);
+    const canvas = canvasWH(layout?.canvas) || canvasWH(doc?.contract?.canvas) || resolveCanvas(doc.meta.category);
 
     // Graph nodes reference content via valueRef so edits can rebind later.
     const nodes = [
@@ -284,7 +326,7 @@
     const errs = [];
     if(!doc || typeof doc !== "object") errs.push("doc_missing");
     if(!doc?.meta?.category) errs.push("meta.category_missing");
-    if(!doc?.contract?.canvas?.w || !doc?.contract?.canvas?.h) errs.push("contract.canvas_missing");
+    if(!(doc?.contract?.canvas?.w || doc?.contract?.canvas?.width) || !(doc?.contract?.canvas?.h || doc?.contract?.canvas?.height)) errs.push("contract.canvas_missing");
     if(!doc?.content?.headline || !str(doc.content.headline).trim()) errs.push("content.headline_missing");
     if(!Array.isArray(doc?.graph?.nodes) || !doc.graph.nodes.length) errs.push("graph.nodes_missing");
     return { ok: errs.length === 0, errors: errs };
@@ -293,7 +335,7 @@
   // ---------- Adapter: Doc -> Template (legacy UI/editor) ----------
   // Convert NexoraDoc into the template shape your editor already supports.
   function docToTemplate(doc){
-    const canvas = doc?.graph?.canvas || doc?.contract?.canvas || resolveCanvas(doc?.meta?.category);
+    const canvas = canvasWH(doc?.graph?.canvas) || canvasWH(doc?.contract?.canvas) || resolveCanvas(doc?.meta?.category);
     const zones = doc?.graph?.zones || doc?.layout?.zones || {};
     const content = doc?.content || {};
     const nodes = doc?.graph?.nodes || [];
