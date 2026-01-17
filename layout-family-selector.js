@@ -1,4 +1,5 @@
 
+
 /**
  * layout-family-selector.js — Nexora P7 (v1)
  * Deterministic selector for layout families.
@@ -81,7 +82,7 @@
   function selectLayoutFamilyResolved(input) {
     const id = selectLayoutFamily(input);
     const reg = loadRegistry();
-    return reg && typeof reg.getLayoutFamily === "function" ? reg.getLayoutFamily(id) : { id };
+    return reg ? ((typeof reg.getLayoutFamilyContract === "function") ? reg.getLayoutFamilyContract(id) : ((typeof reg.getLayoutFamily === "function") ? reg.getLayoutFamily(id) : { id })) : { id };
   }
 
   try {
