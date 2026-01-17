@@ -2,6 +2,7 @@
 
 
 
+
 /**
  * preview-renderer.js — Nexora Preview Renderer v1
  * Spine-correct, client-only, deterministic renderer
@@ -155,9 +156,38 @@
     return null;
   }
 
+  
+  // ---------- P7.1: Layout Family → Visual Binding (Preview Only) ----------
+  function applyLayoutFamilyOrder(layers, family){
+    try{
+      if(!family || !Array.isArray(layers)) return layers;
+
+      const H = {
+        "text-first": ["headline","subhead","badge","cta","image"],
+        "image-led": ["image","headline","subhead","badge","cta"],
+        "split-hero": ["image","headline","subhead","badge","cta"]
+      };
+      const order = H[family];
+      if(!order) return layers;
+
+      const rank = Object.create(null);
+      order.forEach((r,i)=>rank[r]=i);
+
+      return layers.slice().sort((a,b)=>{
+        const ra = rank[a.role] ?? 99;
+        const rb = rank[b.role] ?? 99;
+        return ra - rb;
+      });
+    }catch(_){
+      return layers;
+    }
+  }
+
+
   function renderInto(root, payload){
     try{
       const contract = payload?.contract;
+       const family = payload?.doc?.layout?.family || payload?.layout?.family || null;
       const content  = payload?.content || {};
       const metaIn   = payload?.meta || {};
 
