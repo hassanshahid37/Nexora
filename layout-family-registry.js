@@ -1,3 +1,4 @@
+
 /**
  * layout-family-registry.js — Nexora P7 (v1)
  *
@@ -52,6 +53,67 @@
     }
   };
 
+  // -----------------------------
+  // P7 Contract view (v1)
+  // - Preserves legacy REGISTRY shape (for existing behavior)
+  // - Adds a contract-normalized view for P7 obedience work
+  // -----------------------------
+  const __Contract = (root.LayoutFamilyContract) || (function(){ try { return require("./layout-family-contract.js"); } catch(_) { return null; } })();
+
+  function __defaultZonesFromHierarchy(arr){
+    // Best-effort, structure-safe defaults (v1): do NOT enforce zones aggressively yet.
+    const order = Array.isArray(arr) ? arr : [];
+    const zones = [];
+    // include background always as structural anchor
+    zones.push("background");
+    for(const r of order){
+      const role = String(r||"").toLowerCase();
+      if(!role) continue;
+      if(!zones.includes(role)) zones.push(role);
+    }
+    return zones;
+  }
+
+  function __toContractFamily(legacy){
+    try{
+      if(!__Contract || typeof __Contract.createFamily !== "function") return null;
+      if(!legacy) return null;
+      const hierarchyArr = Array.isArray(legacy.hierarchy) ? legacy.hierarchy : [];
+      return __Contract.createFamily({
+        id: String(legacy.id || "generic"),
+        label: String(legacy.label || legacy.id || "Generic"),
+        category: "any",
+        zones: __defaultZonesFromHierarchy(hierarchyArr),
+        hierarchy: hierarchyArr,
+        lockedRoles: ["background"], // safest v1 lock; does not break existing behavior
+        flexibleRoles: hierarchyArr.filter(Boolean),
+        constraints: {}
+      });
+    }catch(_){
+      return null;
+    }
+  }
+
+  const CONTRACT_REGISTRY = (function(){
+    const out = Object.create(null);
+    try{
+      for(const k of Object.keys(REGISTRY)){
+        const fam = __toContractFamily(REGISTRY[k]);
+        if(fam) out[k] = fam;
+      }
+    }catch(_){}
+    return out;
+  })();
+
+  function getLayoutFamilyContract(id){
+    const key = String(id || "");
+    return CONTRACT_REGISTRY[key] || CONTRACT_REGISTRY.generic || null;
+  }
+
+  function listLayoutFamilyContracts(){
+    try{ return Object.values(CONTRACT_REGISTRY); }catch(_){ return []; }
+  }
+
   function getLayoutFamily(id){
     const key = String(id || "");
     return REGISTRY[key] || REGISTRY.generic;
@@ -64,13 +126,13 @@
   // Node / serverless export
   try{
     if(typeof module === "object" && module.exports){
-      module.exports = { getLayoutFamily, listLayoutFamilies, REGISTRY };
+      module.exports = { getLayoutFamily, listLayoutFamilies, REGISTRY, getLayoutFamilyContract, listLayoutFamilyContracts, CONTRACT_REGISTRY };
     }
   }catch(_){ }
 
   // Browser global
   try{
-    root.NexoraLayoutRegistry = root.NexoraLayoutRegistry || { getLayoutFamily, listLayoutFamilies, REGISTRY };
+    root.NexoraLayoutRegistry = root.NexoraLayoutRegistry || { getLayoutFamily, listLayoutFamilies, REGISTRY, getLayoutFamilyContract, listLayoutFamilyContracts, CONTRACT_REGISTRY };
   }catch(_){ }
 
 })(typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : global));
