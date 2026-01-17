@@ -1,3 +1,20 @@
+
+/* P7→P8 wiring: resolve layout family via selector */
+function resolveLayoutFamily(input){
+  try{
+    if(typeof require==="function"){
+      const sel = require("./layout-family-selector.js");
+      if(sel && typeof sel.selectLayoutFamily==="function"){
+        return sel.selectLayoutFamily(input);
+      }
+    }
+    if(typeof window!=="undefined" && typeof window.selectLayoutFamily==="function"){
+      return window.selectLayoutFamily(input);
+    }
+  }catch(_){}
+  return null;
+}
+
 // api/generate.js
 // Nexora / Templify – Serverless API: /api/generate
 // Style engine is optional at runtime (dev/prod paths differ). If it can't be
@@ -2589,3 +2606,27 @@ async function generateTemplates(payload) {
 module.exports = handler;
 module.exports.generateTemplates = generateTemplates;
 module.exports.default = handler;
+
+// --- GENERATION OUTPUT ---
+
+
+/* P8: Real Template Generation (additive) */
+try{
+  const factory = (typeof require==="function")
+    ? require("./template-structure-factory.js")
+    : window.NexoraTemplateFactory;
+
+  if(factory && typeof factory.createTemplateContract==="function"){
+    const baseContract = output?.contract;
+    const resolvedFamily = resolveLayoutFamily({ category: baseContract?.category, prompt: input?.prompt || "" });
+    if(baseContract && resolvedFamily){ baseContract.layoutFamily = resolvedFamily; }
+    const count = Number(input?.count||1);
+    if(baseContract && count>1){
+      const templates = [];
+      for(let i=0;i<count;i++){
+        templates.push(factory.createTemplateContract(baseContract,i));
+      }
+      output.templates = templates;
+    }
+  }
+}catch(_){}
