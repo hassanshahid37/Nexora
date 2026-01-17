@@ -290,6 +290,32 @@
   }
 </style>
 
+
+<script>
+/* Nexora canonical state (single source of truth) */
+(function(){
+  if(window.__NEXORA_STATE_LOCKED__) return;
+  window.__NEXORA_STATE_LOCKED__ = true;
+
+  window.__NEXORA_TEMPLATES__ = window.__NEXORA_TEMPLATES__ || [];
+  window.__NEXORA_AI_COMMITTED__ = window.__NEXORA_AI_COMMITTED__ || false;
+
+  window.__commitNexoraTemplates = function(templates){
+    if(!Array.isArray(templates)) return;
+    window.__NEXORA_TEMPLATES__ = templates;
+    window.__NEXORA_AI_COMMITTED__ = true;
+  };
+})();
+</script>
+
+<script>
+(function(){
+  if(window.__NEXORA_CANONICAL__) return;
+  window.__NEXORA_CANONICAL__ = true;
+  window.__NEXORA_TEMPLATES__ = window.__NEXORA_TEMPLATES__ || [];
+})();
+</script>
+
 </head>
 
 <body data-theme="dark">
@@ -439,7 +465,21 @@
   window.NEXORA.applyPromptToTemplates = applyPromptToTemplates;
 
 
-  function drawThumb(thumb, tplOrElements, bg){
+  
+function resolveCanvas(tpl){
+  try{
+    const cat = tpl?.category;
+    if(window.normalizeCategory){
+      const spec = window.normalizeCategory(cat);
+      if(spec && spec.canvas && spec.canvas.w && spec.canvas.h){
+        return { w: spec.canvas.w, h: spec.canvas.h };
+      }
+    }
+  }catch(_){}
+  return { w: 980, h: 620 };
+}
+
+function drawThumb(thumb, tplOrElements, bg){
   if(!thumb) return;
 
   // Fail-safe: never break the app if preview rendering has issues
@@ -448,55 +488,9 @@
       ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
       : (tplOrElements || {});
     const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
-
-    // Category-aware canvas resolution (critical for correct preview aspect ratios).
-    // - Prefer explicit tpl.canvas.
-    // - Otherwise, derive from CategorySpecV1 based on tpl.category (or current UI selection).
-    // - Final fallback: 980x620.
-    const resolveCanvas = (maybeTpl) => {
-      try{
-        const cw = Number(maybeTpl?.canvas?.w);
-        const ch = Number(maybeTpl?.canvas?.h);
-        if(Number.isFinite(cw) && cw > 0 && Number.isFinite(ch) && ch > 0){
-          return { w: cw, h: ch };
-        }
-
-        const catFromTpl = String(maybeTpl?.category || "").trim();
-        const catFromUI = String(document.getElementById("cat")?.value || "").trim();
-        const cat = catFromTpl || catFromUI;
-
-        if(typeof window.normalizeCategory === "function"){
-          const spec = window.normalizeCategory(cat);
-          const w = Number(spec?.canvas?.w);
-          const h = Number(spec?.canvas?.h);
-          if(Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0) return { w, h };
-        }
-
-        // Minimal fallback map (in case normalizeCategory isn't loaded yet)
-        const key = cat.toLowerCase();
-        const map = {
-          "instagram post": { w: 1080, h: 1080 },
-          "instagram_post": { w: 1080, h: 1080 },
-          "youtube thumbnail": { w: 1280, h: 720 },
-          "youtube_thumbnail": { w: 1280, h: 720 },
-          "story": { w: 1080, h: 1920 },
-          "flyer": { w: 1080, h: 1350 },
-          "poster": { w: 1414, h: 2000 },
-          "business card": { w: 1050, h: 600 },
-          "business_card": { w: 1050, h: 600 },
-          "presentation slide": { w: 1920, h: 1080 },
-          "presentation_slide": { w: 1920, h: 1080 },
-          "resume": { w: 1240, h: 1754 },
-          "logo": { w: 1000, h: 1000 },
-        };
-        if(map[key]) return map[key];
-      }catch(_){ }
-      return { w: 980, h: 620 };
-    };
-
-    const cnv = resolveCanvas(tpl);
-    const W0 = Number(cnv.w || 980);
-    const H0 = Number(cnv.h || 620);
+    const cv = (!tpl?.canvas || (tpl.canvas.w===980 && tpl.canvas.h===620)) ? resolveCanvas(tpl) : tpl.canvas;
+    const W0 = Number(cv.w || 980);
+    const H0 = Number(cv.h || 620);
 
     // Make the preview box match the template aspect ratio (critical for YouTube 16:9)
     thumb.innerHTML = "";
@@ -875,8 +869,11 @@ function renderThumb(thumb, tplOrElements, bg){
     // Use Preview Renderer v1 ONLY when a real doc/content exists.
     // Otherwise, fall back to element-based thumb renderer to avoid blank previews.
     const catName = String(tpl?.category || "").toLowerCase();
-    const forceLegacy = catName.includes("flyer") || catName.includes("story");
+    const forceLegacy = false; // do not block contract previews by category
     if(!forceLegacy && tpl && tpl.contract && hasContent && window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
+      const cv = resolveCanvas(tpl);
+      const w = Math.max(1, thumb.clientWidth || 260);
+      thumb.style.height = Math.round(w * (cv.h / cv.w)) + "px";
       thumb.innerHTML = "";
       window.NexoraPreview.renderTo(thumb, { contract: tpl.contract, content });
       return;
@@ -913,28 +910,14 @@ if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "func
 
       const thumb = div.querySelector(".thumb");
       if(thumb){
-        // Category preview correctness:
-        // - design.js preview is optimized for square IG cards.
-        // - non-square categories (YT 16:9, Story 9:16, print ratios) must use renderThumb()
-        //   so resolveCanvas() drives the aspect ratio.
-        const catLower = String(category).toLowerCase();
-        const isYT = catLower.includes("youtube");
-        let isSquare = catLower.includes("instagram");
-        try{
-          if(typeof window.normalizeCategory === "function"){
-            const spec = window.normalizeCategory(category);
-            const w = Number(spec?.canvas?.w);
-            const h = Number(spec?.canvas?.h);
-            if(Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) isSquare = (w === h);
-          }
-        }catch(_){ }
-
-        if(!isYT && isSquare && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
-          window.NexoraDesign.renderPreview(t, thumb);
-        }else{
-          // Render RAW so canvas + element.style are preserved and category aspect ratio is correct.
-          renderThumb(thumb, t, (t.bg || null));
-        }
+        // Prefer design.js renderer for non-YouTube. For YouTube, use drawThumb so backend archetype styles can show.
+const isYT = String(category).toLowerCase().includes("youtube");
+if(!isYT && String(category).toLowerCase().includes("instagram") && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
+  window.NexoraDesign.renderPreview(t, thumb);
+}else{
+  // Use our renderer (supports element.style bridge via mkText)
+  renderThumb(thumb, toEditorTemplate(t), (t.bg || null));
+}
       }
 
       __lastTemplates.push(t);               // RAW
@@ -983,38 +966,11 @@ if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "func
         <span>${style} • ${layoutWord} layout • Click to edit</span>
       `;
 
-      // Seed patterns are authored in a 980x620 coordinate system.
-      // Scale them into the target category canvas so previews match the category aspect ratio.
-      const baseW = 980;
-      const baseH = 620;
-      let targetCanvas = { w: baseW, h: baseH };
-      try{
-        if(typeof window.normalizeCategory === "function"){
-          const spec = window.normalizeCategory(category);
-          const w = Number(spec?.canvas?.w);
-          const h = Number(spec?.canvas?.h);
-          if(Number.isFinite(w) && w > 0 && Number.isFinite(h) && h > 0){
-            targetCanvas = { w, h };
-          }
-        }
-      }catch(_){ }
-
-      const sxSeed = targetCanvas.w / baseW;
-      const sySeed = targetCanvas.h / baseH;
-
-      const elements = patterns[i % patterns.length](i).map(e => {
-        const id = (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16)));
-        // scale positional fields only
-        const x = (Number(e.x ?? 0) * sxSeed);
-        const y = (Number(e.y ?? 0) * sySeed);
-        const w = (Number(e.w ?? e.width ?? 0) * sxSeed);
-        const h = (Number(e.h ?? e.height ?? 0) * sySeed);
-        return { ...e, id, x, y, w, h };
-      });
+      const elements = patterns[i % patterns.length](i).map(e => ({ id: (globalThis.crypto?.randomUUID?.() || (Math.random().toString(16).slice(2) + Date.now().toString(16))), ...e }));
 
       const thumb = div.querySelector('.thumb');
       if(thumb){
-        drawThumb(thumb, { elements, canvas: targetCanvas, category }, null);
+        drawThumb(thumb, { elements, canvas: { w: 980, h: 620 } });
       }
 
       const template = {
@@ -1023,7 +979,7 @@ if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "func
         description: `${style} • ${layoutWord} layout`,
         category,
         style,
-        canvas: targetCanvas,
+        canvas: { w: 980, h: 620 },
         elements
       };
       __lastTemplates.push(template);
@@ -1217,33 +1173,24 @@ function renderTemplatesFromList(list){
       if(thumb){
         const cat = String(t.category || document.getElementById("cat")?.value || "");
         const isYT = cat.toLowerCase().includes("youtube");
-        // design.js preview is only safe for square canvases (IG). Non-square categories must use renderThumb()
-        // so resolveCanvas() drives correct aspect ratio.
-        let isSquare = cat.toLowerCase().includes("instagram");
-        try{
-          if(typeof window.normalizeCategory === "function"){
-            const spec = window.normalizeCategory(cat);
-            const w = Number(spec?.canvas?.w);
-            const h = Number(spec?.canvas?.h);
-            if(Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) isSquare = (w === h);
-          }
-        }catch(_){ }
         const hasStyle = Array.isArray(t.elements) && t.elements.some(e => e && typeof e === "object" && e.style);
         const hasContract = !!t.contract;
 
 
-        // CRITICAL FIX (category preview correctness):
-        // Always preview using RAW template objects.
-        // Converting via toEditorTemplate() strips element.style (typography/filters)
-        // and causes wrong/blank previews for multiple categories (not just YT).
-        const tplForPreview = (t || {});
+        const catLower = String(cat || '').toLowerCase();
+
+
+        const forceRawPreview = catLower.includes('flyer') || catLower.includes('story');
+
+
+        const tplForPreview = forceRawPreview ? (t || {}) : toEditorTemplate(t);
 
         // SINGLE AUTHORITY ROUTING:
         // - Contract ALWAYS uses unified renderer
         // - After AI commit, legacy renderer is NEVER allowed (prevents renderer fights / flashing)
         if (hasContract || window.__NEXORA_AI_COMMITTED__) {
           renderThumb(thumb, tplForPreview, (tplForPreview.bg || null));
-        } else if (!isYT && isSquare && !hasStyle && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function") {
+        } else if (String(cat).toLowerCase().includes("instagram") && !hasStyle && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function") {
           window.NexoraDesign.renderPreview(t, thumb);
         } else {
           renderThumb(thumb, tplForPreview, (tplForPreview.bg || null));
@@ -1339,7 +1286,7 @@ function renderTemplatesFromList(list){
   // initial previews are rendered on DOMContentLoaded so restore can win
 </script>
 <script>
-document.addEventListener("DOMContentLoaded", () => {
+  document.addEventListener("DOMContentLoaded", () => {
   // Globals used by some UI modules (avoid ReferenceError)
   let currentLayout = "";
   let currentStyle = "";
@@ -1354,8 +1301,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btn.addEventListener("click", async (event) => {
   // New generation cycle: allow seed before AI, then lock after AI commit
-  window.__NEXORA_AI_COMMITTED__ = false;
-currentLayout = "Modern";
+  currentLayout = "Modern";
 currentStyle = "Dark Premium";
 
     const payload = {
@@ -1385,11 +1331,18 @@ currentStyle = "Dark Premium";
     if(!data || !Array.isArray(data.templates) || !data.templates.length) return;
 
     // Replace seeded templates with REAL backend templates (archetypes + style-engine).
-    window.__NEXORA_AI_COMMITTED__ = true;
+    
     __lastTemplates = data.templates;
 
-    // Re-render the grid using the same UI (template boxes remain identical).
+    
+    
+
+try{ if(Array.isArray(__lastTemplates)) window.__NEXORA_TEMPLATES__ = __lastTemplates; }catch(_){ }
+try{ if(Array.isArray(__lastTemplates)) window.__NEXORA_TEMPLATES__ = __lastTemplates; }catch(_){ }
+try{ window.__commitNexoraTemplates(__lastTemplates); }catch(_){ }
+// Re-render the grid using the same UI (template boxes remain identical).
     renderTemplatesFromList(__lastTemplates);
+    try{ window.__commitNexora(__lastTemplates); }catch(_){ }
 
     try{ saveHomeState(); }catch(_){}
 
@@ -1458,7 +1411,7 @@ document.getElementById("newStyleBtn")?.addEventListener("click", () => {
 
 
 <script>
-function renderPreview(canvas, t){
+  function renderPreview(canvas, t){
   if(!canvas) return;
   canvas.innerHTML="";
   if(t.bg) canvas.style.background=t.bg;
@@ -1478,7 +1431,7 @@ function renderPreview(canvas, t){
 
 
 <script>
-// Inlined CategorySpecV1 to avoid 404s on static deploys.
+  // Inlined CategorySpecV1 to avoid 404s on static deploys.
 // Source: category-spec-v1.js (P5.1)
 /**
  * Nexora P5.1 – CategorySpecV1
@@ -1486,7 +1439,8 @@ function renderPreview(canvas, t){
  * ADDITIVE ONLY. Does not modify existing logic.
  *
  * UMD-style so it works in:
- * - Browser <script> (window.CategorySpecV1 / window.normalizeCategory)
+ * - Browser <script>
+  (window.CategorySpecV1 / window.normalizeCategory)
  * - Node/CommonJS (require('./category-spec-v1.js'))
  * It does NOT require bundlers or "type=module".
  */
@@ -1648,7 +1602,7 @@ function renderPreview(canvas, t){
 
 <!-- YT Preview Shell Toggle -->
 <script>
-(function(){
+  (function(){
   function isYouTubeSelected(){
     const sel = document.getElementById('cat') || document.querySelector('select');
     if(!sel) return false;
@@ -1687,5 +1641,81 @@ function renderPreview(canvas, t){
 })();
 </script>
 
+
+<script>
+(function(){
+  
+
+
+<script>
+(function(){
+  if(!window.NexoraPreview) return;
+
+  const _render = window.NexoraPreview.render;
+  const _renderTo = window.NexoraPreview.renderTo;
+
+  function extractTemplates(payload){
+    if(payload && payload.templates) return payload.templates;
+    if(payload && payload.items) return payload.items;
+    return null;
+  }
+
+  window.NexoraPreview.render = function(payload){
+    const t = extractTemplates(payload);
+    if(t) window.__commitNexoraTemplates(t);
+    return _render.apply(this, arguments);
+  };
+
+  window.NexoraPreview.renderTo = function(target, payload){
+    const t = extractTemplates(payload);
+    if(t) window.__commitNexoraTemplates(t);
+    return _renderTo.apply(this, arguments);
+  };
+})();
+</script>
+
+
+<script>
+(function(){
+  
+})();
+</script>
+
+<script>
+/* 
+
+<script>
+(function(){
+  const btn = document.getElementById("exportBtn");
+  if(!btn) return;
+  const clone = btn.
+
+<script>
+(function(){
+  const btn = document.getElementById("exportBtn");
+  if(!btn) return;
+
+  btn.replaceWith(btn.cloneNode(true));
+  const cleanBtn = document.getElementById("exportBtn");
+
+  cleanBtn.addEventListener("click", function(e){
+    e.preventDefault();
+    const items =
+      (Array.isArray(window.__lastTemplates) && window.__lastTemplates.length)
+        ? window.__lastTemplates
+        : (Array.isArray(window.__NEXORA_TEMPLATES__) ? window.__NEXORA_TEMPLATES__ : []);
+
+    const blob = new Blob(
+      [JSON.stringify({ items }, null, 2)],
+      { type: "application/json" }
+    );
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "nexora_templates.json";
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 0);
+  }, { once: true });
+})();
+</script>
 </body>
 </html>
