@@ -1,5 +1,3 @@
-
-
 // api/generate.js
 // Nexora / Templify – Serverless API: /api/generate
 // Style engine is optional at runtime (dev/prod paths differ). If it can't be
