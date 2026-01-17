@@ -1,0 +1,16 @@
+(function () {
+  function clone(o){try{return JSON.parse(JSON.stringify(o))}catch{return o}}
+  function generateVariations(base,count){
+    const n=Math.max(1,Math.min(Number(count||1),6));
+    const out=[];
+    for(let i=0;i<n;i++){
+      const c=clone(base);
+      c.templateId=String(c.templateId)+"_v"+(i+1);
+      c.variationIndex=i;
+      out.push(c);
+    }
+    return out;
+  }
+  try{if(typeof module!=="undefined"&&module.exports)module.exports={generateVariations}}catch(_){}
+  try{if(typeof window!=="undefined")window.NexoraAutoVariation=window.NexoraAutoVariation||{generateVariations}}catch(_){}
+})();
