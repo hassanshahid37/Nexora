@@ -60,9 +60,22 @@
     const role = layer.role;
     const wrap = el("div", "nr-layer nr-" + role);
 
-    wrap.style.position = "relative";
-    wrap.style.margin = "12px";
-    wrap.style.zIndex = "1";
+    // P8 Phase-3 (preview): if zone rects are provided, position layers absolutely
+    const zr = meta && meta.__zoneRects;
+    if(zr && zr[role] && role !== "background"){
+      const r = zr[role];
+      wrap.style.position = "absolute";
+      wrap.style.left = r.x + "px";
+      wrap.style.top = r.y + "px";
+      wrap.style.width = r.w + "px";
+      wrap.style.height = r.h + "px";
+      wrap.style.margin = "0";
+      wrap.style.zIndex = "1";
+    }else{
+      wrap.style.position = "relative";
+      wrap.style.margin = "12px";
+      wrap.style.zIndex = "1";
+    }
 
     const applyStyle = window.applyStyle || noop;
     const style = applyStyle({
@@ -84,7 +97,7 @@
     if (role === "image") {
       const img = el("div", "nr-image");
       img.style.width = "100%";
-      img.style.height = "220px";
+      img.style.height = "100%";
       img.style.background = "#222";
       img.style.borderRadius = "16px";
       wrap.appendChild(img);
@@ -210,6 +223,16 @@
         style: metaIn.style || contract.style || contract.archetype || null,
         palette: metaIn.palette || contract.palette || {}
       };
+
+      // P8 Phase-3: derive zone rects for preview placement when available
+      try{
+        const z = (window.NexoraZones && typeof window.NexoraZones.getZoneRects === 'function') ? window.NexoraZones.getZoneRects : null;
+        if(z){
+          const fam = String(contract.layoutFamilyCanonical || contract.layoutFamily || 'text-first');
+          const idx = Number.isFinite(Number(metaIn.variationIndex)) ? Number(metaIn.variationIndex) : 0;
+          meta.__zoneRects = z({ family: fam, canvas: { w: cv.width || 1080, h: cv.height || 1080 }, variant: contract.layoutVariant, index: idx });
+        }
+      }catch(_){ }
 
       // P7: render order is spine-authoritative.
       // If a layout family exists and a registry is present, honor its hierarchy to avoid preview drift.
