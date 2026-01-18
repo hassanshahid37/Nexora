@@ -218,15 +218,103 @@ size = size || CATEGORIES[category] || { w:1080, h:1080 };
       }catch(_){}
       return Object.assign({}, t, { contract, content });
     });
-    // ---- P6: Expand deterministic variations (no structural change) ----
-    const expanded = [];
-    const base = withContracts[0] || null;
-    if (!base) return res.end(JSON.stringify({ success: true, templates: [] }));
-    for (let i = 0; i < variationCount; i++) {
-      const p = VARIATION_PROFILES[i % VARIATION_PROFILES.length];
-      expanded.push(applyVariation(base, p, i));
+    
+// ---- P8 Phase-2: Real structural templates (P7-authoritative family) ----
+const expanded = [];
+const base = withContracts[0] || null;
+if (!base) return res.end(JSON.stringify({ success: true, templates: [] }));
+
+// Resolve layout family via P7 selector (mechanical wiring)
+let familyId = null;
+try{
+  if(typeof require === "function"){
+    const sel = require("./layout-family-selector.js");
+    if(sel && typeof sel.selectLayoutFamily === "function"){
+      familyId = sel.selectLayoutFamily({ category, prompt });
     }
-    return res.end(JSON.stringify({ success: true, templates: expanded }));
+  }
+  if(!familyId && typeof globalThis !== "undefined" && typeof globalThis.selectLayoutFamily === "function"){
+    familyId = globalThis.selectLayoutFamily({ category, prompt });
+  }
+}catch(_){}
+
+// Load P8 factory (pure logic)
+let factory = null;
+try{
+  if(typeof require === "function") factory = require("./template-structure-factory.js");
+  if(!factory && typeof globalThis !== "undefined") factory = globalThis.NexoraTemplateFactory;
+}catch(_){}
+
+// Helper: filter elements[] to match contract roles (non-destructive, safe fallback)
+function applyContractToElements(template, contract){
+  try{
+    if(!template || !contract || !Array.isArray(template.elements) || !Array.isArray(contract.layers)) return template;
+
+    const els = template.elements.map(e => Object.assign({}, e));
+    const keep = [];
+    let textIdx = 0;
+
+    function takeText(){
+      const texts = els.filter(e => e && e.type === "text");
+      const t = texts[textIdx] || null;
+      textIdx++;
+      return t;
+    }
+
+    for(const layer of contract.layers){
+      const role = String(layer && layer.role || "");
+      if(role === "background"){
+        const bg = els.find(e => e && e.type === "bg") || null;
+        if(bg) keep.push(bg);
+      } else if(role === "image"){
+        const ph = els.find(e => e && e.type === "photo") || null;
+        if(ph) keep.push(ph);
+      } else if(role === "cta"){
+        const cta = els.find(e => e && (e.type === "pill" || e.type === "chip")) || null;
+        if(cta) keep.push(cta);
+      } else if(role === "badge"){
+        const badge = els.find(e => e && (e.type === "badge" || e.type === "chip")) || null;
+        if(badge) keep.push(badge);
+      } else if(role === "headline" || role === "subhead" || role === "body"){
+        const t = takeText();
+        if(t) keep.push(t);
+      } else {
+        // Unknown role: ignore safely
+      }
+    }
+
+    // If contract filtering would empty template, keep original elements
+    template.elements = keep.length ? keep : template.elements;
+    return template;
+  }catch(_){
+    return template;
+  }
+}
+
+for (let i = 0; i < variationCount; i++) {
+  const p = VARIATION_PROFILES[i % VARIATION_PROFILES.length];
+
+  // Start from base template, then inject a structurally different contract
+  let t = JSON.parse(JSON.stringify(base));
+
+  // Build a new contract using P7 familyId as authority
+  try{
+    if(factory && typeof factory.createTemplateContract === "function"){
+      const baseContract = (t && t.contract) ? t.contract : null;
+      const c = factory.createTemplateContract(baseContract || {}, i, { familyId });
+      t.contract = c;
+      // Align ids with contract
+      t.id = c.templateId;
+      t.templateId = c.templateId;
+      // Apply contract roles to element selection
+      t = applyContractToElements(t, c);
+    }
+  }catch(_){}
+
+  // Then apply P6 variation routing / density adjustments
+  expanded.push(applyVariation(t, p, i));
+}
+return res.end(JSON.stringify({ success: true, templates: expanded }));
 } catch (err) {
     // Hard-safe: NEVER return 500
     try {
