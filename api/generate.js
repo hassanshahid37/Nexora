@@ -1,4 +1,17 @@
 
+const CATEGORY_FAMILY_MAP = {
+  "Instagram Post": "text-first",
+  "YouTube Thumbnail": "image-led",
+  "Flyer": "image-led",
+  "Poster": "image-led",
+  "Business Card": "split-hero",
+  "Resume": "dense",
+  "Presentation Slide": "text-first",
+  "Story": "image-led",
+  "Logo": "minimal"
+};
+
+
 /* P7→P8 wiring: resolve layout family via selector */
 function resolveLayoutFamily(input){
   try{
@@ -279,6 +292,9 @@ try{
     }
   }
 }catch(_){}
+
+
+
 size = size || CATEGORIES[category] || { w:1080, h:1080 };
       const content = {
         headline: (t.elements||[]).find(e=>e.type==="text")?.text || "",
@@ -321,6 +337,22 @@ try{
     familyId = globalThis.selectLayoutFamily({ category, prompt });
   }
 }catch(_){}
+
+// P8 Phase-3 bootstrap:
+// If the selector cannot decide (common when selector is Instagram-biased),
+// fall back to deterministic category→canonical family mapping so categories diverge visually.
+// This preserves P7 authority whenever it returns a value.
+try{
+  if(!familyId){
+    const key = String(category || "");
+    familyId = CATEGORY_FAMILY_MAP[key] || null;
+  }
+}catch(_){
+  // ignore
+}
+
+// Final safety fallback
+if(!familyId) familyId = "text-first";
 
 // Load P8 factory (pure logic)
 let factory = null;
