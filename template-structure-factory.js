@@ -111,7 +111,7 @@
     c.layoutVariant = built.roles.join("+");
     c.layers = built.layers;
 
-    return c;
+    c.meta=c.meta||{};try{const zr=(typeof require==='function'?require('./layout-zone-registry.js'):window.NexoraZones);if(zr&&zr.getZones){c.meta.zones=zr.getZones(c.layoutFamilyCanonical);}}catch(_){};return c;
   }
 
   try{
