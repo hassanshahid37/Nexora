@@ -840,9 +840,41 @@ if(layout==="posterHero"){
       }) || null;
     }catch(_){ contract = null; }
 
+    // P8 Phase-3: make layoutFamily authoritative for geometry.
+    // We synthesize a family id (same selector used elsewhere) and then
+    // expand the base contract into a family-aware variant contract.
+    try{
+      if(contract && window.NexoraTemplateFactory && typeof window.NexoraTemplateFactory.createTemplateContract === "function"){
+        const familyId = (typeof window.selectLayoutFamily === "function")
+          ? window.selectLayoutFamily({ category, prompt })
+          : (contract.layoutFamily || contract.layoutFamilyId || "generic");
+        contract = window.NexoraTemplateFactory.createTemplateContract(contract, idx, { familyId });
+      }
+    }catch(_){ /* keep base contract */ }
+
+    // NOTE:
+    // - index.html's thumbnail pipeline uses the contract renderer only when BOTH
+    //   `template.contract` and top-level `template.content` exist.
+    // - Seed templates previously only returned `doc`, which meant thumbs fell back to the
+    //   legacy canvas preview renderer.
+    const topLevelContent = (spineDoc && spineDoc.content) ? spineDoc.content : {
+      // These keys MUST match the role ids used by the preview renderer:
+      // headline, subhead, body, cta, badge, imageUrl (optional).
+      headline: cm?.headline || "",
+      subhead: cm?.subheadline || "",
+      body: cm?.body || "",
+      cta: cm?.cta || "",
+      badge: cm?.badge || "",
+      // Optional: if available, the preview renderer will use this as a real image.
+      imageUrl: cm?.imageUrl || "",
+      // Logo templates can map to headline (wordmark) but we keep a dedicated key too.
+      logoText: cm?.logoText || "",
+    };
+
     return {
       id: "tpl_"+seed.toString(16),
       contract,
+      content: topLevelContent,
       doc: spineDoc || null,
       title: titleByCategory[category] || (category+" #"+(idx+1)),
       description: normalizeStyleName(style)+" • "+arch.name+" • "+(intent.type||"generic"),
@@ -875,29 +907,9 @@ if(layout==="posterHero"){
 
 // === Preview Renderer v1 HARD GUARD ===
   // If contract exists, legacy preview MUST NOT run
-  // NOTE: Some generators store text in template.elements (role-tagged) rather than template.content.
-  // To avoid blank previews, synthesize a minimal content map from role-tagged elements when needed.
-  const __synthContentFromElements = (els)=>{
-    const out = {};
-    const arr = Array.isArray(els) ? els : [];
-    for(const e of arr){
-      const role = e?.role;
-      if(!role) continue;
-      const text = (e?.text ?? e?.title ?? e?.label ?? e?.value ?? "");
-      if(typeof text !== "string" || !text.trim()) continue;
-      if(out[role]) continue;
-      out[role] = text;
-    }
-    return out;
-  };
-
   try {
     if (template && template.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === 'function') {
-      let content = template.content || template.doc?.content || {};
-      if (!content || typeof content !== "object") content = {};
-      if (Object.keys(content).length === 0 && Array.isArray(template.elements)) {
-        content = __synthContentFromElements(template.elements);
-      }
+      const content = template.content || template.doc?.content || {};
       container.innerHTML = '';
       window.NexoraPreview.renderTo(container, { contract: template.contract, content });
       return; // 🚫 STOP legacy rendering completely
