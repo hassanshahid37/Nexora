@@ -1,185 +1,375 @@
-/*
-  Nexora Layout Zone Registry (P8 Phase-3)
+// layout-zone-registry.js
+// P8 Phase-3: Layout Family -> Zones -> Rects (single authority)
+//
+// Goals:
+// - Stable, data-driven zone definitions per layout family
+// - Deterministic rects that scale across different canvas sizes
+// - Backwards compatible export surface (window + module.exports)
+//
+// This module is geometry-only: it describes zones and calculates rectangles.
+// It must remain deterministic and must not generate content.
 
-  Goal
-  - Provide a stable, data-driven zone system used by both generation and preview.
-  - Keep zoning as structural authority outside generate.js.
+(() => {
+  function clamp(n, min, max) {
+    const v = Number(n);
+    if (!Number.isFinite(v)) return min;
+    return Math.min(max, Math.max(min, v));
+  }
 
-  Public API (global)
-    globalThis.NexoraZoneRegistry = {
-      getZones(family): returns normalized zones (0..1)
-      getZoneRects({ family, canvas, padding }): returns pixel rects keyed by ROLE
+  function round(n) {
+    const v = Number(n);
+    return Number.isFinite(v) ? Math.round(v) : 0;
+  }
+
+  function normalizeFamily(family) {
+    const raw = (family ?? '').toString().trim();
+    if (!raw) return 'text-first';
+    return raw
+      .toLowerCase()
+      .replace(/_/g, '-')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+  }
+
+  const warnOnce = (() => {
+    let warned = false;
+    return (msg) => {
+      if (warned) return;
+      warned = true;
+      try {
+        // eslint-disable-next-line no-console
+        console.warn(msg);
+      } catch (_) {}
+    };
+  })();
+
+  function resolveCanvasDims(canvas) {
+    // Supported shapes:
+    // - { w, h }
+    // - { width, height }
+    // - HTMLCanvasElement { width, height }
+    // - Any object with nested { canvas: { w,h } }
+    const obj = canvas ?? {};
+
+    const w =
+      obj.w ??
+      obj.width ??
+      obj.canvas?.w ??
+      obj.canvas?.width ??
+      obj.size?.w ??
+      obj.size?.width;
+
+    const h =
+      obj.h ??
+      obj.height ??
+      obj.canvas?.h ??
+      obj.canvas?.height ??
+      obj.size?.h ??
+      obj.size?.height;
+
+    const W = Number(w);
+    const H = Number(h);
+
+    if (!Number.isFinite(W) || !Number.isFinite(H) || W <= 0 || H <= 0) {
+      warnOnce(
+        '[Nexora] LayoutZoneRegistry: invalid canvas dims. Falling back to 1080x1080 to avoid NaN rects.'
+      );
+      return { w: 1080, h: 1080 };
     }
 
-  Notes
-  - Zones are defined in normalized coordinates.
-  - getZoneRects returns ROLE-keyed rectangles because both generator and preview
-    reason in terms of TemplateContract roles (headline, body, cta, image, ...).
-*/
+    return { w: W, h: H };
+  }
 
-(function initNexoraZoneRegistry() {
-  const clamp01 = (v) => Math.max(0, Math.min(1, Number(v) || 0));
-
-  // Normalized zones per layout family (0..1)
-  const ZONES = {
-    // Classic stacked layout
-    "text-first": {
-      header: { x: 0.08, y: 0.08, w: 0.84, h: 0.22 },
-      body: { x: 0.08, y: 0.32, w: 0.84, h: 0.46 },
-      footer: { x: 0.08, y: 0.80, w: 0.84, h: 0.12 },
+  const FAMILY_DEFS = {
+    'text-first': {
+      zones: ['headline', 'subhead', 'body', 'cta'],
     },
-
-    // Image dominates, supporting text panel
-    "image-led": {
-      hero: { x: 0.06, y: 0.08, w: 0.88, h: 0.58 },
-      support: { x: 0.06, y: 0.68, w: 0.88, h: 0.18 },
-      footer: { x: 0.06, y: 0.87, w: 0.88, h: 0.09 },
+    'image-dominant': {
+      zones: ['image', 'headline', 'subhead', 'body'],
     },
-
-    // Split canvas: visual left, content right
-    "split-hero": {
-      left: { x: 0.06, y: 0.10, w: 0.46, h: 0.80 },
-      rightHeader: { x: 0.54, y: 0.10, w: 0.40, h: 0.26 },
-      rightBody: { x: 0.54, y: 0.38, w: 0.40, h: 0.36 },
-      rightFooter: { x: 0.54, y: 0.76, w: 0.40, h: 0.14 },
+    'split-balanced': {
+      zones: ['image', 'headline', 'subhead', 'body'],
     },
-
-    // Minimal poster-like focus
-    "minimal": {
-      focus: { x: 0.10, y: 0.18, w: 0.80, h: 0.56 },
-      footer: { x: 0.10, y: 0.76, w: 0.80, h: 0.14 },
+    'top-bottom': {
+      zones: ['image', 'headline', 'subhead', 'body', 'cta'],
     },
-
-    // More slots for dense layouts
-    "dense": {
-      header: { x: 0.06, y: 0.06, w: 0.88, h: 0.18 },
-      grid: { x: 0.06, y: 0.26, w: 0.88, h: 0.58 },
-      footer: { x: 0.06, y: 0.86, w: 0.88, h: 0.10 },
+    'bottom-top': {
+      zones: ['headline', 'subhead', 'body', 'image', 'cta'],
+    },
+    'dominance-left': {
+      zones: ['image', 'headline', 'subhead', 'body', 'cta'],
+    },
+    'dominance-right': {
+      zones: ['image', 'headline', 'subhead', 'body', 'cta'],
+    },
+    'center-stack': {
+      zones: ['headline', 'subhead', 'body', 'cta'],
+    },
+    // Optional special-case family for Logo-like compositions.
+    'logo-only': {
+      zones: ['logo'],
     },
   };
 
-  const DEFAULT_FAMILY = "text-first";
+  function computeRectsForFamily({ w, h, family }) {
+    const fam = normalizeFamily(family);
 
-  function getZones(family) {
-    const key = String(family || "").trim();
-    return ZONES[key] || ZONES[DEFAULT_FAMILY];
-  }
+    const minSide = Math.max(1, Math.min(w, h));
+    const pad = clamp(round(minSide * 0.05), 16, 64);
+    const gap = clamp(round(minSide * 0.02), 8, 24);
 
-  function toPxRect(zone, canvasW, canvasH) {
-    const x = clamp01(zone.x) * canvasW;
-    const y = clamp01(zone.y) * canvasH;
-    const w = clamp01(zone.w) * canvasW;
-    const h = clamp01(zone.h) * canvasH;
-    return { x, y, w, h };
-  }
+    const innerW = Math.max(0, w - pad * 2);
+    const innerH = Math.max(0, h - pad * 2);
 
-  function insetRect(r, insetPx) {
-    const i = Math.max(0, Number(insetPx) || 0);
-    return {
-      x: r.x + i,
-      y: r.y + i,
-      w: Math.max(1, r.w - i * 2),
-      h: Math.max(1, r.h - i * 2),
-    };
-  }
+    const rects = {};
 
-  function canvasToWH(canvas) {
-    if (!canvas) return { w: 1080, h: 1080 };
-    const w = Number(canvas.w ?? canvas.width ?? 1080) || 1080;
-    const h = Number(canvas.h ?? canvas.height ?? 1080) || 1080;
-    return { w, h };
-  }
-
-  // Returns ROLE-keyed pixel rectangles used by generator + preview.
-  function getZoneRects(arg1, arg2, arg3) {
-    // Support both old call style (family, canvas, padding) and new ({...}).
-    const opts =
-      typeof arg1 === "object" && arg1 !== null
-        ? arg1
-        : { family: arg1, canvas: arg2, padding: arg3 };
-
-    const family = String(opts.family || "").trim() || DEFAULT_FAMILY;
-    const { w: canvasW, h: canvasH } = canvasToWH(opts.canvas);
-    const zones = getZones(family);
-
-    // Padding is interpreted as a fraction of the *short* side.
-    const paddingFrac = Math.max(0, Number(opts.padding ?? 0.05) || 0.05);
-    const insetPx = Math.round(Math.min(canvasW, canvasH) * paddingFrac);
-
-    // Base full canvas rect
-    const full = insetRect({ x: 0, y: 0, w: canvasW, h: canvasH }, 0);
-
-    // Helper for pixel zone rect with internal padding
-    const px = (z) => insetRect(toPxRect(z, canvasW, canvasH), insetPx);
-
-    // Map TemplateContract roles -> zoning strategy
-    // Roles seen in the system: background, headline, subhead, body, cta, image, badge, logo
-    const roleRects = {
-      background: full,
-      // defaults (will be overridden below by family-specific mapping)
-      headline: insetRect(full, insetPx),
-      subhead: insetRect(full, insetPx),
-      body: insetRect(full, insetPx),
-      cta: insetRect(full, insetPx),
-      image: insetRect(full, insetPx),
-      badge: insetRect(full, insetPx),
-      logo: insetRect(full, insetPx),
-    };
-
-    if (family === "text-first") {
-      roleRects.headline = zones.header ? px(zones.header) : insetRect(full, insetPx);
-      roleRects.subhead = zones.body ? px(zones.body) : insetRect(full, insetPx);
-      roleRects.body = zones.body ? px(zones.body) : insetRect(full, insetPx);
-      roleRects.cta = zones.footer ? px(zones.footer) : insetRect(full, insetPx);
-      // If an image role exists, treat it as an accent in the body zone.
-      roleRects.image = zones.body ? px(zones.body) : insetRect(full, insetPx);
-      roleRects.badge = zones.header ? px(zones.header) : insetRect(full, insetPx);
-      roleRects.logo = zones.header ? px(zones.header) : insetRect(full, insetPx);
-    } else if (family === "image-led") {
-      roleRects.image = zones.hero ? px(zones.hero) : insetRect(full, insetPx);
-      roleRects.headline = zones.support ? px(zones.support) : insetRect(full, insetPx);
-      roleRects.subhead = zones.support ? px(zones.support) : insetRect(full, insetPx);
-      roleRects.body = zones.support ? px(zones.support) : insetRect(full, insetPx);
-      roleRects.cta = zones.footer ? px(zones.footer) : insetRect(full, insetPx);
-      roleRects.badge = zones.hero ? px(zones.hero) : insetRect(full, insetPx);
-      roleRects.logo = zones.hero ? px(zones.hero) : insetRect(full, insetPx);
-    } else if (family === "split-hero") {
-      roleRects.image = zones.left ? px(zones.left) : insetRect(full, insetPx);
-      roleRects.headline = zones.rightHeader ? px(zones.rightHeader) : insetRect(full, insetPx);
-      roleRects.subhead = zones.rightBody ? px(zones.rightBody) : insetRect(full, insetPx);
-      roleRects.body = zones.rightBody ? px(zones.rightBody) : insetRect(full, insetPx);
-      roleRects.cta = zones.rightFooter ? px(zones.rightFooter) : insetRect(full, insetPx);
-      roleRects.badge = zones.rightHeader ? px(zones.rightHeader) : insetRect(full, insetPx);
-      roleRects.logo = zones.rightHeader ? px(zones.rightHeader) : insetRect(full, insetPx);
-    } else if (family === "minimal") {
-      roleRects.headline = zones.focus ? px(zones.focus) : insetRect(full, insetPx);
-      roleRects.subhead = zones.focus ? px(zones.focus) : insetRect(full, insetPx);
-      roleRects.body = zones.focus ? px(zones.focus) : insetRect(full, insetPx);
-      roleRects.cta = zones.footer ? px(zones.footer) : insetRect(full, insetPx);
-      roleRects.image = zones.focus ? px(zones.focus) : insetRect(full, insetPx);
-      roleRects.badge = zones.footer ? px(zones.footer) : insetRect(full, insetPx);
-      roleRects.logo = zones.footer ? px(zones.footer) : insetRect(full, insetPx);
-    } else if (family === "dense") {
-      roleRects.headline = zones.header ? px(zones.header) : insetRect(full, insetPx);
-      roleRects.subhead = zones.header ? px(zones.header) : insetRect(full, insetPx);
-      roleRects.body = zones.grid ? px(zones.grid) : insetRect(full, insetPx);
-      roleRects.image = zones.grid ? px(zones.grid) : insetRect(full, insetPx);
-      roleRects.cta = zones.footer ? px(zones.footer) : insetRect(full, insetPx);
-      roleRects.badge = zones.header ? px(zones.header) : insetRect(full, insetPx);
-      roleRects.logo = zones.header ? px(zones.header) : insetRect(full, insetPx);
-    } else {
-      // Unknown family: fall back to default zoning.
-      const fallback = getZones(DEFAULT_FAMILY);
-      roleRects.headline = fallback.header ? px(fallback.header) : insetRect(full, insetPx);
-      roleRects.body = fallback.body ? px(fallback.body) : insetRect(full, insetPx);
-      roleRects.cta = fallback.footer ? px(fallback.footer) : insetRect(full, insetPx);
+    if (fam === 'logo-only') {
+      const size = clamp(round(minSide * 0.60), 64, minSide);
+      rects.logo = {
+        x: round((w - size) / 2),
+        y: round((h - size) / 2),
+        w: size,
+        h: size,
+      };
+      return rects;
     }
 
-    return roleRects;
+    if (fam === 'text-first') {
+      const headlineH = clamp(round(h * 0.14), 48, Math.max(0, round(innerH * 0.32)));
+      const subheadH = clamp(round(h * 0.09), 36, Math.max(0, round(innerH * 0.24)));
+      const ctaH = clamp(round(h * 0.08), 32, Math.max(0, round(innerH * 0.18)));
+
+      let y = pad;
+      rects.headline = { x: pad, y, w: innerW, h: headlineH };
+      y += headlineH + gap;
+
+      rects.subhead = { x: pad, y, w: innerW, h: subheadH };
+      y += subheadH + gap;
+
+      const ctaY = h - pad - ctaH;
+      const ctaW = clamp(round(innerW * 0.52), Math.min(innerW, 120), innerW);
+      rects.cta = { x: pad, y: ctaY, w: ctaW, h: ctaH };
+
+      const bodyH = Math.max(0, ctaY - gap - y);
+      rects.body = { x: pad, y, w: innerW, h: bodyH };
+
+      return rects;
+    }
+
+    if (fam === 'image-dominant') {
+      const imageH = clamp(round(innerH * 0.58), 0, innerH);
+
+      let y = pad;
+      rects.image = { x: pad, y, w: innerW, h: imageH };
+      y += imageH + gap;
+
+      const remaining = Math.max(0, h - pad - y);
+      const headlineH = clamp(round(remaining * 0.38), 0, remaining);
+      const subheadH = clamp(round(remaining * 0.22), 0, Math.max(0, remaining - headlineH));
+
+      rects.headline = { x: pad, y, w: innerW, h: headlineH };
+      y += headlineH + gap;
+
+      rects.subhead = { x: pad, y, w: innerW, h: subheadH };
+      y += subheadH + gap;
+
+      rects.body = { x: pad, y, w: innerW, h: Math.max(0, h - pad - y) };
+
+      return rects;
+    }
+
+    if (fam === 'split-balanced') {
+      const leftW = clamp(round(innerW * 0.52), 0, innerW);
+      const gapX = gap;
+      const rightX = pad + leftW + gapX;
+      const rightW = Math.max(0, w - pad - rightX);
+
+      rects.image = { x: pad, y: pad, w: leftW, h: innerH };
+
+      const headlineH = clamp(round(innerH * 0.18), 0, innerH);
+      const subheadH = clamp(round(innerH * 0.10), 0, Math.max(0, innerH - headlineH - gap));
+
+      let y = pad;
+      rects.headline = { x: rightX, y, w: rightW, h: headlineH };
+      y += headlineH + gap;
+
+      rects.subhead = { x: rightX, y, w: rightW, h: subheadH };
+      y += subheadH + gap;
+
+      rects.body = { x: rightX, y, w: rightW, h: Math.max(0, h - pad - y) };
+
+      return rects;
+    }
+
+    if (fam === 'top-bottom') {
+      // Image dominates top; text stack below
+      const imageH = clamp(round(innerH * 0.58), 0, innerH);
+      const textY = pad + imageH + gap;
+      const textH = Math.max(0, h - pad - textY);
+
+      rects.image = { x: pad, y: pad, w: innerW, h: imageH };
+
+      const headlineH = clamp(round(textH * 0.34), 0, textH);
+      const subheadH = clamp(round(textH * 0.18), 0, Math.max(0, textH - headlineH));
+      const ctaH = clamp(round(textH * 0.18), 0, Math.max(0, textH - headlineH - subheadH));
+
+      let y = textY;
+      rects.headline = { x: pad, y, w: innerW, h: headlineH };
+      y += headlineH + gap;
+      rects.subhead = { x: pad, y, w: innerW, h: subheadH };
+      y += subheadH + gap;
+
+      const ctaY = h - pad - ctaH;
+      const ctaW = clamp(round(innerW * 0.52), Math.min(innerW, 120), innerW);
+      rects.cta = { x: pad, y: ctaY, w: ctaW, h: ctaH };
+
+      rects.body = { x: pad, y, w: innerW, h: Math.max(0, ctaY - gap - y) };
+      return rects;
+    }
+
+    if (fam === 'bottom-top') {
+      // Text stack top; image dominates bottom
+      const imageH = clamp(round(innerH * 0.52), 0, innerH);
+      const imageY = h - pad - imageH;
+      rects.image = { x: pad, y: imageY, w: innerW, h: imageH };
+
+      const textH = Math.max(0, imageY - gap - pad);
+      const headlineH = clamp(round(textH * 0.34), 0, textH);
+      const subheadH = clamp(round(textH * 0.18), 0, Math.max(0, textH - headlineH));
+      const ctaH = clamp(round(textH * 0.16), 0, Math.max(0, textH - headlineH - subheadH));
+
+      let y = pad;
+      rects.headline = { x: pad, y, w: innerW, h: headlineH };
+      y += headlineH + gap;
+      rects.subhead = { x: pad, y, w: innerW, h: subheadH };
+      y += subheadH + gap;
+
+      const ctaY = pad + textH - ctaH;
+      const ctaW = clamp(round(innerW * 0.52), Math.min(innerW, 120), innerW);
+      rects.cta = { x: pad, y: ctaY, w: ctaW, h: ctaH };
+
+      rects.body = { x: pad, y, w: innerW, h: Math.max(0, ctaY - gap - y) };
+      return rects;
+    }
+
+    if (fam === 'dominance-left' || fam === 'dominance-right') {
+      // Strong visual dominance; one side is large media, other is text.
+      const leftDominant = (fam === 'dominance-left');
+      const domW = clamp(round(innerW * 0.62), 0, innerW);
+      const textW = Math.max(0, innerW - domW - gap);
+
+      const imgX = leftDominant ? pad : (pad + textW + gap);
+      const textX = leftDominant ? (pad + domW + gap) : pad;
+
+      rects.image = { x: imgX, y: pad, w: domW, h: innerH };
+
+      const headlineH = clamp(round(innerH * 0.22), 0, innerH);
+      const subheadH = clamp(round(innerH * 0.12), 0, Math.max(0, innerH - headlineH));
+      const ctaH = clamp(round(innerH * 0.10), 0, Math.max(0, innerH - headlineH - subheadH));
+
+      let y = pad;
+      rects.headline = { x: textX, y, w: textW, h: headlineH };
+      y += headlineH + gap;
+      rects.subhead = { x: textX, y, w: textW, h: subheadH };
+      y += subheadH + gap;
+
+      const ctaY = h - pad - ctaH;
+      const ctaW = clamp(round(textW * 0.72), Math.min(textW, 120), textW);
+      rects.cta = { x: textX, y: ctaY, w: ctaW, h: ctaH };
+
+      rects.body = { x: textX, y, w: textW, h: Math.max(0, ctaY - gap - y) };
+      return rects;
+    }
+
+    // center-stack (default fallback)
+    {
+      const contentW = clamp(round(innerW * 0.78), 0, innerW);
+      const x = pad + round((innerW - contentW) / 2);
+
+      const headlineH = clamp(round(innerH * 0.16), 0, innerH);
+      const subheadH = clamp(round(innerH * 0.10), 0, innerH);
+      const ctaH = clamp(round(innerH * 0.10), 0, innerH);
+
+      let y = pad + round(innerH * 0.10);
+
+      rects.headline = { x, y, w: contentW, h: headlineH };
+      y += headlineH + gap;
+
+      rects.subhead = { x, y, w: contentW, h: subheadH };
+      y += subheadH + gap;
+
+      const ctaY = h - pad - ctaH;
+      const bodyMaxH = Math.max(0, ctaY - gap - y);
+      const bodyH = clamp(round(innerH * 0.28), 0, bodyMaxH);
+
+      rects.body = { x, y, w: contentW, h: bodyH };
+
+      const ctaW = clamp(round(contentW * 0.55), 0, contentW);
+      rects.cta = { x, y: ctaY, w: ctaW, h: ctaH };
+
+      return rects;
+    }
   }
 
-  globalThis.NexoraZoneRegistry = {
-    getZones,
-    getZoneRects,
+  function sanitizeRects(rects, w, h) {
+    // Clamp and round all rects to valid pixel bounds (avoid NaN/negative).
+    const out = {};
+    for (const [k, r] of Object.entries(rects || {})) {
+      if (!r) continue;
+      const x = clamp(round(r.x), 0, w);
+      const y = clamp(round(r.y), 0, h);
+      const rw = clamp(round(r.w), 0, Math.max(0, w - x));
+      const rh = clamp(round(r.h), 0, Math.max(0, h - y));
+      out[k] = { x, y, w: rw, h: rh };
+    }
+    return out;
+  }
+
+  const ZoneRegistry = {
+    normalizeFamily,
+
+    getFamilyIds() {
+      return Object.keys(FAMILY_DEFS);
+    },
+
+    getZones(params = {}) {
+      const family = normalizeFamily(params.family ?? params.layoutFamily);
+      return (FAMILY_DEFS[family] || FAMILY_DEFS['text-first']).zones.slice();
+    },
+
+    getZoneRects(params = {}) {
+      const family = normalizeFamily(params.family ?? params.layoutFamily);
+      const { w, h } = resolveCanvasDims(params.canvas);
+
+      const rects = computeRectsForFamily({ w, h, family });
+      const clean = sanitizeRects(rects, w, h);
+
+      // Ensure rect list aligns with zones list (no missing keys).
+      const zones = (FAMILY_DEFS[family] || FAMILY_DEFS['text-first']).zones;
+      const out = {};
+      for (const z of zones) {
+        out[z] = clean[z] || { x: 0, y: 0, w: 0, h: 0 };
+      }
+      return out;
+    },
+
+    // Compatibility helper: some code paths may ask for role rects.
+    // For now, role==zone mapping (roles are resolved elsewhere).
+    getRoleRects(params = {}) {
+      return this.getZoneRects(params);
+    },
   };
+
+  // Global export (browser)
+  if (typeof window !== 'undefined') {
+    window.NexoraZoneRegistry = ZoneRegistry;
+    // Back-compat alias seen in older wiring.
+    if (!window.NexoraZones) window.NexoraZones = ZoneRegistry;
+    if (!window.LayoutZoneRegistry) window.LayoutZoneRegistry = ZoneRegistry;
+  }
+
+  // CommonJS export (node)
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ZoneRegistry;
+  }
 })();
