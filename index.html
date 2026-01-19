@@ -449,8 +449,11 @@
       ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
       : (tplOrElements || {});
     const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
-    const W0 = Number(tpl?.canvas?.w || 980);
-    const H0 = Number(tpl?.canvas?.h || 620);
+
+    // Canvas sizing can come from tpl.canvas (lab) or tpl.contract.canvas (Nexora)
+    const canvasSrc = (tpl && (tpl.canvas || (tpl.contract && tpl.contract.canvas))) || {};
+    const W0 = Number((canvasSrc.w ?? canvasSrc.width) || 980);
+    const H0 = Number((canvasSrc.h ?? canvasSrc.height) || 620);
 
     // Make the preview box match the template aspect ratio (critical for YouTube 16:9)
     thumb.innerHTML = "";
@@ -793,38 +796,54 @@
   }
 }
 // Unified preview router (no UI changes):
-// Prefer Preview Renderer v1 when contract exists; fallback to legacy drawThumb otherwise.
+// P8 Phase-3 requirement: when contract exists, previews must reflect zone-executed geometry.
+function __synthContentFromElements(tpl){
+  try{
+    const els = Array.isArray(tpl?.elements) ? tpl.elements : [];
+    if(!els.length) return null;
+
+    const normType = (e)=>String(e?.type||"").toLowerCase();
+    const pick = (types)=>els.find(e=>types.includes(normType(e)));
+
+    const heading = pick(["headline","heading","h1","title"]) || els.find(e=>normType(e)==="text" && (Number(e.weight||0)>=800 || Number(e.size||0)>=46));
+    const sub = pick(["subhead","subheadline"]) || els.find(e=>normType(e)==="text" && e!==heading);
+    const cta = pick(["cta","button"]);
+    const badge = pick(["badge","pill","chip"]);
+    const img = pick(["image","photo"]);
+
+    const headlineText = String(heading?.text ?? heading?.title ?? heading?.label ?? "").trim();
+    const subText = String(sub?.sub ?? sub?.text ?? sub?.title ?? sub?.subtitle ?? "").trim();
+    const ctaText = String(cta?.text ?? cta?.title ?? "").trim();
+    const badgeText = String(badge?.text ?? badge?.title ?? "").trim();
+    const imageUrl = String(img?.src ?? img?.url ?? img?.imageUrl ?? "").trim();
+
+    const out = {};
+    if(headlineText) out.headline = headlineText;
+    if(subText) out.subhead = subText;
+    if(ctaText) out.cta = ctaText;
+    if(badgeText) out.badge = badgeText;
+    if(imageUrl) out.imageUrl = imageUrl;
+
+    // If we have nothing meaningful, return null to fall back safely
+    return Object.keys(out).length ? out : null;
+  }catch(_){ return null; }
+}
+
+// Prefer Preview Renderer v1 when contract exists; synthesize content if missing.
 function renderThumb(thumb, tplOrElements, bg){
   if(!thumb) return;
   try{
     const tpl = Array.isArray(tplOrElements)
       ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
       : (tplOrElements || {});
-    const synth = (els)=>{
-      const out = {};
-      const arr = Array.isArray(els) ? els : [];
-      for(const e of arr){
-        const role = e?.role;
-        if(!role) continue;
-        const text = (e?.text ?? e?.title ?? e?.label ?? e?.value ?? "");
-        if(typeof text !== "string" || !text.trim()) continue;
-        if(role === "headline" && !out.headline) out.headline = text;
-        else if((role === "subhead" || role === "subheadline") && !out.subhead) out.subhead = text;
-        else if(role === "badge" && !out.badge) out.badge = text;
-        else if((role === "cta" || role === "button") && !out.cta) out.cta = text;
-      }
-      return out;
-    };
-
-    const contentRaw = tpl && (tpl.content || tpl.doc?.content);
-    const content = (contentRaw && typeof contentRaw === "object" && Object.keys(contentRaw).length)
-      ? contentRaw
-      : (tpl && Array.isArray(tpl.elements) ? synth(tpl.elements) : {});
 
     if(tpl && tpl.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
-      thumb.innerHTML = "";
-      window.NexoraPreview.renderTo(thumb, { contract: tpl.contract, content });
-      return;
+      const content = tpl.content || tpl.doc?.content || __synthContentFromElements(tpl);
+      if(content && typeof content === "object"){
+        thumb.innerHTML = "";
+        window.NexoraPreview.renderTo(thumb, { contract: tpl.contract, content });
+        return;
+      }
     }
   }catch(_){}
   drawThumb(thumb, tplOrElements, bg);
@@ -1526,9 +1545,10 @@ function renderPreview(canvas, t){
   }
 })();
 </script>
-<script src="template-contract.js"></script>
+  <script src="template-contract.js"></script>
   <script src="spine-core.js"></script>
   <script src="style-engine.js"></script>
+  <!-- P8 Phase-3: zone execution authority for preview + generation -->
   <script src="layout-zone-registry.js"></script>
   <script src="preview-renderer.js"></script>
   <script src="design.js"></script>
@@ -1576,17 +1596,5 @@ function renderPreview(canvas, t){
 })();
 </script>
 
-
-<script>
-/* P8_PHASE3_PREVIEW_WIRE */
-window.renderPreviewCard = function(container, contract){
-  if (window.NexoraPreview && typeof window.NexoraPreview.render === "function") {
-    window.NexoraPreview.render(container, contract);
-    return true;
-  }
-  return false;
-};
-</script>
 </body>
-
 </html>
