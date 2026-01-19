@@ -4,6 +4,7 @@
 
 
 
+
 <!doctype html>
 <html lang="en">
 <head>
@@ -870,6 +871,9 @@ Ctrl+Z / Ctrl+Y = Undo / Redo">⌨</button>
   });
 })();
 </script>
+<!-- Spine core is required so the Editor can hydrate a full template from the active NexoraDoc (P8 spine-first flow). -->
+<script src="./spine-core.js"></script>
+
 <script>
 /* Nexora Editor Core – minimal, non-destructive controller
    Fixes: toolbar buttons + keyboard shortcuts + draft load
@@ -1030,7 +1034,21 @@ function loadDraft(){
     hydrateFromActiveDoc();
     const draft = safeParse(localStorage.getItem(KEY_DRAFT) || "null");
     const sel = safeParse(localStorage.getItem(KEY_SELECTED) || "null");
-    const tpl = (draft && draft.template) ? draft.template : sel;
+    let tpl = (draft && draft.template) ? draft.template : sel;
+
+    // Extra spine-first safety:
+    // If selection is a NexoraDoc (or wrapped in {doc:...}) convert it to a legacy template shape for the editor.
+    if(tpl && !Array.isArray(tpl.elements) && window.NexoraSpine){
+      try{
+        const maybeDoc = (tpl && tpl.nodes && tpl.version) ? tpl : (tpl && tpl.doc && tpl.doc.nodes ? tpl.doc : null);
+        if(maybeDoc){
+          const synthesized = window.NexoraSpine.docToTemplate(maybeDoc);
+          if(synthesized && Array.isArray(synthesized.elements)) tpl = synthesized;
+        }
+      }catch(e){
+        console.warn("Editor core: failed to synthesize template from selected doc", e);
+      }
+    }
     const fitAlready = !!(draft && draft.meta && draft.meta[FIT_META_KEY]);
 
     if(tpl && Array.isArray(tpl.elements)){
