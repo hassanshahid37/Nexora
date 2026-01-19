@@ -800,11 +800,28 @@ function renderThumb(thumb, tplOrElements, bg){
     const tpl = Array.isArray(tplOrElements)
       ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
       : (tplOrElements || {});
-    const content = tpl && (tpl.content || tpl.doc?.content);
-    const hasContent = !!(content && typeof content === "object" && Object.keys(content).length);
-    // Use Preview Renderer v1 ONLY when a real doc/content exists.
-    // Otherwise, fall back to element-based thumb renderer to avoid blank previews.
-    if(tpl && tpl.contract && hasContent && window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
+    const synth = (els)=>{
+      const out = {};
+      const arr = Array.isArray(els) ? els : [];
+      for(const e of arr){
+        const role = e?.role;
+        if(!role) continue;
+        const text = (e?.text ?? e?.title ?? e?.label ?? e?.value ?? "");
+        if(typeof text !== "string" || !text.trim()) continue;
+        if(role === "headline" && !out.headline) out.headline = text;
+        else if((role === "subhead" || role === "subheadline") && !out.subhead) out.subhead = text;
+        else if(role === "badge" && !out.badge) out.badge = text;
+        else if((role === "cta" || role === "button") && !out.cta) out.cta = text;
+      }
+      return out;
+    };
+
+    const contentRaw = tpl && (tpl.content || tpl.doc?.content);
+    const content = (contentRaw && typeof contentRaw === "object" && Object.keys(contentRaw).length)
+      ? contentRaw
+      : (tpl && Array.isArray(tpl.elements) ? synth(tpl.elements) : {});
+
+    if(tpl && tpl.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
       thumb.innerHTML = "";
       window.NexoraPreview.renderTo(thumb, { contract: tpl.contract, content });
       return;
@@ -1559,5 +1576,17 @@ function renderPreview(canvas, t){
 })();
 </script>
 
+
+<script>
+/* P8_PHASE3_PREVIEW_WIRE */
+window.renderPreviewCard = function(container, contract){
+  if (window.NexoraPreview && typeof window.NexoraPreview.render === "function") {
+    window.NexoraPreview.render(container, contract);
+    return true;
+  }
+  return false;
+};
+</script>
 </body>
+
 </html>
