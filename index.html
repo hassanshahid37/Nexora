@@ -795,6 +795,7 @@
     }catch(_){}
   }
 }
+
 // Unified preview router (no UI changes):
 // P8 Phase-3 requirement: when contract exists, previews must reflect zone-executed geometry.
 function __synthContentFromElements(tpl){
@@ -824,7 +825,6 @@ function __synthContentFromElements(tpl){
     if(badgeText) out.badge = badgeText;
     if(imageUrl) out.imageUrl = imageUrl;
 
-    // If we have nothing meaningful, return null to fall back safely
     return Object.keys(out).length ? out : null;
   }catch(_){ return null; }
 }
@@ -845,7 +845,7 @@ function renderThumb(thumb, tplOrElements, bg){
         return;
       }
     }
-  }catch(_){}
+  }catch(_){ }
   drawThumb(thumb, tplOrElements, bg);
 }
 
