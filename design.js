@@ -1,4 +1,5 @@
 
+
 // === Nexora Preview Authority Flag ===
 // Once AI templates are committed, no legacy/seed re-render is allowed.
 // NOTE: use window.__NEXORA_AI_COMMITTED__ (top-level `let` does not attach to window).
@@ -874,9 +875,29 @@ if(layout==="posterHero"){
 
 // === Preview Renderer v1 HARD GUARD ===
   // If contract exists, legacy preview MUST NOT run
+  // NOTE: Some generators store text in template.elements (role-tagged) rather than template.content.
+  // To avoid blank previews, synthesize a minimal content map from role-tagged elements when needed.
+  const __synthContentFromElements = (els)=>{
+    const out = {};
+    const arr = Array.isArray(els) ? els : [];
+    for(const e of arr){
+      const role = e?.role;
+      if(!role) continue;
+      const text = (e?.text ?? e?.title ?? e?.label ?? e?.value ?? "");
+      if(typeof text !== "string" || !text.trim()) continue;
+      if(out[role]) continue;
+      out[role] = text;
+    }
+    return out;
+  };
+
   try {
     if (template && template.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === 'function') {
-      const content = template.content || template.doc?.content || {};
+      let content = template.content || template.doc?.content || {};
+      if (!content || typeof content !== "object") content = {};
+      if (Object.keys(content).length === 0 && Array.isArray(template.elements)) {
+        content = __synthContentFromElements(template.elements);
+      }
       container.innerHTML = '';
       window.NexoraPreview.renderTo(container, { contract: template.contract, content });
       return; // 🚫 STOP legacy rendering completely
