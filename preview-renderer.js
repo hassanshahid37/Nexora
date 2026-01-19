@@ -60,22 +60,9 @@
     const role = layer.role;
     const wrap = el("div", "nr-layer nr-" + role);
 
-    // P8 Phase-3 (preview): if zone rects are provided, position layers absolutely
-    const zr = meta && meta.__zoneRects;
-    if(zr && zr[role] && role !== "background"){
-      const r = zr[role];
-      wrap.style.position = "absolute";
-      wrap.style.left = r.x + "px";
-      wrap.style.top = r.y + "px";
-      wrap.style.width = r.w + "px";
-      wrap.style.height = r.h + "px";
-      wrap.style.margin = "0";
-      wrap.style.zIndex = "1";
-    }else{
-      wrap.style.position = "relative";
-      wrap.style.margin = "12px";
-      wrap.style.zIndex = "1";
-    }
+    wrap.style.position = "relative";
+    wrap.style.margin = "12px";
+    wrap.style.zIndex = "1";
 
     const applyStyle = window.applyStyle || noop;
     const style = applyStyle({
@@ -97,7 +84,7 @@
     if (role === "image") {
       const img = el("div", "nr-image");
       img.style.width = "100%";
-      img.style.height = "100%";
+      img.style.height = "220px";
       img.style.background = "#222";
       img.style.borderRadius = "16px";
       wrap.appendChild(img);
@@ -218,21 +205,73 @@
         root.style.aspectRatio = cv.width + " / " + cv.height;
       }
 
+      // P8 Phase-3: Layout Family → Canvas Execution
+      // We compute family-specific zones (top/bottom/split/dominance) and
+      // place layers into those zones to create real visual differences.
+      function canonFamilyId(contract){
+        try{
+          const c = contract || {};
+          const raw = String(c.layoutFamilyCanonical || c.layoutFamily || c.layoutFamilyId || "").trim();
+          if(!raw) return "text-first";
+          if(raw === "promo-badge") return "image-led";
+          if(raw === "minimal-quote") return "minimal";
+          if(raw === "feature-grid") return "dense";
+          if(raw === "generic") return "split-hero";
+          return raw;
+        }catch(_){
+          return "text-first";
+        }
+      }
+
+      const familyCanon = canonFamilyId(contract);
+      const zonesFrac = (window.NexoraZones && typeof window.NexoraZones.getZones === "function")
+        ? window.NexoraZones.getZones(familyCanon)
+        : null;
+
+      function roleToZone(family, role){
+        const r = String(role||"");
+        // Background always fills.
+        if(r === "background") return null;
+
+        if(family === "text-first"){
+          if(r === "headline" || r === "badge") return "header";
+          if(r === "subhead" || r === "body" || r === "image") return "body";
+          if(r === "cta") return "footer";
+          return "body";
+        }
+
+        if(family === "image-led"){
+          if(r === "image") return "hero";
+          if(r === "badge") return "hero";
+          if(r === "headline" || r === "subhead" || r === "body") return "support";
+          if(r === "cta") return "footer";
+          return "support";
+        }
+
+        if(family === "split-hero"){
+          if(r === "image") return "left";
+          // Text stack on right
+          return "right";
+        }
+
+        if(family === "minimal"){
+          return "focus";
+        }
+
+        if(family === "dense"){
+          if(r === "headline") return "header";
+          if(r === "cta") return "footer";
+          return "grid";
+        }
+
+        return null;
+      }
+
       const meta = {
         category: metaIn.category || contract.category,
         style: metaIn.style || contract.style || contract.archetype || null,
         palette: metaIn.palette || contract.palette || {}
       };
-
-      // P8 Phase-3: derive zone rects for preview placement when available
-      try{
-        const z = (window.NexoraZones && typeof window.NexoraZones.getZoneRects === 'function') ? window.NexoraZones.getZoneRects : null;
-        if(z){
-          const fam = String(contract.layoutFamilyCanonical || contract.layoutFamily || 'text-first');
-          const idx = Number.isFinite(Number(metaIn.variationIndex)) ? Number(metaIn.variationIndex) : 0;
-          meta.__zoneRects = z({ family: fam, canvas: { w: cv.width || 1080, h: cv.height || 1080 }, variant: contract.layoutVariant, index: idx });
-        }
-      }catch(_){ }
 
       // P7: render order is spine-authoritative.
       // If a layout family exists and a registry is present, honor its hierarchy to avoid preview drift.
@@ -269,9 +308,66 @@
         }
       })();
 
+      // If zones are available, split each zone into vertical slots based on
+      // how many layers map to that zone. This keeps behavior deterministic
+      // while still producing strong family-driven geometry differences.
+      const zoneBuckets = Object.create(null);
+      if(zonesFrac){
+        ordered.forEach((layer, idx) => {
+          const zone = roleToZone(familyCanon, layer && layer.role);
+          if(!zone) return;
+          (zoneBuckets[zone] = zoneBuckets[zone] || []).push(idx);
+        });
+      }
+
+      function applyPlacement(node, zoneKey, slotIndex){
+        try{
+          if(!node || !zonesFrac || !zoneKey || !zonesFrac[zoneKey]) return;
+          const z = zonesFrac[zoneKey];
+          const bucket = zoneBuckets[zoneKey] || [];
+          const n = Math.max(1, bucket.length);
+          const i = Math.max(0, Math.min(n-1, slotIndex|0));
+
+          const x = (z.x != null) ? z.x : 0;
+          const y = (z.y != null) ? z.y : 0;
+          const w = (z.w != null) ? z.w : 1;
+          const h = (z.h != null) ? z.h : 1;
+
+          const slotH = h / n;
+          const slotY = y + (slotH * i);
+
+          node.style.position = "absolute";
+          node.style.left = (x * 100) + "%";
+          node.style.top = (slotY * 100) + "%";
+          node.style.width = (w * 100) + "%";
+          node.style.height = (slotH * 100) + "%";
+          node.style.boxSizing = "border-box";
+          node.style.padding = node.style.padding || "10%";
+          node.style.display = "flex";
+          node.style.alignItems = "center";
+          node.style.justifyContent = "center";
+          node.style.textAlign = node.style.textAlign || "center";
+        }catch(_){ }
+      }
+
+      const zoneCursor = Object.create(null);
       ordered.forEach(layer => {
         const node = renderLayer(layer, content, meta);
-        if (node) root.appendChild(node);
+        if (!node) return;
+
+        if(layer && layer.role === "background"){
+          root.appendChild(node);
+          return;
+        }
+
+        const zone = zonesFrac ? roleToZone(familyCanon, layer && layer.role) : null;
+        if(zone){
+          const slot = zoneCursor[zone] || 0;
+          zoneCursor[zone] = slot + 1;
+          applyPlacement(node, zone, slot);
+        }
+
+        root.appendChild(node);
       });
 
       return true;
