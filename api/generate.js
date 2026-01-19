@@ -1,17 +1,4 @@
 
-const CATEGORY_FAMILY_MAP = {
-  "Instagram Post": "text-first",
-  "YouTube Thumbnail": "image-led",
-  "Flyer": "image-led",
-  "Poster": "image-led",
-  "Business Card": "split-hero",
-  "Resume": "dense",
-  "Presentation Slide": "text-first",
-  "Story": "image-led",
-  "Logo": "minimal"
-};
-
-
 /* P7→P8 wiring: resolve layout family via selector */
 function resolveLayoutFamily(input){
   try{
@@ -124,90 +111,6 @@ async function getNormalizeCategory() {
   }
 }
 
-
-// Layout Zones registry is optional at runtime (P8 Phase-3).
-let __getZoneRects = null;
-let __getZoneRectsTried = false;
-function getZoneRects(){
-  try{
-    if (typeof __getZoneRects === 'function') return __getZoneRects;
-    if (__getZoneRectsTried) return null;
-    __getZoneRectsTried = true;
-
-    try{
-      // Vercel serverless: /api/generate.js -> ../layout-zone-registry.js
-      // eslint-disable-next-line global-require
-      const mod = require('../layout-zone-registry.js');
-      __getZoneRects = (mod && typeof mod.getZoneRects === 'function') ? mod.getZoneRects : null;
-      if (typeof __getZoneRects === 'function') return __getZoneRects;
-    }catch(_){ }
-
-    try{
-      // Local/dev alt path
-      // eslint-disable-next-line global-require
-      const mod = require('./layout-zone-registry.js');
-      __getZoneRects = (mod && typeof mod.getZoneRects === 'function') ? mod.getZoneRects : null;
-      if (typeof __getZoneRects === 'function') return __getZoneRects;
-    }catch(_){ }
-
-    if (typeof globalThis !== 'undefined' && globalThis.NexoraZones && typeof globalThis.NexoraZones.getZoneRects === 'function'){
-      __getZoneRects = globalThis.NexoraZones.getZoneRects;
-      return __getZoneRects;
-    }
-    return null;
-  }catch(_){ return null; }
-}
-
-function applyZonesToElements(template, contract, index, canvas){
-  try{
-    if (!template || !contract || !Array.isArray(template.elements)) return template;
-    const fn = getZoneRects();
-    if (typeof fn !== 'function') return template;
-    const family = String(contract.layoutFamilyCanonical || contract.layoutFamily || 'text-first');
-    const rects = fn({ family, canvas, variant: contract.layoutVariant, index });
-    if (!rects || typeof rects !== 'object') return template;
-
-    // Apply rects to elements. We use __role if present (set during contract filtering)
-    for (const el of template.elements){
-      if (!el || typeof el !== 'object') continue;
-      const role = String(el.__role || (
-        el.type === 'bg' ? 'background' :
-        el.type === 'photo' ? 'image' :
-        (el.type === 'pill' || el.type === 'chip') ? 'cta' :
-        el.type === 'badge' ? 'badge' :
-        el.type === 'text' ? 'headline' :
-        ''
-      ));
-      const r = rects[role] || null;
-      if (!r) continue;
-
-      // Background: full bleed
-      if (el.type === 'bg'){
-        el.x = 0; el.y = 0; el.w = canvas.w; el.h = canvas.h;
-        continue;
-      }
-
-      // Shapes/photos/badges/pills: set box
-      if (el.type === 'photo' || el.type === 'shape' || el.type === 'badge' || el.type === 'pill'){
-        el.x = r.x; el.y = r.y; el.w = r.w; el.h = r.h;
-        continue;
-      }
-
-      // Text/chip: set x,y and keep a maxWidth hint for editor
-      if (el.type === 'text' || el.type === 'chip'){
-        el.x = r.x; el.y = r.y;
-        el.maxW = r.w;
-        continue;
-      }
-    }
-
-    template.meta = template.meta || {};
-    template.meta.layoutFamilyCanonical = family;
-    template.meta.zonesApplied = true;
-    return template;
-  }catch(_){ return template; }
-}
-
 // Purpose: ALWAYS return REAL templates (canvas + elements) compatible with index.html preview.
 // Notes:
 // - CommonJS handler for Vercel/Netlify-style /api directory.
@@ -292,9 +195,6 @@ try{
     }
   }
 }catch(_){}
-
-
-
 size = size || CATEGORIES[category] || { w:1080, h:1080 };
       const content = {
         headline: (t.elements||[]).find(e=>e.type==="text")?.text || "",
@@ -325,39 +225,28 @@ const base = withContracts[0] || null;
 if (!base) return res.end(JSON.stringify({ success: true, templates: [] }));
 
 // Resolve layout family via P7 selector (mechanical wiring)
+// IMPORTANT: this file typically runs as /api/generate.js on Vercel.
+// So we must resolve selector paths robustly (../ + ./) and NEVER crash.
 let familyId = null;
 try{
-  if(typeof require === "function"){
-    const sel = require("./layout-family-selector.js");
-    if(sel && typeof sel.selectLayoutFamily === "function"){
-      familyId = sel.selectLayoutFamily({ category, prompt });
-    }
+  const selFn = getSelectLayoutFamily();
+  if (typeof selFn === "function") {
+    familyId = selFn({ category, prompt });
   }
   if(!familyId && typeof globalThis !== "undefined" && typeof globalThis.selectLayoutFamily === "function"){
     familyId = globalThis.selectLayoutFamily({ category, prompt });
   }
 }catch(_){}
 
-// P8 Phase-3 bootstrap:
-// If the selector cannot decide (common when selector is Instagram-biased),
-// fall back to deterministic category→canonical family mapping so categories diverge visually.
-// This preserves P7 authority whenever it returns a value.
-try{
-  if(!familyId){
-    const key = String(category || "");
-    familyId = CATEGORY_FAMILY_MAP[key] || null;
-  }
-}catch(_){
-  // ignore
-}
-
-// Final safety fallback
-if(!familyId) familyId = "text-first";
-
 // Load P8 factory (pure logic)
 let factory = null;
 try{
-  if(typeof require === "function") factory = require("./template-structure-factory.js");
+  if(typeof require === "function"){
+    // Vercel: /api/generate.js -> ../template-structure-factory.js
+    try{ factory = require("../template-structure-factory.js"); }catch(_){ }
+    // Local/dev: same folder
+    if(!factory){ try{ factory = require("./template-structure-factory.js"); }catch(_){ } }
+  }
   if(!factory && typeof globalThis !== "undefined") factory = globalThis.NexoraTemplateFactory;
 }catch(_){}
 
@@ -381,19 +270,19 @@ function applyContractToElements(template, contract){
       const role = String(layer && layer.role || "");
       if(role === "background"){
         const bg = els.find(e => e && e.type === "bg") || null;
-        if(bg){ bg.__role='background'; keep.push(bg); }
+        if(bg) keep.push(bg);
       } else if(role === "image"){
         const ph = els.find(e => e && e.type === "photo") || null;
-        if(ph){ ph.__role='image'; keep.push(ph); }
+        if(ph) keep.push(ph);
       } else if(role === "cta"){
         const cta = els.find(e => e && (e.type === "pill" || e.type === "chip")) || null;
-        if(cta){ cta.__role='cta'; keep.push(cta); }
+        if(cta) keep.push(cta);
       } else if(role === "badge"){
         const badge = els.find(e => e && (e.type === "badge" || e.type === "chip")) || null;
-        if(badge){ badge.__role='badge'; keep.push(badge); }
+        if(badge) keep.push(badge);
       } else if(role === "headline" || role === "subhead" || role === "body"){
         const t = takeText();
-        if(t){ t.__role=role; keep.push(t); }
+        if(t) keep.push(t);
       } else {
         // Unknown role: ignore safely
       }
@@ -406,14 +295,6 @@ function applyContractToElements(template, contract){
     return template;
   }
 }
-
-let __canvasSize = { w: 1080, h: 1080 };
-try{
-  const cv = (base && base.contract && base.contract.canvas) ? base.contract.canvas : null;
-  const w = Number(cv && (cv.w ?? cv.width));
-  const h = Number(cv && (cv.h ?? cv.height));
-  if(Number.isFinite(w) && Number.isFinite(h) && w>0 && h>0) __canvasSize = { w: Math.round(w), h: Math.round(h) };
-}catch(_){}
 
 for (let i = 0; i < variationCount; i++) {
   const p = VARIATION_PROFILES[i % VARIATION_PROFILES.length];
@@ -432,8 +313,6 @@ for (let i = 0; i < variationCount; i++) {
       t.templateId = c.templateId;
       // Apply contract roles to element selection
       t = applyContractToElements(t, c);
-      // P8 Phase-3: execute layout zones onto element geometry
-      t = applyZonesToElements(t, c, i, __canvasSize);
     }
   }catch(_){}
 
