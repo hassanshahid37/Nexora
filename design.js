@@ -1223,3 +1223,76 @@ function applyIntentScene(template, intent) {
     };
   }
 })();
+
+
+
+/* =====================================================
+   P8 EDITOR HYDRATION BRIDGE (SAFE, NON-DESTRUCTIVE)
+   Purpose:
+   - If a template enters the Editor with `contract.layers`
+   - And legacy `elements` are missing / incomplete
+   - Synthesize minimal editor-compatible elements
+   ===================================================== */
+(function(){
+  if (typeof window === "undefined") return;
+
+  function installHydrationBridge(){
+    if (typeof window.loadTemplateIntoEditor !== "function") return false;
+
+    const original = window.loadTemplateIntoEditor;
+    if (original.__P8_PATCHED__) return true;
+
+    function withGeometry(role, i){
+      const pad = 80 + i*40;
+      return {
+        x: pad,
+        y: pad,
+        w: 600,
+        h: 120,
+        role
+      };
+    }
+
+    window.loadTemplateIntoEditor = function(template){
+      try{
+        if (
+          template &&
+          template.contract &&
+          Array.isArray(template.contract.layers) &&
+          (!template.elements || template.elements.length <= 2)
+        ){
+          const els = [];
+
+          // Background
+          els.push({ type:"bg", role:"background", x:0, y:0, w:template.canvas?.w||1080, h:template.canvas?.h||1080 });
+
+          let ti = 0;
+          for(const layer of template.contract.layers){
+            if(layer.role === "image"){
+              els.push({ type:"photo", role:"image", ...withGeometry("image", ti++) });
+            } else if(layer.role === "headline" || layer.role === "subhead" || layer.role === "body"){
+              els.push({
+                type:"text",
+                role: layer.role,
+                text: template.content?.[layer.role] || layer.role,
+                ...withGeometry(layer.role, ti++)
+              });
+            }
+          }
+
+          template = { ...template, elements: els };
+        }
+      }catch(e){ /* silent */ }
+
+      return original(template);
+    };
+
+    window.loadTemplateIntoEditor.__P8_PATCHED__ = true;
+    return true;
+  }
+
+  // Poll until editor boot finishes
+  const t = setInterval(()=>{
+    if (installHydrationBridge()) clearInterval(t);
+  }, 50);
+})();
