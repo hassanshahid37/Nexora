@@ -8,6 +8,7 @@ const ROLE_TYPE_MAP = {
   subhead: "text",
   body: "text",
   cta: "text",
+  badge: "text",
   image: "image",
   logo: "image",
   background: "shape"
@@ -20,6 +21,29 @@ const DEFAULTS = {
   background: { fill: null, radius: 0 },
   visibility: { visible: true, opacity: 1 }
 };
+
+// Deterministic id helper (avoid randomness in render pipeline).
+function fnv1a32(str){
+  let h = 0x811c9dc5;
+  const s = String(str || "");
+  for (let i = 0; i < s.length; i++){
+    h ^= s.charCodeAt(i);
+    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+  }
+  return h >>> 0;
+}
+
+function stableElementId(el, index, seed){
+  try{
+    const role = String(el && el.role || "");
+    const type = String(el && el.type || "");
+    const g = [el?.x, el?.y, el?.w, el?.h].map(v => (typeof v === "number" ? v.toFixed(4) : "na")).join(",");
+    const base = [seed || "", role, type, String(index ?? 0), g].join("|");
+    return "el_" + fnv1a32(base).toString(16);
+  }catch(_){
+    return "el_" + fnv1a32(String(index ?? 0)).toString(16);
+  }
+}
 
 function resolveType(el){
   if (el.type) return el.type;
@@ -46,14 +70,14 @@ function hasGeometry(el){
   return typeof el.x==="number" && typeof el.y==="number" && typeof el.w==="number" && typeof el.h==="number";
 }
 
-function normalizeElement(el){
+function normalizeElement(el, index, seed){
   if (!el || !hasGeometry(el)) return null;
   const type = resolveType(el);
   if (!type) return null;
   const c = normalizeContent(el, type);
   if (!c) return null;
   return {
-    id: el.id || `${type}_${Math.random().toString(36).slice(2,9)}`,
+    id: String(el.id || stableElementId({ ...el, type }, index, seed)),
     type,
     role: el.role || null,
     content: c.content,
@@ -66,37 +90,114 @@ function normalizeElement(el){
   };
 }
 
-function normalizeElements(elements){
+function normalizeElements(elements, opts){
+  const o = (opts && typeof opts === "object") ? opts : {};
+  const seed = String(o.seed || o.templateId || "");
+
   const out = [];
+  let i = 0;
   for (const el of (elements||[])){
-    const n = normalizeElement(el);
+    const n = normalizeElement(el, i, seed);
     if (n) out.push(n);
     else console.warn("[P9.1] Dropped invalid element:", el);
+    i++;
   }
   return out;
 }
 
-
-function normalizeContentForPreview(content, layers){
+// --- P9.1 Content normalization for layer/content-driven renderers ---
+// Many Nexora renderers paint from `contract.layers` + `payload.content`.
+// This function guarantees safe defaults so previews never appear blank.
+function normalizeContentForPreview(content, layers, opts){
   try{
-    const c = Object.assign({}, content || {});
-    const roles = new Set((layers||[]).map(l => String(l && l.role || "")));
-    // Ensure text fields exist if roles present
-    if(roles.has("headline") && !String(c.headline||"").trim()) c.headline = "Your Headline";
-    if(roles.has("subhead") && !String(c.subhead||"").trim()) c.subhead = "Supporting text goes here";
-    if(roles.has("cta") && !String(c.cta||"").trim()) c.cta = "Learn more";
-    if(roles.has("badge") && !String(c.badge||"").trim()) c.badge = "NEW";
-    // Image: allow any of these keys; create placeholder token if missing
-    const img = c.imageSrc || c.image || c.src || c.photo || null;
-    if(roles.has("image") && !img) c.imageSrc = "__PLACEHOLDER_IMAGE__";
-    else if(img) c.imageSrc = img;
+    const c0 = (content && typeof content === "object") ? content : {};
+    const c = Object.assign({}, c0);
+
+    const layerArr = Array.isArray(layers) ? layers : [];
+    const roles = new Set(layerArr.map(l => String(l && l.role || "")));
+
+    const prefer = (opts && typeof opts === "object") ? opts : {};
+    const title = String(prefer.title || prefer.headline || "Your Headline").trim();
+    const sub = String(prefer.subhead || "Supporting text goes here").trim();
+    const body = String(prefer.body || "A short description that fits the layout.").trim();
+    const cta = String(prefer.cta || "Learn More").trim();
+    const badge = String(prefer.badge || "NEW").trim();
+
+    // Normalize text fields by role.
+    if (roles.has("headline")) {
+      const v = String(c.headline || c.title || "").trim();
+      c.headline = v || title;
+    }
+    if (roles.has("subhead")) {
+      const v = String(c.subhead || c.subtitle || "").trim();
+      c.subhead = v || sub;
+    }
+    if (roles.has("body")) {
+      const v = String(c.body || c.description || "").trim();
+      c.body = v || body;
+    }
+    if (roles.has("cta")) {
+      const v = String(c.cta || c.button || "").trim();
+      c.cta = v || cta;
+    }
+    if (roles.has("badge")) {
+      const v = String(c.badge || c.tag || "").trim();
+      c.badge = v || badge;
+    }
+
+    // Image normalization: accept multiple keys; guarantee a placeholder token.
+    const img = c.imageSrc || c.image || c.src || c.photo || c.thumbnail || null;
+    if (roles.has("image")) {
+      c.imageSrc = (typeof img === "string" && img.trim()) ? img.trim() : "__PLACEHOLDER_IMAGE__";
+    }
+
+    // Logo normalization (future): also placeholder-safe
+    const logo = c.logoSrc || c.logo || null;
+    if (roles.has("logo")) {
+      c.logoSrc = (typeof logo === "string" && logo.trim()) ? logo.trim() : "__PLACEHOLDER_IMAGE__";
+    }
+
     return c;
   }catch(_){
-    return content || {};
+    return (content && typeof content === "object") ? content : {};
+  }
+}
+
+// Deterministic placeholder image (inline SVG data URL)
+function placeholderDataUrl(label){
+  try{
+    const safe = String(label || "IMAGE").toUpperCase().slice(0, 10).replace(/[^A-Z0-9 ]/g, "");
+    const svg =
+      '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800">' +
+      '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#2b2b2b"/><stop offset="1" stop-color="#111"/>' +
+      '</linearGradient></defs>' +
+      '<rect width="100%" height="100%" fill="url(#g)"/>' +
+      '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" ' +
+      'font-family="Inter,Arial" font-size="64" fill="#ffffff" opacity="0.55" letter-spacing="10">' +
+      safe +
+      '</text></svg>';
+    const enc = encodeURIComponent(svg).replace(/'/g, "%27").replace(/\(/g, "%28").replace(/\)/g, "%29");
+    return "data:image/svg+xml;charset=utf-8," + enc;
+  }catch(_){
+    return null;
   }
 }
 
 
+
+
+
+
 // UMD
-try{ if(typeof module!=="undefined" && module.exports){ module.exports={ normalizeElements, normalizeContentForPreview }; } }catch(_){}
-try{ if(typeof window!=="undefined"){ window.NexoraElementNormalizer={ normalizeElements, normalizeContentForPreview }; } }catch(_){}
+const API = {
+  normalizeElements,
+  normalizeContentForPreview,
+  placeholderDataUrl,
+  stableElementId,
+  ROLE_TYPE_MAP,
+  DEFAULTS
+};
+
+try{ if(typeof module!=="undefined" && module.exports){ module.exports = API; } }catch(_){ }
+try{ if(typeof window!=="undefined"){ window.NexoraElementNormalizer = API; } }catch(_){ }
