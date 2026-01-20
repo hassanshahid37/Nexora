@@ -1,8 +1,12 @@
-
 /**
- * P9.1 — Element Normalization Engine
+ * P9.1 — Element Normalization Engine (FULL)
  * Render-safety only. No layout/geometry changes.
+ * - Deterministic IDs
+ * - Role→Type resolution
+ * - Content normalization for layer/content-driven renderers (preview/editor)
+ * - Placeholder image support (data URL)
  */
+
 const ROLE_TYPE_MAP = {
   headline: "text",
   subhead: "text",
@@ -22,13 +26,12 @@ const DEFAULTS = {
   visibility: { visible: true, opacity: 1 }
 };
 
-// Deterministic id helper (avoid randomness in render pipeline).
 function fnv1a32(str){
   let h = 0x811c9dc5;
-  const s = String(str || "");
-  for (let i = 0; i < s.length; i++){
+  const s = String(str ?? "");
+  for(let i=0;i<s.length;i++){
     h ^= s.charCodeAt(i);
-    h = (h + ((h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24))) >>> 0;
+    h = (h + ((h<<1) + (h<<4) + (h<<7) + (h<<8) + (h<<24))) >>> 0;
   }
   return h >>> 0;
 }
@@ -46,19 +49,19 @@ function stableElementId(el, index, seed){
 }
 
 function resolveType(el){
-  if (el.type) return el.type;
-  if (el.role && ROLE_TYPE_MAP[el.role]) return ROLE_TYPE_MAP[el.role];
+  if (el && el.type) return el.type;
+  if (el && el.role && ROLE_TYPE_MAP[el.role]) return ROLE_TYPE_MAP[el.role];
   return null;
 }
 
 function normalizeContent(el, type){
   if (type === "text"){
-    const text = (el.text ?? el.content ?? "").toString().trim();
+    const text = (el?.text ?? el?.content ?? "").toString().trim();
     if (!text) return null;
     return { content: text };
   }
   if (type === "image"){
-    const src = el.src || el.content || el.image || null;
+    const src = el?.src || el?.content || el?.image || null;
     if (!src) return { content: "__PLACEHOLDER_IMAGE__" };
     return { content: src };
   }
@@ -67,7 +70,7 @@ function normalizeContent(el, type){
 }
 
 function hasGeometry(el){
-  return typeof el.x==="number" && typeof el.y==="number" && typeof el.w==="number" && typeof el.h==="number";
+  return typeof el?.x==="number" && typeof el?.y==="number" && typeof el?.w==="number" && typeof el?.h==="number";
 }
 
 function normalizeElement(el, index, seed){
@@ -76,6 +79,7 @@ function normalizeElement(el, index, seed){
   if (!type) return null;
   const c = normalizeContent(el, type);
   if (!c) return null;
+
   return {
     id: String(el.id || stableElementId({ ...el, type }, index, seed)),
     type,
@@ -93,7 +97,6 @@ function normalizeElement(el, index, seed){
 function normalizeElements(elements, opts){
   const o = (opts && typeof opts === "object") ? opts : {};
   const seed = String(o.seed || o.templateId || "");
-
   const out = [];
   let i = 0;
   for (const el of (elements||[])){
@@ -105,9 +108,7 @@ function normalizeElements(elements, opts){
   return out;
 }
 
-// --- P9.1 Content normalization for layer/content-driven renderers ---
-// Many Nexora renderers paint from `contract.layers` + `payload.content`.
-// This function guarantees safe defaults so previews never appear blank.
+// Content normalization for layer/content-driven renderers.
 function normalizeContentForPreview(content, layers, opts){
   try{
     const c0 = (content && typeof content === "object") ? content : {};
@@ -123,7 +124,6 @@ function normalizeContentForPreview(content, layers, opts){
     const cta = String(prefer.cta || "Learn More").trim();
     const badge = String(prefer.badge || "NEW").trim();
 
-    // Normalize text fields by role.
     if (roles.has("headline")) {
       const v = String(c.headline || c.title || "").trim();
       c.headline = v || title;
@@ -145,13 +145,11 @@ function normalizeContentForPreview(content, layers, opts){
       c.badge = v || badge;
     }
 
-    // Image normalization: accept multiple keys; guarantee a placeholder token.
-    const img = c.imageSrc || c.image || c.src || c.photo || c.thumbnail || null;
+    const img = c.imageSrc || c.image || c.src || c.photo || c.thumbnail || c.imageUrl || null;
     if (roles.has("image")) {
       c.imageSrc = (typeof img === "string" && img.trim()) ? img.trim() : "__PLACEHOLDER_IMAGE__";
     }
 
-    // Logo normalization (future): also placeholder-safe
     const logo = c.logoSrc || c.logo || null;
     if (roles.has("logo")) {
       c.logoSrc = (typeof logo === "string" && logo.trim()) ? logo.trim() : "__PLACEHOLDER_IMAGE__";
@@ -184,12 +182,6 @@ function placeholderDataUrl(label){
   }
 }
 
-
-
-
-
-
-// UMD
 const API = {
   normalizeElements,
   normalizeContentForPreview,
