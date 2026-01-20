@@ -1,144 +1,143 @@
 (function(){
-  // Nexora Archetype Engine
-  // Purpose: isolate archetype compilation away from generate.js.
-  // Works in Node (CommonJS) and browser (window) without crashing.
+  "use strict";
+
+  // Nexora Archetype Engine (CJS + Browser safe)
+  // - Loads archetypes_1-20_compiled.js which MUST be UMD/CJS compatible.
+  // - Never throws: if archetype library is missing/misconfigured, functions return null/[]
 
   let _cache = null;
-  async function loadCompiled(){
+
+  function _loadLib(){
     if(_cache) return _cache;
-    // 1) If a global is already present (browser builds), use it.
     try{
-      if(typeof globalThis !== 'undefined' && globalThis.NexoraArchetypes && typeof globalThis.NexoraArchetypes.buildAllArchetypes==='function'){
-        _cache = {
-          buildAllArchetypes: globalThis.NexoraArchetypes.buildAllArchetypes,
-          selectArchetype: globalThis.NexoraArchetypes.selectArchetype,
-        };
+      // Prefer CommonJS require (Vercel/server)
+      if(typeof require === "function"){
+        // eslint-disable-next-line global-require
+        const lib = require("./archetypes_1-20_compiled.js");
+        const buildAll = lib && lib.buildAllArchetypes;
+        const select = lib && lib.selectArchetype;
+        const resolveCanvas = lib && lib.resolveCanvas;
+        if(typeof buildAll !== "function" || typeof select !== "function" || typeof resolveCanvas !== "function"){
+          throw new Error("Invalid archetype lib exports (expected buildAllArchetypes/selectArchetype/resolveCanvas)");
+        }
+        const ALL = buildAll();
+        _cache = { ALL, select, resolveCanvas };
         return _cache;
       }
-    }catch(_){ }
+    }catch(e){
+      try{ console.warn("[Nexora] Archetype engine disabled:", e && e.message ? e.message : e); }catch(_){}
+      _cache = null;
+      return null;
+    }
 
-    // 2) Try require (works if compiled file is CommonJS; harmless if not).
+    // Browser fallback: window global (if script tag loaded)
     try{
-      if(typeof require === 'function'){
-        const mod = require('./archetypes_1-20_compiled.js');
-        if(mod && typeof mod.buildAllArchetypes==='function' && typeof mod.selectArchetype==='function'){
-          _cache = mod;
+      if(typeof window !== "undefined"){
+        const lib = window.NexoraArchetypesLib || window.NexoraArchetypes;
+        if(lib && typeof lib.buildAllArchetypes === "function" && typeof lib.selectArchetype === "function" && typeof lib.resolveCanvas === "function"){
+          const ALL = lib.buildAllArchetypes();
+          _cache = { ALL, select: lib.selectArchetype, resolveCanvas: lib.resolveCanvas };
           return _cache;
         }
       }
     }catch(_){ }
 
-    // 3) Dynamic import for ESM compiled file.
-    try{
-      const mod = await import('./archetypes_1-20_compiled.js');
-      if(mod && typeof mod.buildAllArchetypes==='function' && typeof mod.selectArchetype==='function'){
-        _cache = mod;
-        return _cache;
-      }
-    }catch(_){ }
-
+    _cache = null;
     return null;
   }
 
-  async function compileArchetype(input){
-    const mod = await loadCompiled();
-    if(!mod) throw new Error('Archetype module not available');
-
-    const all = mod.buildAllArchetypes();
-    const archetypeId = input && input.archetypeId;
-    const canvas = input && input.canvas;
-    const ctx = input && input.ctx;
-
-    const chosen = mod.selectArchetype(all, archetypeId, ctx && ctx.headline, ctx && ctx.subhead);
-    return chosen.compile(canvas, ctx);
-  }
-
-  async function listArchetypes(){
-    const mod = await loadCompiled();
-    if(!mod) return [];
-    const all = mod.buildAllArchetypes();
-    return all.map(a => a.id);
-  }
-
-
-
-  // Convert archetype compiled blocks into legacy Nexora 'elements' for preview/editor.
-  function _placeholderImage(label){
+  function compileArchetype(input){
     try{
-      const safe = String(label || 'Nexora').slice(0, 18).replace(/</g,'').replace(/>/g,'');
-      const svg = "<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='800' viewBox='0 0 1200 800'><rect width='1200' height='800' fill='#0b1020'/><text x='64' y='140' font-family='Arial' font-size='72' fill='#ffffff' font-weight='800'>" + safe + "</text><text x='64' y='200' font-family='Arial' font-size='28' fill='rgba(255,255,255,0.65)'>Auto image</text></svg>";
-      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+      const L = _loadLib();
+      if(!L) return null;
+      const archetypeId = input && input.archetypeId;
+      const canvas = (input && input.canvas) ? input.canvas : L.resolveCanvas("youtube");
+      const ctx = (input && input.ctx) ? input.ctx : {};
+
+      const archetype = L.select(L.ALL, archetypeId, ctx && ctx.headline, ctx && ctx.subhead);
+      if(!archetype || typeof archetype.compile !== "function") return null;
+      const compiled = archetype.compile(canvas, ctx);
+      if(!compiled) return null;
+
+      return {
+        archetypeId: compiled.archetype || archetype.id || archetypeId || null,
+        canvas,
+        blocks: Array.isArray(compiled.blocks) ? compiled.blocks : []
+      };
     }catch(_){
-      return '';
+      return null;
     }
   }
 
-  function _zoneToRect(z){
-    z = z || {};
+  function listArchetypes(){
+    const L = _loadLib();
+    if(!L) return [];
+    return (L.ALL || []).map(a => a && a.id).filter(Boolean);
+  }
+
+  function _zoneToRect(zone){
+    const z = zone || {};
     return {
-      x: Math.round(Number(z.x || 0)),
-      y: Math.round(Number(z.y || 0)),
-      w: Math.round(Number(z.w || 0)),
-      h: Math.round(Number(z.h || 0))
+      x: Number(z.x || 0),
+      y: Number(z.y || 0),
+      w: Number(z.w || 0),
+      h: Number(z.h || 0)
     };
+  }
+
+  function _placeholderImage(label){
+    const txt = String(label || "Nexora").slice(0, 18);
+    const svg =
+`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#fb7185" stop-opacity="0.90"/>
+    </linearGradient>
+    <filter id="blur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="18"/></filter>
+  </defs>
+  <rect width="1200" height="800" fill="#0b1020"/>
+  <circle cx="360" cy="280" r="180" fill="url(#g)" filter="url(#blur)" opacity="0.9"/>
+  <circle cx="820" cy="520" r="140" fill="url(#g)" filter="url(#blur)" opacity="0.85"/>
+  <text x="64" y="120" font-family="Poppins, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-size="64" font-weight="800" fill="#ffffff" opacity="0.92">${txt}</text>
+  <text x="64" y="172" font-family="Poppins, system-ui, -apple-system, Segoe UI, Roboto, Arial" font-size="26" font-weight="600" fill="#ffffff" opacity="0.60">Auto image</text>
+</svg>`;
+    return "data:image/svg+xml;utf8," + encodeURIComponent(svg);
   }
 
   function _blockToElement(block, ctx){
     try{
-      const r = _zoneToRect(block && block.zone);
-      const style = (block && block.style) || {};
+      if(!block || !block.type) return null;
+      const r = _zoneToRect(block.zone);
+      const style = block.style || {};
+      const role = block.role || null;
 
-      if(block.type === 'background'){
-        return { type:'bg', x:r.x, y:r.y, w:r.w, h:r.h, fill: style.color || style.fill || '#0b1020' };
+      if(block.type === "background"){
+        return { type:"bg", role: role || "background", x:r.x, y:r.y, w:r.w, h:r.h, fill: style.color || style.fill || "#0b1020", fill2: style.fill2 || null, style: style.style || null };
       }
 
-      if(block.type === 'image'){
-        const src = (ctx && (ctx.imageSrc || ctx.photoSrc || ctx.image)) || _placeholderImage((ctx && (ctx.brand || ctx.headline)) || 'Nexora');
-        return { type:'photo', x:r.x, y:r.y, w:r.w, h:r.h, r: style.radius || 0, src };
+      if(block.type === "image"){
+        const src = (ctx && (ctx.imageSrc || ctx.photoSrc || ctx.image)) || _placeholderImage((ctx && (ctx.brand || ctx.headline)) || "Nexora");
+        return { type:"photo", role: role || "image", x:r.x, y:r.y, w:r.w, h:r.h, src, radius: Number(style.radius ?? style.r ?? 24), opacity: Number(style.opacity ?? 1) };
       }
 
-      if(block.type === 'overlay'){
-        let fill = style.color || style.fill;
-        if(!fill && style.type === 'gradient' && Array.isArray(style.stops) && style.stops.length){
-          fill = style.stops[0].color;
-        }
-        if(!fill) fill = 'rgba(0,0,0,0.25)';
-        return { type:'shape', x:r.x, y:r.y, w:r.w, h:r.h, r: style.radius || 0, fill, opacity: style.opacity };
+      if(block.type === "overlay"){
+        const fill = style.color || style.fill || "rgba(0,0,0,0.35)";
+        return { type:"shape", role: role || "badge", x:r.x, y:r.y, w:r.w, h:r.h, fill, opacity: Number(style.opacity ?? 1), radius: Number(style.radius ?? style.r ?? 24), stroke: style.stroke || null };
       }
 
-      if(block.type === 'text'){
-        const val = (block && (block.value || block.text)) || '';
-        return {
-          type:'text',
-          x:r.x,
-          y:r.y,
-          text:String(val),
-          size: Number(style.fontSize || 48),
-          weight: Number(style.weight || 700),
-          color: style.fill || style.color || '#ffffff',
-          align: style.align || 'left'
-        };
+      if(block.type === "text"){
+        const text = String(block.value || block.text || "");
+        return { type:"text", role: role || "headline", x:r.x, y:r.y, text, size: Number(style.fontSize ?? style.size ?? 64), weight: Number(style.weight ?? 800), color: style.fill || style.color || "#ffffff", align: style.align || "left", letter: style.letter ?? style.tracking ?? undefined };
       }
 
-      if(block.type === 'badge'){
-        const label = String(style.label || style.text || '');
-        return {
-          type:'badge',
-          x:r.x,
-          y:r.y,
-          w:r.w,
-          h:r.h,
-          r: style.radius || 999,
-          fill: style.fill || '#ffffff',
-          text: label,
-          tcolor: style.textColor || '#0b1020',
-          tsize: Number(style.fontSize || 24),
-          tweight: Number(style.weight || 800)
-        };
+      if(block.type === "badge"){
+        const text = String(style.label || style.text || block.value || "");
+        return { type:"badge", role: role || "badge", x:r.x, y:r.y, w:r.w, h:r.h, r: Number(style.radius ?? 999), fill: style.fill || style.color || "#ffffff", text, tcolor: style.textColor || "#0b1020", tsize: Number(style.fontSize ?? 24), tweight: Number(style.weight ?? 900) };
       }
 
-      if(block.type === 'line'){
-        return { type:'shape', x:r.x, y:r.y, w:r.w, h: Math.max(1,r.h), fill: style.color || style.fill || '#ffffff', opacity: style.opacity };
+      if(block.type === "line"){
+        return { type:"shape", role: role || "badge", x:r.x, y:r.y, w:r.w, h: Math.max(1, r.h), fill: style.color || style.fill || "#ffffff", opacity: Number(style.opacity ?? 1) };
       }
 
       return null;
@@ -148,24 +147,25 @@
   }
 
   async function compileArchetypeToElements(input){
-    const compiled = await compileArchetype(input);
+    const compiled = compileArchetype(input);
+    if(!compiled) return null;
     const ctx = input && input.ctx;
-
-    const blocks = (compiled && Array.isArray(compiled.blocks)) ? compiled.blocks : [];
+    const blocks = Array.isArray(compiled.blocks) ? compiled.blocks : [];
     const elements = [];
     for(const b of blocks){
       const el = _blockToElement(b, ctx);
       if(el) elements.push(el);
     }
     return {
-      canvas: (compiled && compiled.canvas) || (input && input.canvas) || { w:1280, h:720 },
-      archetypeId: (compiled && compiled.archetypeId) || (input && input.archetypeId) || null,
+      canvas: compiled.canvas,
+      archetypeId: compiled.archetypeId,
       elements,
       blocks
     };
   }
+
   const api = { compileArchetype, compileArchetypeToElements, listArchetypes };
 
-  try{ if(typeof module!=='undefined' && module.exports) module.exports = api; }catch(_){ }
-  try{ if(typeof window!=='undefined') window.NexoraArchetypeEngine = api; }catch(_){ }
+  try{ if(typeof module !== "undefined" && module.exports){ module.exports = api; } }catch(_){ }
+  try{ if(typeof window !== "undefined"){ window.NexoraArchetypeEngine = api; } }catch(_){ }
 })();
