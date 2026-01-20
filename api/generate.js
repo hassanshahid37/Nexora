@@ -111,55 +111,6 @@ async function getNormalizeCategory() {
   }
 }
 
-
-
-// Archetype Engine is optional at runtime.
-// We load it lazily and use it only if available.
-let __archetypeEngine = null;
-let __archetypeEngineTried = false;
-async function getArchetypeEngine(){
-  try{
-    if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
-    if(__archetypeEngineTried) return null;
-    __archetypeEngineTried = true;
-
-    // Prefer CommonJS require when available
-    try{
-      if(typeof require === "function"){
-        // Vercel: /api/generate.js -> ../archetype-engine.js
-        try{ __archetypeEngine = require("../archetype-engine.js"); }catch(_){ }
-        if(!__archetypeEngine){
-          try{ __archetypeEngine = require("./archetype-engine.js"); }catch(_){ }
-        }
-        if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
-      }
-    }catch(_){ }
-
-    // Browser global
-    try{
-      if(typeof globalThis !== "undefined" && globalThis.NexoraArchetypeEngine){
-        __archetypeEngine = globalThis.NexoraArchetypeEngine;
-        if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
-      }
-    }catch(_){ }
-
-    // Dynamic import fallback
-    try{
-      const mod = await import("../archetype-engine.js");
-      __archetypeEngine = mod && (mod.default || mod);
-      if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
-    }catch(_){ }
-    try{
-      const mod = await import("./archetype-engine.js");
-      __archetypeEngine = mod && (mod.default || mod);
-      if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
-    }catch(_){ }
-
-    return null;
-  }catch(_){
-    return null;
-  }
-}
 // Purpose: ALWAYS return REAL templates (canvas + elements) compatible with index.html preview.
 // Notes:
 // - CommonJS handler for Vercel/Netlify-style /api directory.
@@ -232,7 +183,7 @@ try {
     
     const variationCount = count;
     const baseCount = 1;
-    const templates = await makeTemplates({ prompt, category, style, count: baseCount, divergenceIndex });
+    const templates = makeTemplates({ prompt, category, style, count: baseCount, divergenceIndex });
 
     const withContracts = templates.map((t, i) => {
       let size = { w: 1080, h: 1080 };
@@ -372,7 +323,7 @@ return res.end(JSON.stringify({ success: true, templates: expanded }));
 } catch (err) {
     // Hard-safe: NEVER return 500
     try {
-      const templates = await makeTemplates({
+      const templates = makeTemplates({
         prompt: "",
         category: "Instagram Post",
         style: "Dark Premium",
@@ -914,260 +865,6 @@ function materializeTemplate({ prompt, category, style, i, vibe, layoutHint, hea
 };
 }
 
-
-// ===========================
-function normalizeContractToSpec(contract, spec){
-  try{
-    if(!contract || !spec || !spec.roles) return contract;
-    const required = Array.isArray(spec.roles.required) ? spec.roles.required : [];
-    const optional = Array.isArray(spec.roles.optional) ? spec.roles.optional : [];
-    const allowed = new Set([].concat(required, optional));
-
-    const maxPerRole = { badge: 3 };
-    const countByRole = Object.create(null);
-    const out = [];
-
-    const layers = Array.isArray(contract.layers) ? contract.layers : [];
-    for(const l of layers){
-      if(!l) continue;
-      const role = String(l.role || "");
-      if(!allowed.has(role)) continue;
-      const max = maxPerRole[role] || 1;
-      const cur = countByRole[role] || 0;
-      if(cur >= max) continue;
-      countByRole[role] = cur + 1;
-      out.push(l);
-    }
-
-    for(const r of required){
-      const role = String(r||"");
-      if((countByRole[role]||0) > 0) continue;
-      // create a stable placeholder layer id
-      let id = "auto_"+role;
-      if(out.some(x=>String(x.id||"")===id)) id = id + "_" + String(Date.now()).slice(-6);
-      out.push({ id, role, locked: Boolean(contract.layers?.[0]?.locked) });
-      countByRole[role] = 1;
-    }
-
-    if(out.length) contract.layers = out;
-    // keep roles metadata aligned if present
-    if(typeof contract.roles === "object") contract.roles = { required, optional };
-    return contract;
-  }catch(_){
-    return contract;
-  }
-}
-
-function buildContractV1(templateId, category, canvas, elements){
-  try{
-    const layers = (elements||[]).filter(Boolean).map((e, i)=>({
-      id: String(e.id || ("l_"+i)),
-      role: String(e.role || (e.type==="photo" ? "image" : (e.type==="bg" ? "background" : "badge"))),
-      locked: false
-    }));
-    return {
-      version: "v1",
-      templateId: String(templateId),
-      category: String(category || "Unknown"),
-      canvas: { w: canvas.w, h: canvas.h },
-      exportProfiles: [{ id:"default", label:String(category||"Export"), w: canvas.w, h: canvas.h, format:"png" }],
-      layers,
-      constraints: {},
-      roles: { required: ["headline"], optional: ["subhead","cta","badge","image","background"] }
-    };
-  }catch(_){
-    return null;
-  }
-}
-
-async function makeTemplates({ prompt, category, style, count, divergenceIndex }) {
-
-  const words = splitWords(prompt);
-  const base = prompt ? titleCase(prompt) : "New Collection";
-
-  // Variation profiles with layout hints (deterministic variety)
-  const PROFILES = [
-    { vibe: "Branding", layoutHint: "clean", cta: "Learn More" },
-    { vibe: "Urgency", layoutHint: "badge-promo", cta: "Shop Now" },
-    { vibe: "Info", layoutHint: "feature-grid", cta: "See Details" },
-    { vibe: "CTA", layoutHint: "split-hero", cta: "Get Started" },
-    { vibe: "Branding", layoutHint: "photo-card", cta: "Discover" },
-    { vibe: "Info", layoutHint: "minimal-quote", cta: "Explore" },
-  ];
-
-  let start = 0;
-  if (Number.isFinite(divergenceIndex) && divergenceIndex >= 0) {
-    start = Math.floor(divergenceIndex) % PROFILES.length;
-  }
-
-  const templates = [];
-  for (let i = 0; i < count; i++) {
-    const a = PROFILES[(start + i) % PROFILES.length];
-
-    // deterministic copy (varies, but stays premium)
-    const maxH = 42;
-    const headline = (base.length > maxH ? base.slice(0, maxH) : base) || "New Collection";
-    const subhead =
-      a.vibe === "Info"
-        ? words.length
-          ? "Clear details • Simple structure"
-          : "Clear details • Simple structure"
-        : a.vibe === "Urgency"
-        ? "Limited time • Act fast"
-        : a.vibe === "Branding"
-        ? "Premium quality • Trusted"
-        : "Tap to begin • Instant results";
-
-    const seed = hash32(`${prompt}|${category}|${style}|${i}`);
-    const cta = pickCTA(a.vibe, seed);
-
-    // Try the external Archetype Engine (1–20) first. Fallback to legacy composer if unavailable.
-    let composed = null;
-    try{
-      const eng = await getArchetypeEngine();
-      if(eng && typeof eng.compileArchetypeToElements === "function"){
-        const size = CATEGORIES[category] || CATEGORIES["Instagram Post"];
-        const seed = hash32(`${prompt}|${category}|${style}|${i}`);
-        const ctx = {
-          prompt,
-          category,
-          style,
-          headline,
-          subhead,
-          cta,
-          // The compiled archetypes may require these flags; keep deterministic defaults.
-          imageProvided: true,
-          faceDetected: false
-        };
-        const out = await eng.compileArchetypeToElements({
-          archetypeId: null,
-          canvas: { w: size.w, h: size.h },
-          ctx,
-          seed
-        });
-        if(out && out.canvas && Array.isArray(out.elements)){
-          composed = {
-            canvas: out.canvas,
-            elements: out.elements,
-            _layout: out.archetypeId || null,
-            _palette: null,
-            _seed: seed
-          };
-        }
-      }
-    }catch(_){ /* fallback below */ }
-
-    if(!composed){
-      composed = materializeTemplate({
-        prompt,
-        category,
-        style,
-        i,
-        vibe: a.vibe,
-        layoutHint: a.layoutHint,
-        headline,
-        subhead,
-        cta
-      });
-    }
-
-    // Attach semantic roles + stable-ish ids (non-breaking)
-    const elements = Array.isArray(composed.elements) ? composed.elements.map((e) => ({ ...e })) : [];
-    let textSeen = 0;
-    for (const el of elements) {
-      const t = String(el && el.type ? el.type : "").toLowerCase();
-      if (t === "bg") {
-        el.role = "background";
-        el.id = el.id || "bg";
-        continue;
-      }
-      if (t === "photo" || t === "image") {
-        el.role = "image";
-        el.id = el.id || "media";
-        continue;
-      }
-      if (t === "pill") {
-        const txt = String((el && (el.text || el.title)) || "").trim();
-        if (txt && String(cta || "").trim() && txt === String(cta).trim()) {
-          el.role = "cta";
-          el.id = el.id || "cta";
-        } else {
-          el.role = "badge";
-          el.id = el.id || "badge";
-        }
-        continue;
-      }
-      if (t === "badge" || t === "chip") {
-        el.role = "badge";
-        el.id = el.id || (t === "badge" ? "badge" : "chip");
-        continue;
-      }
-      if (t === "text") {
-        textSeen += 1;
-        el.role = textSeen === 1 ? "headline" : "subhead";
-        el.id = el.id || (textSeen === 1 ? "headline" : textSeen === 2 ? "subhead" : `text_${textSeen}`);
-        continue;
-      }
-      el.role = el.role || "badge";
-      el.id = el.id || `el_${seed.toString(16)}_${i}_${Math.random().toString(16).slice(2)}`;
-    }
-
-    // TemplateContract (pure JSON)
-    const canvasN = {
-      width: Math.round(Number(composed && composed.canvas ? composed.canvas.w : 0)),
-      height: Math.round(Number(composed && composed.canvas ? composed.canvas.h : 0))
-};
-    const templateId = `tpl_${seed.toString(16)}_${i + 1}`;
-    const pal = composed && composed._palette ? composed._palette : null;
-    let contract = {
-      version: "v1",
-      templateId,
-      category,
-      canvas: canvasN,
-      palette: pal ? { bg: pal.bg || null, accent: pal.accent || pal.accent2 || null, ink: pal.ink || null } : null,
-      layers: elements.map((e) => ({ id: String(e.id || "layer"), role: String(e.role || "badge"), locked: true })),
-      exportProfiles: [String(category).replace(/\s+/g, "_").toLowerCase()],
-      layoutFamily: (function(){
-        try{
-          const sel = getSelectLayoutFamily();
-          return (typeof sel === "function") ? String(sel({ category, prompt }) || "") : null;
-        }catch(_){ return null; }
-      })(),
-      createdAt: Date.now()
-};
-
-    try{
-      if(typeof __normalizeCategory === "function"){
-        const spec = __normalizeCategory(category);
-        contract = normalizeContractToSpec(contract, spec);
-      }
-    }catch(_){/* no-op */}
-
-    templates.push({
-      id: templateId,
-      contract,
-      title: `${category} #${i + 1}`,
-      subtitle: `${style} • ${a.vibe}`,
-      category,
-      style,
-      headline,
-      subhead,
-      cta,
-      vibe: a.vibe,
-      layoutHint: a.layoutHint,
-      canvas: composed.canvas,
-      elements,
-      _layout: composed._layout,
-      _palette: composed._palette && composed._palette.name ? composed._palette.name : null,
-      _seed: composed._seed
-});
-  }
-  return templates;
-}
-
-
-/* ===========================
-
 // ---------------------------------------------------------------------------
 // Public API for reuse by wrappers (e.g., /api/generate.js thin handler) 
 // ---------------------------------------------------------------------------
@@ -1194,7 +891,7 @@ async function generateTemplates(payload) {
     }
   } catch (_) {}
 
-  return await makeTemplates(normalized);
+  return makeTemplates(normalized);
 }
 
 module.exports = handler;
@@ -1224,3 +921,23 @@ try{
     }
   }
 }catch(_){}
+
+
+/**
+ * Optional Archetype Path (externalized)
+ * - Archetypes live in archetypes_1-20_compiled.js
+ * - Runtime wrapper lives in archetype-engine.js
+ * This file must remain orchestration-only.
+ */
+function tryCompileArchetypeTemplate(opts){
+  try{
+    if(typeof require==="function"){
+      const eng = require("./archetype-engine.js");
+      if(eng && typeof eng.compileArchetypeTemplate==="function"){
+        return eng.compileArchetypeTemplate(opts);
+      }
+    }
+  }catch(e){ /* hard-safe */ }
+  return null;
+}
+
