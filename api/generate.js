@@ -111,6 +111,55 @@ async function getNormalizeCategory() {
   }
 }
 
+
+
+// Archetype Engine is optional at runtime.
+// We load it lazily and use it only if available.
+let __archetypeEngine = null;
+let __archetypeEngineTried = false;
+async function getArchetypeEngine(){
+  try{
+    if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
+    if(__archetypeEngineTried) return null;
+    __archetypeEngineTried = true;
+
+    // Prefer CommonJS require when available
+    try{
+      if(typeof require === "function"){
+        // Vercel: /api/generate.js -> ../archetype-engine.js
+        try{ __archetypeEngine = require("../archetype-engine.js"); }catch(_){ }
+        if(!__archetypeEngine){
+          try{ __archetypeEngine = require("./archetype-engine.js"); }catch(_){ }
+        }
+        if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
+      }
+    }catch(_){ }
+
+    // Browser global
+    try{
+      if(typeof globalThis !== "undefined" && globalThis.NexoraArchetypeEngine){
+        __archetypeEngine = globalThis.NexoraArchetypeEngine;
+        if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
+      }
+    }catch(_){ }
+
+    // Dynamic import fallback
+    try{
+      const mod = await import("../archetype-engine.js");
+      __archetypeEngine = mod && (mod.default || mod);
+      if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
+    }catch(_){ }
+    try{
+      const mod = await import("./archetype-engine.js");
+      __archetypeEngine = mod && (mod.default || mod);
+      if(__archetypeEngine && typeof __archetypeEngine.compileArchetypeToElements === "function") return __archetypeEngine;
+    }catch(_){ }
+
+    return null;
+  }catch(_){
+    return null;
+  }
+}
 // Purpose: ALWAYS return REAL templates (canvas + elements) compatible with index.html preview.
 // Notes:
 // - CommonJS handler for Vercel/Netlify-style /api directory.
@@ -183,7 +232,7 @@ try {
     
     const variationCount = count;
     const baseCount = 1;
-    const templates = makeTemplates({ prompt, category, style, count: baseCount, divergenceIndex });
+    const templates = await makeTemplates({ prompt, category, style, count: baseCount, divergenceIndex });
 
     const withContracts = templates.map((t, i) => {
       let size = { w: 1080, h: 1080 };
@@ -323,7 +372,7 @@ return res.end(JSON.stringify({ success: true, templates: expanded }));
 } catch (err) {
     // Hard-safe: NEVER return 500
     try {
-      const templates = makeTemplates({
+      const templates = await makeTemplates({
         prompt: "",
         category: "Instagram Post",
         style: "Dark Premium",
@@ -931,13 +980,13 @@ function buildContractV1(templateId, category, canvas, elements){
   }
 }
 
-function makeTemplates({ prompt, category, style, count, divergenceIndex }) {
+async function makeTemplates({ prompt, category, style, count, divergenceIndex }) {
 
   const words = splitWords(prompt);
   const base = prompt ? titleCase(prompt) : "New Collection";
 
-  // Archetype set with layout hints (deterministic variety)
-  const archetypes = [
+  // Variation profiles with layout hints (deterministic variety)
+  const PROFILES = [
     { vibe: "Branding", layoutHint: "clean", cta: "Learn More" },
     { vibe: "Urgency", layoutHint: "badge-promo", cta: "Shop Now" },
     { vibe: "Info", layoutHint: "feature-grid", cta: "See Details" },
@@ -948,12 +997,12 @@ function makeTemplates({ prompt, category, style, count, divergenceIndex }) {
 
   let start = 0;
   if (Number.isFinite(divergenceIndex) && divergenceIndex >= 0) {
-    start = Math.floor(divergenceIndex) % archetypes.length;
+    start = Math.floor(divergenceIndex) % PROFILES.length;
   }
 
   const templates = [];
   for (let i = 0; i < count; i++) {
-    const a = archetypes[(start + i) % archetypes.length];
+    const a = PROFILES[(start + i) % PROFILES.length];
 
     // deterministic copy (varies, but stays premium)
     const maxH = 42;
@@ -972,17 +1021,55 @@ function makeTemplates({ prompt, category, style, count, divergenceIndex }) {
     const seed = hash32(`${prompt}|${category}|${style}|${i}`);
     const cta = pickCTA(a.vibe, seed);
 
-    const composed = materializeTemplate({
-      prompt,
-      category,
-      style,
-      i,
-      vibe: a.vibe,
-      layoutHint: a.layoutHint,
-      headline,
-      subhead,
-      cta
-});
+    // Try the external Archetype Engine (1–20) first. Fallback to legacy composer if unavailable.
+    let composed = null;
+    try{
+      const eng = await getArchetypeEngine();
+      if(eng && typeof eng.compileArchetypeToElements === "function"){
+        const size = CATEGORIES[category] || CATEGORIES["Instagram Post"];
+        const seed = hash32(`${prompt}|${category}|${style}|${i}`);
+        const ctx = {
+          prompt,
+          category,
+          style,
+          headline,
+          subhead,
+          cta,
+          // The compiled archetypes may require these flags; keep deterministic defaults.
+          imageProvided: true,
+          faceDetected: false
+        };
+        const out = await eng.compileArchetypeToElements({
+          archetypeId: null,
+          canvas: { w: size.w, h: size.h },
+          ctx,
+          seed
+        });
+        if(out && out.canvas && Array.isArray(out.elements)){
+          composed = {
+            canvas: out.canvas,
+            elements: out.elements,
+            _layout: out.archetypeId || null,
+            _palette: null,
+            _seed: seed
+          };
+        }
+      }
+    }catch(_){ /* fallback below */ }
+
+    if(!composed){
+      composed = materializeTemplate({
+        prompt,
+        category,
+        style,
+        i,
+        vibe: a.vibe,
+        layoutHint: a.layoutHint,
+        headline,
+        subhead,
+        cta
+      });
+    }
 
     // Attach semantic roles + stable-ish ids (non-breaking)
     const elements = Array.isArray(composed.elements) ? composed.elements.map((e) => ({ ...e })) : [];
@@ -1107,7 +1194,7 @@ async function generateTemplates(payload) {
     }
   } catch (_) {}
 
-  return makeTemplates(normalized);
+  return await makeTemplates(normalized);
 }
 
 module.exports = handler;
