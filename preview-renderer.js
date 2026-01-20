@@ -1,32 +1,23 @@
-// P9.1 Element Normalization hook
-function __normalizeForPreview(elements){
-  try{
-    const N = (typeof window !== "undefined" && window.NexoraElementNormalizer)
-      ? window.NexoraElementNormalizer
-      : null;
-    return (N && typeof N.normalizeElements === "function")
-      ? N.normalizeElements(elements)
-      : elements;
-  }catch(_){ return elements; }
-}
-
-/* P8 executed geometry only */
-
-
-
-
-
-/**
- * preview-renderer.js — Nexora Preview Renderer v1
- * Spine-correct, client-only, deterministic renderer
- * Input: { contract, content }
- * Output: DOM only
- */
+// preview-renderer.js — Nexora Preview Renderer v1
+// Spine-correct, client-only, deterministic renderer
+// Input: { contract, content, meta? }
+// Output: DOM only
 
 (function () {
   if (window.NexoraPreview) return;
 
   function noop() {}
+
+  // ---------- Small, safe helpers ----------
+  function el(tag, cls) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    return e;
+  }
+
+  function clear(node) {
+    while (node.firstChild) node.removeChild(node.firstChild);
+  }
 
   function validate(contract) {
     try {
@@ -48,14 +39,47 @@ function __normalizeForPreview(elements){
     }
   }
 
-  function el(tag, cls) {
-    const e = document.createElement(tag);
-    if (cls) e.className = cls;
-    return e;
+  function normalizeCanvas(contract, meta) {
+    // 1) Prefer Spine's normalizer if present
+    try {
+      if (window.NexoraSpine && typeof window.NexoraSpine.normalizeCanvas === "function") {
+        const v = window.NexoraSpine.normalizeCanvas(contract?.canvas);
+        if (v && v.width && v.height) return v;
+      }
+    } catch (_) {}
+
+    // 2) Use contract.canvas if valid
+    const w = Number(contract?.canvas?.width ?? contract?.canvas?.w);
+    const h = Number(contract?.canvas?.height ?? contract?.canvas?.h);
+    if (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0) {
+      return { width: Math.round(w), height: Math.round(h) };
+    }
+
+    // 3) P5.1 fallback: derive canvas from CategorySpecV1 using category
+    try {
+      const cat = (meta && meta.category) ? meta.category : (contract?.category || null);
+      if (cat && window.normalizeCategory && window.CategorySpecV1) {
+        const norm = window.normalizeCategory(cat);
+        const spec = (norm && typeof norm === "object") ? norm : (window.CategorySpecV1[String(norm || "")] || null);
+        if (spec && spec.canvas && spec.canvas.w && spec.canvas.h) {
+          return { width: Math.round(spec.canvas.w), height: Math.round(spec.canvas.h) };
+        }
+      }
+    } catch (_) {}
+
+    return null;
   }
 
-  function clear(node) {
-    while (node.firstChild) node.removeChild(node.firstChild);
+  function normalizeContent(raw) {
+    // Keep it dead simple: preview must never crash on missing keys.
+    const c = (raw && typeof raw === "object") ? raw : {};
+    return {
+      headline: (c.headline == null) ? "" : String(c.headline),
+      subhead: (c.subhead == null) ? "" : String(c.subhead),
+      cta: (c.cta == null) ? "" : String(c.cta),
+      badge: (c.badge == null) ? "" : String(c.badge),
+      body: (c.body == null) ? "" : String(c.body),
+    };
   }
 
   function applyStyles(node, style) {
@@ -64,15 +88,15 @@ function __normalizeForPreview(elements){
     if (style.fontWeight) node.style.fontWeight = style.fontWeight;
     if (style.casing === "uppercase") node.style.textTransform = "uppercase";
     if (style.casing === "capitalize") node.style.textTransform = "capitalize";
-    if (style.stroke) {
-      node.style.webkitTextStroke = style.stroke.width + "px " + style.stroke.color;
-    }
+    if (style.stroke) node.style.webkitTextStroke = style.stroke.width + "px " + style.stroke.color;
   }
 
+  // ---------- Layer renderer (visual only; geometry handled by ZoneExecutor) ----------
   function renderLayer(layer, content, meta) {
     const role = layer.role;
     const wrap = el("div", "nr-layer nr-" + role);
 
+    // Default styling (ZoneExecutor may override position/size)
     wrap.style.position = "relative";
     wrap.style.margin = "12px";
     wrap.style.zIndex = "1";
@@ -122,6 +146,7 @@ function __normalizeForPreview(elements){
 
     if (role === "cta") {
       const b = el("button", "nr-cta");
+      b.type = "button";
       b.textContent = content.cta || "CTA";
       applyStyles(b, style);
       wrap.appendChild(b);
@@ -136,256 +161,158 @@ function __normalizeForPreview(elements){
       return wrap;
     }
 
+    if (role === "body") {
+      const t = el("div", "nr-body");
+      t.textContent = content.body || "";
+      applyStyles(t, style);
+      wrap.appendChild(t);
+      return wrap;
+    }
+
     return wrap;
   }
-  function normalizeCanvas(contract, meta){
-    // 1) Prefer Spine's normalizer if present
-    try{
-      if(window.NexoraSpine && typeof window.NexoraSpine.normalizeCanvas === "function"){
-        const v = window.NexoraSpine.normalizeCanvas(contract?.canvas);
-        if(v && v.width && v.height) return v;
-      }
-    }catch(_){ }
 
-    // 2) Use contract.canvas if valid
-    const w = Number(contract?.canvas?.width ?? contract?.canvas?.w);
-    const h = Number(contract?.canvas?.height ?? contract?.canvas?.h);
-    if(Number.isFinite(w) && Number.isFinite(h) && w>0 && h>0){
-      return { width: Math.round(w), height: Math.round(h) };
-    }
+  // ---------- Zone bridge: ZoneRegistry pixel rects -> ZoneExecutor fractional zones ----------
+  function getZonesFracFromRegistry(zoneRegistry, familyCanon, cv) {
+    try {
+      if (!zoneRegistry || !cv?.width || !cv?.height) return null;
 
-    // 3) P5.1 fallback: derive canvas from CategorySpecV1 using category
-    try{
-      const cat = (meta && meta.category) ? meta.category : (contract?.category || null);
-      if(cat && window.normalizeCategory && window.CategorySpecV1){
-        const norm = window.normalizeCategory(cat);
-        const spec = (norm && typeof norm === "object") ? norm : (window.CategorySpecV1[String(norm || "")] || null);
-        if(spec && spec.canvas && spec.canvas.w && spec.canvas.h){
-          return { width: Math.round(spec.canvas.w), height: Math.round(spec.canvas.h) };
+      // Preferred: P8 registry contract
+      if (typeof zoneRegistry.getZoneRects === "function") {
+        const rects = zoneRegistry.getZoneRects({ family: familyCanon, canvas: { w: cv.width, h: cv.height } });
+        if (!rects || typeof rects !== "object") return null;
+
+        const frac = Object.create(null);
+        for (const k of Object.keys(rects)) {
+          const r = rects[k];
+          const x = Number(r?.x), y = Number(r?.y), w = Number(r?.w), h = Number(r?.h);
+          if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(w) || !Number.isFinite(h)) continue;
+          frac[k] = { x: x / cv.width, y: y / cv.height, w: w / cv.width, h: h / cv.height };
         }
+        return Object.keys(frac).length ? frac : null;
       }
-    }catch(_){ }
 
-    return null;
-  }
+      // Fallback: older API returning fractional zones directly
+      if (typeof zoneRegistry.getZones === "function") {
+        const z = zoneRegistry.getZones(familyCanon);
+        return (z && typeof z === "object") ? z : null;
+      }
 
-  
-  // ---------- P7.1: Layout Family → Visual Binding (Preview Only) ----------
-  function applyLayoutFamilyOrder(layers, family){
-    try{
-      if(!family || !Array.isArray(layers)) return layers;
-
-      const H = {
-        "text-first": ["headline","subhead","badge","cta","image"],
-        "image-led": ["image","headline","subhead","badge","cta"],
-        "split-hero": ["image","headline","subhead","badge","cta"]
-      };
-      const order = H[family];
-      if(!order) return layers;
-
-      const rank = Object.create(null);
-      order.forEach((r,i)=>rank[r]=i);
-
-      return layers.slice().sort((a,b)=>{
-        const ra = rank[a.role] ?? 99;
-        const rb = rank[b.role] ?? 99;
-        return ra - rb;
-      });
-    }catch(_){
-      return layers;
+      return null;
+    } catch (_) {
+      return null;
     }
   }
 
-
-  function renderInto(root, payload){
-    try{
+  // ---------- Render entry ----------
+  function renderInto(root, payload) {
+    try {
       const contract = payload?.contract;
-       const family = payload?.doc?.layout?.family || payload?.layout?.family || null;
-      const rawContent = payload?.content || {};
-      const content = __p9NormalizeContent(rawContent, contract?.layers);
-      const metaIn   = payload?.meta || {};
+      const metaIn = payload?.meta || {};
+      const content = normalizeContent(payload?.content);
 
       if (!root) return false;
       if (!validate(contract)) return false;
 
       clear(root);
 
-      // Ensure absolute layers (e.g., background) are scoped to this root
-      try{ root.style.position = root.style.position || "relative"; }catch(_){ }
-      try{ root.style.overflow = root.style.overflow || "hidden"; }catch(_){ }
+      // Ensure abs-position children are scoped to this root
+      try { root.style.position = root.style.position || "relative"; } catch (_) {}
+      try { root.style.overflow = root.style.overflow || "hidden"; } catch (_) {}
 
       const cv = normalizeCanvas(contract, metaIn);
-      if (cv?.width && cv?.height) {
-        root.style.aspectRatio = cv.width + " / " + cv.height;
-      }
-
-      // P8 Phase-3: Layout Family → Canvas Execution
-      // We compute family-specific zones (top/bottom/split/dominance) and
-      // place layers into those zones to create real visual differences.
-      function canonFamilyId(contract){
-        try{
-          const c = contract || {};
-          const raw = String(c.layoutFamilyCanonical || c.layoutFamily || c.layoutFamilyId || "").trim();
-          if(!raw) return "text-first";
-          if(raw === "promo-badge") return "image-led";
-          if(raw === "minimal-quote") return "minimal";
-          if(raw === "feature-grid") return "dense";
-          if(raw === "generic") return "split-hero";
-          return raw;
-        }catch(_){
-          return "text-first";
-        }
-      }
-
-      const familyCanon = canonFamilyId(contract);
-      const zonesFrac = (window.NexoraZones && typeof window.NexoraZones.getZones === "function")
-        ? window.NexoraZones.getZones(familyCanon)
-        : null;
-
-      function roleToZone(family, role){
-        const r = String(role||"");
-        // Background always fills.
-        if(r === "background") return null;
-
-        if(family === "text-first"){
-          if(r === "headline" || r === "badge") return "header";
-          if(r === "subhead" || r === "body" || r === "image") return "body";
-          if(r === "cta") return "footer";
-          return "body";
-        }
-
-        if(family === "image-led"){
-          if(r === "image") return "hero";
-          if(r === "badge") return "hero";
-          if(r === "headline" || r === "subhead" || r === "body") return "support";
-          if(r === "cta") return "footer";
-          return "support";
-        }
-
-        if(family === "split-hero"){
-          if(r === "image") return "left";
-          // Text stack on right
-          return "right";
-        }
-
-        if(family === "minimal"){
-          return "focus";
-        }
-
-        if(family === "dense"){
-          if(r === "headline") return "header";
-          if(r === "cta") return "footer";
-          return "grid";
-        }
-
-        return null;
-      }
+      if (cv?.width && cv?.height) root.style.aspectRatio = cv.width + " / " + cv.height;
 
       const meta = {
         category: metaIn.category || contract.category,
         style: metaIn.style || contract.style || contract.archetype || null,
+        archetype: metaIn.archetype || contract.archetype || null,
         palette: metaIn.palette || contract.palette || {}
       };
 
+      const baseLayers = Array.isArray(contract.layers) ? contract.layers : [];
+
       // P7: render order is spine-authoritative.
       // If a layout family exists and a registry is present, honor its hierarchy to avoid preview drift.
-      const baseLayers = Array.isArray(contract.layers) ? contract.layers : [];
-      const ordered = (function(){
-        try{
+      const ordered = (function () {
+        try {
           const famId = contract && contract.layoutFamily ? String(contract.layoutFamily) : "";
           const reg = window.NexoraLayoutRegistry;
-          if(!famId || !reg) return baseLayers;
+          if (!famId || !reg) return baseLayers;
 
-          // Registry API is contract: getLayoutFamily(id) (preferred)
-          // Fallbacks are kept to avoid regressions if registry shape changes.
           const fam =
             (typeof reg.getLayoutFamily === "function") ? reg.getLayoutFamily(famId) :
             (reg.REGISTRY && reg.REGISTRY[famId]) ? reg.REGISTRY[famId] :
             (typeof reg.get === "function") ? reg.get(famId) :
             (reg[famId] || null);
+
           const hierarchy = Array.isArray(fam?.hierarchy) ? fam.hierarchy : null;
-          if(!hierarchy || !hierarchy.length) return baseLayers;
-          const idx = new Map(hierarchy.map((r,i)=>[String(r), i]));
-          // Stable sort: background first, then hierarchy order, then anything else.
-          return baseLayers.slice().sort((a,b)=>{
-            const ra = String(a?.role||"");
-            const rb = String(b?.role||"");
-            if(ra === "background" && rb !== "background") return -1;
-            if(rb === "background" && ra !== "background") return 1;
+          if (!hierarchy || !hierarchy.length) return baseLayers;
+
+          const idx = new Map(hierarchy.map((r, i) => [String(r), i]));
+          return baseLayers.slice().sort((a, b) => {
+            const ra = String(a?.role || "");
+            const rb = String(b?.role || "");
+            if (ra === "background" && rb !== "background") return -1;
+            if (rb === "background" && ra !== "background") return 1;
             const ia = idx.has(ra) ? idx.get(ra) : 1e9;
             const ib = idx.has(rb) ? idx.get(rb) : 1e9;
-            if(ia != ib) return ia - ib;
+            if (ia !== ib) return ia - ib;
             return 0;
           });
-        }catch(_){
+        } catch (_) {
           return baseLayers;
         }
       })();
 
-      // If zones are available, split each zone into vertical slots based on
-      // how many layers map to that zone. This keeps behavior deterministic
-      // while still producing strong family-driven geometry differences.
-      const zoneBuckets = Object.create(null);
-      if(zonesFrac){
-        ordered.forEach((layer, idx) => {
-          const zone = roleToZone(familyCanon, layer && layer.role);
-          if(!zone) return;
-          (zoneBuckets[zone] = zoneBuckets[zone] || []).push(idx);
-        });
+      // P8 Phase-3: Single authority placements
+      const zoneRegistry = (window.NexoraZoneRegistry || window.NexoraZones) || null;
+      const zoneExec = (window.NexoraZoneExecutor && typeof window.NexoraZoneExecutor.computePlacements === "function")
+        ? window.NexoraZoneExecutor
+        : null;
+
+      let placements = null;
+      try {
+        if (zoneExec && zoneRegistry && cv?.width && cv?.height) {
+          const famCanon = (typeof zoneExec.canonFamilyId === "function") ? zoneExec.canonFamilyId(contract) : "text-first";
+          const zonesFrac = getZonesFracFromRegistry(zoneRegistry, famCanon, cv);
+          if (zonesFrac) {
+            const computed = zoneExec.computePlacements({
+              contract,
+              orderedLayers: ordered,
+              getZones: () => zonesFrac
+            });
+            placements = computed?.placements || null;
+          }
+        }
+      } catch (_) {
+        placements = null;
       }
 
-      function applyPlacement(node, zoneKey, slotIndex){
-        try{
-          if(!node || !zonesFrac || !zoneKey || !zonesFrac[zoneKey]) return;
-          const z = zonesFrac[zoneKey];
-          const bucket = zoneBuckets[zoneKey] || [];
-          const n = Math.max(1, bucket.length);
-          const i = Math.max(0, Math.min(n-1, slotIndex|0));
-
-          const x = (z.x != null) ? z.x : 0;
-          const y = (z.y != null) ? z.y : 0;
-          const w = (z.w != null) ? z.w : 1;
-          const h = (z.h != null) ? z.h : 1;
-
-          const slotH = h / n;
-          const slotY = y + (slotH * i);
-
-          node.style.position = "absolute";
-          node.style.left = (x * 100) + "%";
-          node.style.top = (slotY * 100) + "%";
-          node.style.width = (w * 100) + "%";
-          node.style.height = (slotH * 100) + "%";
-          node.style.boxSizing = "border-box";
-          node.style.padding = node.style.padding || "10%";
-          node.style.display = "flex";
-          node.style.alignItems = "center";
-          node.style.justifyContent = "center";
-          node.style.textAlign = node.style.textAlign || "center";
-        }catch(_){ }
-      }
-
-      const zoneCursor = Object.create(null);
-      ordered.forEach(layer => {
+      // Render
+      ordered.forEach((layer, idx) => {
         const node = renderLayer(layer, content, meta);
         if (!node) return;
 
-        if(layer && layer.role === "background"){
+        // Background stays full-bleed
+        if (layer && layer.role === "background") {
           root.appendChild(node);
           return;
         }
 
-        const zone = zonesFrac ? roleToZone(familyCanon, layer && layer.role) : null;
-        if(zone){
-          const slot = zoneCursor[zone] || 0;
-          zoneCursor[zone] = slot + 1;
-          applyPlacement(node, zone, slot);
-        }
+        // Apply zone placement if available
+        try {
+          if (placements && zoneExec && typeof zoneExec.applyPlacementStyle === "function") {
+            const p = placements.get(idx);
+            if (p && p.rect) zoneExec.applyPlacementStyle(node, p.rect);
+          }
+        } catch (_) {}
 
         root.appendChild(node);
       });
 
       return true;
-    }catch(_){
+    } catch (_) {
       return false;
     }
   }
@@ -402,5 +329,4 @@ function __normalizeForPreview(elements){
       return renderInto(target, payload);
     }
   };
-
 })();
