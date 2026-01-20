@@ -111,6 +111,41 @@ async function getNormalizeCategory() {
   }
 }
 
+
+// Archetype engine loader (P7/P8 safe). Never crashes serverless.
+// Vercel: /api/generate.js -> ../archetype-engine.js
+let __archetypeEngine = null;
+let __archetypeEngineTried = false;
+function getArchetypeEngine(){
+  try{
+    if(__archetypeEngine) return __archetypeEngine;
+    if(__archetypeEngineTried) return null;
+    __archetypeEngineTried = true;
+
+    try{
+      // eslint-disable-next-line global-require
+      __archetypeEngine = require("../archetype-engine.js");
+      return __archetypeEngine;
+    }catch(_){}
+
+    try{
+      // eslint-disable-next-line global-require
+      __archetypeEngine = require("./archetype-engine.js");
+      return __archetypeEngine;
+    }catch(_){}
+
+    // Browser (if ever bundled)
+    if(typeof globalThis !== "undefined" && globalThis.NexoraArchetypeEngine){
+      __archetypeEngine = globalThis.NexoraArchetypeEngine;
+      return __archetypeEngine;
+    }
+
+    return null;
+  }catch(_){
+    return null;
+  }
+}
+
 // Purpose: ALWAYS return REAL templates (canvas + elements) compatible with index.html preview.
 // Notes:
 // - CommonJS handler for Vercel/Netlify-style /api directory.
@@ -865,6 +900,412 @@ function materializeTemplate({ prompt, category, style, i, vibe, layoutHint, hea
 };
 }
 
+
+// ===========================
+// YouTube Archetypes → Template Adapter
+// - Uses external archetype-engine + archetypes_1-20_compiled
+// - Produces templates compatible with index.html preview + invisible-editor handoff
+// ===========================
+function makeYouTubeArchetypeTemplates({ prompt, category, style, count, divergenceIndex }) {
+  const cat = category || "YouTube Thumbnail";
+  const canvas = { w: 1280, h: 720 }; // YouTube Thumbnail canonical
+  const seedBase = hash32(String(prompt || "") + "|" + String(style || "") + "|" + String(cat || ""));
+  const palBase = paletteForStyle(style, seedBase);
+
+  const eng = getArchetypeEngine();
+  const ids = (eng && typeof eng.listArchetypes === "function") ? eng.listArchetypes() : [];
+  if(!ids.length){ return []; }
+// Stable copy defaults (strong hooks for YouTube)
+  const raw = String(prompt || "").trim();
+  const cleaned = raw
+    .replace(/^[\s\-–—:]+/g, "")
+    .replace(/^(why|how|what|when|where|the truth about|truth about)\s+/i, "")
+    .replace(/\?+$/, "")
+    .trim();
+
+  function ytHeadline(seed){
+    let head = cleaned || "WATCH THIS";
+    let words = head.split(/\s+/).filter(Boolean);
+    if(words.length > 7) head = words.slice(0,7).join(" ");
+    if(head.length > 34) head = head.slice(0,34).trim();
+    return head.toUpperCase();
+  }
+
+  function ytSubhead(seed){
+    const micro = ["WATCH NOW", "DON'T MISS", "FULL STORY", "NEW VIDEO", "IN 5 MINUTES"];
+    return pick(micro, seed ^ 0x7171);
+  }
+
+  // Deterministic archetype selection per variant
+  const basePick = (divergenceIndex != null && Number.isFinite(Number(divergenceIndex)) && Number(divergenceIndex) >= 0)
+    ? (Number(divergenceIndex) | 0)
+    : 0;
+
+  const out = [];
+  for (let i = 0; i < count; i++) {
+    const seed = (seedBase ^ ((i + 1) * 2654435761) ^ (basePick * 97531)) >>> 0;
+    const pal = paletteForStyle(style, seed);
+
+    const headline = ytHeadline(seed);
+    const subhead = ytSubhead(seed);
+
+    const archetypeId = ids[(seed % ids.length + ids.length) % ids.length];
+    const ctx = { headline, subhead, imageProvided: true, faceDetected: false };
+
+    let compiled;
+    try {
+      const eng = getArchetypeEngine();
+      compiled = eng && typeof eng.compileArchetype === "function"
+        ? eng.compileArchetype({ archetypeId, canvas, ctx })
+        : null;
+    } catch (e) {
+      compiled = null;
+    }
+    if (!compiled || !Array.isArray(compiled.blocks)) {
+      // no archetype available -> skip this variant safely
+      continue;
+    }
+const elements = blocksToElements(compiled.blocks || [], canvas, pal, seed, headline);
+    const id = "yt_" + String(seedBase) + "_" + String(i + 1);
+
+    out.push({
+      id,
+      category: cat,
+      style: style || "Dark Premium",
+      title: "YouTube Thumbnail • " + (compiled.archetype || archetypeId || "ARCHETYPE"),
+      description: "Archetype: " + String(compiled.archetype || archetypeId || "YT"),
+      canvas: { w: canvas.w, h: canvas.h },
+      palette: pal,
+      archetype: compiled.archetype || archetypeId,
+      elements,
+      contract: buildContractV1(id, cat, canvas, elements)
+    });
+  }
+  return out;
+}
+
+function blocksToElements(blocks, canvas, pal, seed, labelText) {
+  const els = [];
+  // Always add a bg for renderer robustness
+  els.push({ type:"bg", role:"background", x:0,y:0,w:canvas.w,h:canvas.h, fill: pal.bg, fill2: pal.bg2, style:"radial" });
+
+  const brandLabel = String(labelText || "Nexora").split(/\s+/).slice(0,2).join(" ").slice(0,18) || "Nexora";
+  const photoSrc = smartPhotoSrc(seed, pal, brandLabel);
+
+  const sorted = (Array.isArray(blocks) ? blocks : []).slice().sort((a,b)=> (a?.z||0)-(b?.z||0));
+  for (const b of sorted) {
+    if (!b || !b.zone) continue;
+    const z = b.zone;
+    const role = String(b.role || "").toLowerCase() || "badge";
+    const t = String(b.type || "").toLowerCase();
+
+    if (t === "image") {
+      els.push({
+        type: "photo",
+        role: role || "image",
+        x: z.x, y: z.y, w: z.w, h: z.h,
+        src: photoSrc,
+        radius: Number(b?.style?.radius ?? b?.style?.r ?? 24),
+        opacity: Number(b?.style?.opacity ?? 1)
+      });
+      continue;
+    }
+
+    if (t === "background") {
+      // background block is already covered by bg; ignore unless it has a special fill
+      if (b?.style?.fill || b?.style?.color) {
+        els.push({
+          type: "shape",
+          role: "background",
+          x: z.x, y: z.y, w: z.w, h: z.h,
+          fill: b.style.fill || b.style.color,
+          opacity: Number(b?.style?.opacity ?? 1),
+          radius: Number(b?.style?.radius ?? 24)
+        });
+      }
+      continue;
+    }
+
+    if (t === "overlay") {
+      els.push({
+        type: "shape",
+        role: role || "badge",
+        x: z.x, y: z.y, w: z.w, h: z.h,
+        fill: b?.style?.fill || b?.style?.color || "rgba(0,0,0,0.45)",
+        opacity: Number(b?.style?.opacity ?? 1),
+        radius: Number(b?.style?.radius ?? b?.style?.r ?? 24),
+        stroke: b?.style?.stroke || null
+      });
+      continue;
+    }
+
+    if (t === "badge") {
+      els.push({
+        type: "pill",
+        role: role || "badge",
+        x: z.x, y: z.y, w: z.w, h: z.h,
+        text: String(b?.value ?? b?.text ?? "NEW"),
+        fill: b?.style?.fill || pal.accent,
+        color: b?.style?.color || pal.ink,
+        size: Number(b?.style?.fontSize ?? 24),
+        weight: Number(b?.style?.weight ?? 800),
+        radius: Number(b?.style?.radius ?? 999),
+        align: b?.style?.align || "center",
+        opacity: Number(b?.style?.opacity ?? 1)
+      });
+      continue;
+    }
+
+    if (t === "text") {
+      els.push({
+        type: "text",
+        role: role || "headline",
+        x: z.x, y: z.y, w: z.w, h: z.h,
+        text: String(b?.value ?? ""),
+        size: Number(b?.style?.fontSize ?? 56),
+        weight: Number(b?.style?.weight ?? 900),
+        color: b?.style?.color || pal.ink,
+        align: b?.style?.align || "left",
+        lineHeight: Number(b?.style?.lineHeight ?? 1.05),
+        letterSpacing: Number(b?.style?.letterSpacing ?? 0),
+        opacity: Number(b?.style?.opacity ?? 1),
+	        shadow: b?.style?.shadow || null,
+      });
+      continue;
+    }
+
+    // unknown block: ignore safely
+  }
+
+  return els;
+}
+
+
+
+function normalizeContractToSpec(contract, spec){
+  try{
+    if(!contract || !spec || !spec.roles) return contract;
+    const required = Array.isArray(spec.roles.required) ? spec.roles.required : [];
+    const optional = Array.isArray(spec.roles.optional) ? spec.roles.optional : [];
+    const allowed = new Set([].concat(required, optional));
+
+    const maxPerRole = { badge: 3 };
+    const countByRole = Object.create(null);
+    const out = [];
+
+    const layers = Array.isArray(contract.layers) ? contract.layers : [];
+    for(const l of layers){
+      if(!l) continue;
+      const role = String(l.role || "");
+      if(!allowed.has(role)) continue;
+      const max = maxPerRole[role] || 1;
+      const cur = countByRole[role] || 0;
+      if(cur >= max) continue;
+      countByRole[role] = cur + 1;
+      out.push(l);
+    }
+
+    for(const r of required){
+      const role = String(r||"");
+      if((countByRole[role]||0) > 0) continue;
+      // create a stable placeholder layer id
+      let id = "auto_"+role;
+      if(out.some(x=>String(x.id||"")===id)) id = id + "_" + String(Date.now()).slice(-6);
+      out.push({ id, role, locked: Boolean(contract.layers?.[0]?.locked) });
+      countByRole[role] = 1;
+    }
+
+    if(out.length) contract.layers = out;
+    // keep roles metadata aligned if present
+    if(typeof contract.roles === "object") contract.roles = { required, optional };
+    return contract;
+  }catch(_){
+    return contract;
+  }
+}
+
+function buildContractV1(templateId, category, canvas, elements){
+  try{
+    const layers = (elements||[]).filter(Boolean).map((e, i)=>({
+      id: String(e.id || ("l_"+i)),
+      role: String(e.role || (e.type==="photo" ? "image" : (e.type==="bg" ? "background" : "badge"))),
+      locked: false
+    }));
+    return {
+      version: "v1",
+      templateId: String(templateId),
+      category: String(category || "Unknown"),
+      canvas: { w: canvas.w, h: canvas.h },
+      exportProfiles: [{ id:"default", label:String(category||"Export"), w: canvas.w, h: canvas.h, format:"png" }],
+      layers,
+      constraints: {},
+      roles: { required: ["headline"], optional: ["subhead","cta","badge","image","background"] }
+    };
+  }catch(_){
+    return null;
+  }
+}
+
+function makeTemplates({ prompt, category, style, count, divergenceIndex }) {
+  // YouTube Thumbnails: REAL archetypes (1–20) only
+  if (String(category || "").toLowerCase().includes("youtube")) {
+    const yt = makeYouTubeArchetypeTemplates({ prompt, category, style, count, divergenceIndex });
+    if (Array.isArray(yt) && yt.length) return yt;
+    // Fallback: if archetype engine is unavailable, use generic deterministic templates
+  }
+
+  const words = splitWords(prompt);
+  const base = prompt ? titleCase(prompt) : "New Collection";
+
+  // Archetype set with layout hints (deterministic variety)
+  const archetypes = [
+    { vibe: "Branding", layoutHint: "clean", cta: "Learn More" },
+    { vibe: "Urgency", layoutHint: "badge-promo", cta: "Shop Now" },
+    { vibe: "Info", layoutHint: "feature-grid", cta: "See Details" },
+    { vibe: "CTA", layoutHint: "split-hero", cta: "Get Started" },
+    { vibe: "Branding", layoutHint: "photo-card", cta: "Discover" },
+    { vibe: "Info", layoutHint: "minimal-quote", cta: "Explore" },
+  ];
+
+  let start = 0;
+  if (Number.isFinite(divergenceIndex) && divergenceIndex >= 0) {
+    start = Math.floor(divergenceIndex) % archetypes.length;
+  }
+
+  const templates = [];
+  for (let i = 0; i < count; i++) {
+    const a = archetypes[(start + i) % archetypes.length];
+
+    // deterministic copy (varies, but stays premium)
+    const maxH = 42;
+    const headline = (base.length > maxH ? base.slice(0, maxH) : base) || "New Collection";
+    const subhead =
+      a.vibe === "Info"
+        ? words.length
+          ? "Clear details • Simple structure"
+          : "Clear details • Simple structure"
+        : a.vibe === "Urgency"
+        ? "Limited time • Act fast"
+        : a.vibe === "Branding"
+        ? "Premium quality • Trusted"
+        : "Tap to begin • Instant results";
+
+    const seed = hash32(`${prompt}|${category}|${style}|${i}`);
+    const cta = pickCTA(a.vibe, seed);
+
+    const composed = materializeTemplate({
+      prompt,
+      category,
+      style,
+      i,
+      vibe: a.vibe,
+      layoutHint: a.layoutHint,
+      headline,
+      subhead,
+      cta
+});
+
+    // Attach semantic roles + stable-ish ids (non-breaking)
+    const elements = Array.isArray(composed.elements) ? composed.elements.map((e) => ({ ...e })) : [];
+    let textSeen = 0;
+    for (const el of elements) {
+      const t = String(el && el.type ? el.type : "").toLowerCase();
+      if (t === "bg") {
+        el.role = "background";
+        el.id = el.id || "bg";
+        continue;
+      }
+      if (t === "photo" || t === "image") {
+        el.role = "image";
+        el.id = el.id || "media";
+        continue;
+      }
+      if (t === "pill") {
+        const txt = String((el && (el.text || el.title)) || "").trim();
+        if (txt && String(cta || "").trim() && txt === String(cta).trim()) {
+          el.role = "cta";
+          el.id = el.id || "cta";
+        } else {
+          el.role = "badge";
+          el.id = el.id || "badge";
+        }
+        continue;
+      }
+      if (t === "badge" || t === "chip") {
+        el.role = "badge";
+        el.id = el.id || (t === "badge" ? "badge" : "chip");
+        continue;
+      }
+      if (t === "text") {
+        textSeen += 1;
+        el.role = textSeen === 1 ? "headline" : "subhead";
+        el.id = el.id || (textSeen === 1 ? "headline" : textSeen === 2 ? "subhead" : `text_${textSeen}`);
+        continue;
+      }
+      el.role = el.role || "badge";
+      el.id = el.id || `el_${seed.toString(16)}_${i}_${Math.random().toString(16).slice(2)}`;
+    }
+
+    // TemplateContract (pure JSON)
+    const canvasN = {
+      width: Math.round(Number(composed && composed.canvas ? composed.canvas.w : 0)),
+      height: Math.round(Number(composed && composed.canvas ? composed.canvas.h : 0))
+};
+    const templateId = `tpl_${seed.toString(16)}_${i + 1}`;
+    const pal = composed && composed._palette ? composed._palette : null;
+    let contract = {
+      version: "v1",
+      templateId,
+      category,
+      canvas: canvasN,
+      palette: pal ? { bg: pal.bg || null, accent: pal.accent || pal.accent2 || null, ink: pal.ink || null } : null,
+      layers: elements.map((e) => ({ id: String(e.id || "layer"), role: String(e.role || "badge"), locked: true })),
+      exportProfiles: [String(category).replace(/\s+/g, "_").toLowerCase()],
+      layoutFamily: (function(){
+        try{
+          const sel = getSelectLayoutFamily();
+          return (typeof sel === "function") ? String(sel({ category, prompt }) || "") : null;
+        }catch(_){ return null; }
+      })(),
+      createdAt: Date.now()
+};
+
+    try{
+      if(typeof __normalizeCategory === "function"){
+        const spec = __normalizeCategory(category);
+        contract = normalizeContractToSpec(contract, spec);
+      }
+    }catch(_){/* no-op */}
+
+    templates.push({
+      id: templateId,
+      contract,
+      title: `${category} #${i + 1}`,
+      subtitle: `${style} • ${a.vibe}`,
+      category,
+      style,
+      headline,
+      subhead,
+      cta,
+      vibe: a.vibe,
+      layoutHint: a.layoutHint,
+      canvas: composed.canvas,
+      elements,
+      _layout: composed._layout,
+      _palette: composed._palette && composed._palette.name ? composed._palette.name : null,
+      _seed: composed._seed
+});
+  }
+  return templates;
+}
+
+
+/* ===========================
+   Archetype Engine (1–20)
+   - Wrapped to avoid polluting existing generate.js symbols.
+   - Not wired into makeTemplates yet; safe merge-only.
+=========================== */
+
 // ---------------------------------------------------------------------------
 // Public API for reuse by wrappers (e.g., /api/generate.js thin handler) 
 // ---------------------------------------------------------------------------
@@ -897,47 +1338,3 @@ async function generateTemplates(payload) {
 module.exports = handler;
 module.exports.generateTemplates = generateTemplates;
 module.exports.default = handler;
-
-// --- GENERATION OUTPUT ---
-
-
-/* P8: Real Template Generation (additive) */
-try{
-  const factory = (typeof require==="function")
-    ? require("./template-structure-factory.js")
-    : window.NexoraTemplateFactory;
-
-  if(factory && typeof factory.createTemplateContract==="function"){
-    const baseContract = output?.contract;
-    const resolvedFamily = resolveLayoutFamily({ category: baseContract?.category, prompt: input?.prompt || "" });
-    if(baseContract && resolvedFamily){ baseContract.layoutFamily = resolvedFamily; }
-    const count = Number(input?.count||1);
-    if(baseContract && count>1){
-      const templates = [];
-      for(let i=0;i<count;i++){
-        templates.push(factory.createTemplateContract(baseContract,i));
-      }
-      output.templates = templates;
-    }
-  }
-}catch(_){}
-
-
-/**
- * Optional Archetype Path (externalized)
- * - Archetypes live in archetypes_1-20_compiled.js
- * - Runtime wrapper lives in archetype-engine.js
- * This file must remain orchestration-only.
- */
-function tryCompileArchetypeTemplate(opts){
-  try{
-    if(typeof require==="function"){
-      const eng = require("./archetype-engine.js");
-      if(eng && typeof eng.compileArchetypeTemplate==="function"){
-        return eng.compileArchetypeTemplate(opts);
-      }
-    }
-  }catch(e){ /* hard-safe */ }
-  return null;
-}
-
