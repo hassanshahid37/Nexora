@@ -1,6 +1,6 @@
 
 /**
- * P9.1 — 
+ * P9.1 — Element Normalization Engine
  * Render-safety only. No layout/geometry changes.
  */
 const ROLE_TYPE_MAP = {
