@@ -100,21 +100,6 @@ function __normalizeForPreview(elements){
       img.style.height = "220px";
       img.style.background = "#222";
       img.style.borderRadius = "16px";
-      img.style.display = "flex";
-      img.style.alignItems = "center";
-      img.style.justifyContent = "center";
-      const src = content.imageSrc || content.image || null;
-      if (!src || src === "__PLACEHOLDER_IMAGE__") {
-        const t = el("div", "nr-image-ph");
-        t.textContent = "IMAGE";
-        t.style.opacity = "0.6";
-        t.style.letterSpacing = "0.2em";
-        img.appendChild(t);
-      } else {
-        img.style.backgroundImage = `url(${src})`;
-        img.style.backgroundSize = "cover";
-        img.style.backgroundPosition = "center";
-      }
       wrap.appendChild(img);
       return wrap;
     }
@@ -216,11 +201,8 @@ function __normalizeForPreview(elements){
     try{
       const contract = payload?.contract;
        const family = payload?.doc?.layout?.family || payload?.layout?.family || null;
-      const contentRaw  = payload?.content || {};
-      const __N = (typeof window !== "undefined" && window.NexoraElementNormalizer) ? window.NexoraElementNormalizer : null;
-      const content  = (__N && typeof __N.normalizeContentForPreview === "function")
-        ? __N.normalizeContentForPreview(contentRaw, contract?.layers)
-        : contentRaw;
+      const rawContent = payload?.content || {};
+      const content = __p9NormalizeContent(rawContent, contract?.layers);
       const metaIn   = payload?.meta || {};
 
       if (!root) return false;
