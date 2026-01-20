@@ -1,3 +1,4 @@
+/* P8 executed geometry only */
 
 
 
@@ -224,6 +225,8 @@
       }
 
       const familyCanon = canonFamilyId(contract);
+      const __zoneExec = window.NexoraZoneExecutor || null;
+
       const zonesFrac = (window.NexoraZones && typeof window.NexoraZones.getZones === "function")
         ? window.NexoraZones.getZones(familyCanon)
         : null;
@@ -364,7 +367,19 @@
         if(zone){
           const slot = zoneCursor[zone] || 0;
           zoneCursor[zone] = slot + 1;
-          applyPlacement(node, zone, slot);
+          if(__zoneExec && __zoneExec.applyPlacementStyle && __zoneExec.computePlacements){
+            // Use centralized P8 executor when available
+            const computed = __zoneExec.computePlacements({
+              contract,
+              orderedLayers: ordered,
+              getZones: (id)=> (window.NexoraZones && typeof window.NexoraZones.getZones==="function") ? window.NexoraZones.getZones(id) : null
+            });
+            const placement = computed && computed.placements ? computed.placements.get(ordered.indexOf(layer)) : null;
+            if(placement && placement.rect) __zoneExec.applyPlacementStyle(node, placement.rect);
+            else applyPlacement(node, zone, slot);
+          } else {
+            applyPlacement(node, zone, slot);
+          }
         }
 
         root.appendChild(node);
