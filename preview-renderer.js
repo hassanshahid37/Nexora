@@ -1,3 +1,15 @@
+// P9.1 Element Normalization hook
+function __normalizeForPreview(elements){
+  try{
+    const N = (typeof window !== "undefined" && window.NexoraElementNormalizer)
+      ? window.NexoraElementNormalizer
+      : null;
+    return (N && typeof N.normalizeElements === "function")
+      ? N.normalizeElements(elements)
+      : elements;
+  }catch(_){ return elements; }
+}
+
 /* P8 executed geometry only */
 
 
@@ -88,6 +100,21 @@
       img.style.height = "220px";
       img.style.background = "#222";
       img.style.borderRadius = "16px";
+      img.style.display = "flex";
+      img.style.alignItems = "center";
+      img.style.justifyContent = "center";
+      const src = content.imageSrc || content.image || null;
+      if (!src || src === "__PLACEHOLDER_IMAGE__") {
+        const t = el("div", "nr-image-ph");
+        t.textContent = "IMAGE";
+        t.style.opacity = "0.6";
+        t.style.letterSpacing = "0.2em";
+        img.appendChild(t);
+      } else {
+        img.style.backgroundImage = `url(${src})`;
+        img.style.backgroundSize = "cover";
+        img.style.backgroundPosition = "center";
+      }
       wrap.appendChild(img);
       return wrap;
     }
@@ -189,7 +216,11 @@
     try{
       const contract = payload?.contract;
        const family = payload?.doc?.layout?.family || payload?.layout?.family || null;
-      const content  = payload?.content || {};
+      const contentRaw  = payload?.content || {};
+      const __N = (typeof window !== "undefined" && window.NexoraElementNormalizer) ? window.NexoraElementNormalizer : null;
+      const content  = (__N && typeof __N.normalizeContentForPreview === "function")
+        ? __N.normalizeContentForPreview(contentRaw, contract?.layers)
+        : contentRaw;
       const metaIn   = payload?.meta || {};
 
       if (!root) return false;
@@ -225,8 +256,6 @@
       }
 
       const familyCanon = canonFamilyId(contract);
-      const __zoneExec = window.NexoraZoneExecutor || null;
-
       const zonesFrac = (window.NexoraZones && typeof window.NexoraZones.getZones === "function")
         ? window.NexoraZones.getZones(familyCanon)
         : null;
@@ -367,19 +396,7 @@
         if(zone){
           const slot = zoneCursor[zone] || 0;
           zoneCursor[zone] = slot + 1;
-          if(__zoneExec && __zoneExec.applyPlacementStyle && __zoneExec.computePlacements){
-            // Use centralized P8 executor when available
-            const computed = __zoneExec.computePlacements({
-              contract,
-              orderedLayers: ordered,
-              getZones: (id)=> (window.NexoraZones && typeof window.NexoraZones.getZones==="function") ? window.NexoraZones.getZones(id) : null
-            });
-            const placement = computed && computed.placements ? computed.placements.get(ordered.indexOf(layer)) : null;
-            if(placement && placement.rect) __zoneExec.applyPlacementStyle(node, placement.rect);
-            else applyPlacement(node, zone, slot);
-          } else {
-            applyPlacement(node, zone, slot);
-          }
+          applyPlacement(node, zone, slot);
         }
 
         root.appendChild(node);
