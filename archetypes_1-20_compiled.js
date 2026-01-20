@@ -25,7 +25,7 @@
 // 19 FUN_PLAYFUL
 // 20 EMOTIONAL_STORY
 
-export const ARCHETYPE_FACTORY_FNS = [
+const ARCHETYPE_FACTORY_FNS = [
   AggressivePower,
   MinimalClean,
   CuriosityMystery,
@@ -49,12 +49,12 @@ export const ARCHETYPE_FACTORY_FNS = [
 ];
 
 // Convenience: build ready-to-use compilers (objects with {id, compile}).
-export function buildAllArchetypes() {
+function buildAllArchetypes() {
   return ARCHETYPE_FACTORY_FNS.map(fn => fn());
 }
 
 // Convenience: shared canvas resolver (union of categories seen across batches).
-export function resolveCanvas(category) {
+function resolveCanvas(category) {
   const CANVAS = {
     youtube: { w: 1280, h: 720, safe: 48 },
     instagram: { w: 1080, h: 1080, safe: 48 },
@@ -70,7 +70,7 @@ export function resolveCanvas(category) {
 }
 
 // Convenience: deterministic selection helpers (same semantics as batches).
-export function selectArchetype(list, requestedId, headline, subhead) {
+function selectArchetype(list, requestedId, headline, subhead) {
   if (requestedId) {
     const hit = list.find(a => a.id === requestedId);
     if (hit) return hit;
@@ -79,7 +79,7 @@ export function selectArchetype(list, requestedId, headline, subhead) {
   return list[h % list.length];
 }
 
-export function nextArchetype(list, id) {
+function nextArchetype(list, id) {
   const i = Math.max(0, list.findIndex(a => a.id === id));
   return list[(i + 1) % list.length];
 }
@@ -1389,3 +1389,28 @@ function estimateLines(text, widthPx, fontSizePx, letterSpacing) {
   const charsPerLine = Math.max(1, Math.floor(widthPx / avgCharW));
   return Math.ceil(text.length / charsPerLine);
 }
+
+
+// UMD exports (Node + Browser)
+try {
+  if (typeof module !== "undefined" && module.exports) {
+    module.exports = {
+      ARCHETYPE_FACTORY_FNS,
+      buildAllArchetypes,
+      resolveCanvas,
+      selectArchetype,
+      nextArchetype
+    };
+  }
+} catch (_) {}
+try {
+  if (typeof window !== "undefined") {
+    window.NexoraArchetypesLib = window.NexoraArchetypesLib || {
+      ARCHETYPE_FACTORY_FNS,
+      buildAllArchetypes,
+      resolveCanvas,
+      selectArchetype,
+      nextArchetype
+    };
+  }
+} catch (_) {}
