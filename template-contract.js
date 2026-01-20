@@ -1,4 +1,5 @@
 
+
 /* template-contract.js — Nexora TemplateContract v1 (System Spine)
    Purpose: Shared contract builder + validator for templates.
    - Works in plain <script> environments (no bundler).
@@ -67,11 +68,19 @@
     const w = Number(c?.width ?? c?.w);
     const h = Number(c?.height ?? c?.h);
     if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return null;
-    return { width: Math.round(w), height: Math.round(h) };
+    const W = Math.round(w);
+    const H = Math.round(h);
+    // Provide both shapes for cross-module compatibility (some modules read .w/.h)
+    return { width: W, height: H, w: W, h: H };
   }
 
   
 
+
+// =========================
+// Option C: STRICT MODE
+// =========================
+const STRICT_CONTRACT = true;
 // --- P5.2: Template Shape Normalization (Category-Safe) ---
 // Additive + optional: only runs when CategorySpecV1 + normalizeCategory are present.
 // Guarantees: required roles exist, forbidden roles removed, duplicates capped (badge may repeat).
@@ -173,14 +182,15 @@ function validateContract(contract) {
         .filter(Boolean)
         .map((l) => ({
           id: String(l.id || stableId("layer")),
-          role: ROLE_SET.has(String(l.role || "")) ? String(l.role) : "badge",
-          locked: true
-        }));
+          role: ROLE_SET.has(String(l.role || "")) ? String(l.role) : null,
+          locked: l.locked
+        }))
+        .filter(l => typeof l.role === 'string' && typeof l.locked === 'boolean');
 
       if (!normalizedLayers.length) return null;
 
       // P5.2: enforce category-safe template shape (optional)
-      const shapedLayers = normalizeLayersForCategory(normalizedLayers, cat);
+      const shapedLayers = (STRICT_CONTRACT ? normalizedLayers : normalizeLayersForCategory(normalizedLayers, cat));
 
       const contract = {
         version: VERSION,
@@ -189,7 +199,7 @@ function validateContract(contract) {
         canvas: cv,
         palette: safePalette,
         layers: shapedLayers || normalizedLayers,
-        exportProfiles: [cat.replace(/\s+/g, "_").toLowerCase()],
+        exportProfiles: [{ id: "default", label: cat, w: cv.width, h: cv.height, format: "png" }],
         layoutFamily: lc.layoutFamily,
         layoutVariant: lc.layoutVariant,
         createdAt: Date.now()
