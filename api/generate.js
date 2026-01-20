@@ -1,19 +1,4 @@
 
-/* P7→P8 wiring: resolve layout family via selector */
-function resolveLayoutFamily(input){
-  try{
-    if(typeof require==="function"){
-      const sel = require("./layout-family-selector.js");
-      if(sel && typeof sel.selectLayoutFamily==="function"){
-        return sel.selectLayoutFamily(input);
-      }
-    }
-    if(typeof window!=="undefined" && typeof window.selectLayoutFamily==="function"){
-      return window.selectLayoutFamily(input);
-    }
-  }catch(_){}
-  return null;
-}
 
 // api/generate.js
 // Nexora / Templify – Serverless API: /api/generate
@@ -68,6 +53,35 @@ function getSelectLayoutFamily(){
     return null;
   }
 }
+
+/* -----------------------------
+   Spine loader (P8+)
+   - NexoraSpine.createTemplateFromInput is authoritative
+   - Spine-only: no legacy generation fallback
+------------------------------ */
+function stableHash32(s){
+  s = String(s == null ? "" : s);
+  let h = 2166136261;
+  for(let i=0;i<s.length;i++){
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0);
+}
+
+function getSpine(){
+  // Node/serverless only. In browser preview, window.NexoraSpine is used directly.
+  try{
+    if(typeof require === "function"){
+      // generate.js lives in /api in production; in lab it may be flat.
+      try{ return require("../spine-core.js"); }catch(_){}
+      try{ return require("./spine-core.js"); }catch(_){}
+      try{ return require("..//spine-core.js"); }catch(_){}
+    }
+  }catch(_){}
+  return null;
+}
+
 // CategorySpecV1 normalizer is optional at runtime.
 // We load it lazily so this CommonJS handler never crashes if the file is missing.
 let __normalizeCategory = null;
@@ -111,40 +125,6 @@ async function getNormalizeCategory() {
   }
 }
 
-
-// Archetype engine loader (P7/P8 safe). Never crashes serverless.
-// Vercel: /api/generate.js -> ../archetype-engine.js
-let __archetypeEngine = null;
-let __archetypeEngineTried = false;
-function getArchetypeEngine(){
-  try{
-    if(__archetypeEngine) return __archetypeEngine;
-    if(__archetypeEngineTried) return null;
-    __archetypeEngineTried = true;
-
-    try{
-      // eslint-disable-next-line global-require
-      __archetypeEngine = require("../archetype-engine.js");
-      return __archetypeEngine;
-    }catch(_){}
-
-    try{
-      // eslint-disable-next-line global-require
-      __archetypeEngine = require("./archetype-engine.js");
-      return __archetypeEngine;
-    }catch(_){}
-
-    // Browser (if ever bundled)
-    if(typeof globalThis !== "undefined" && globalThis.NexoraArchetypeEngine){
-      __archetypeEngine = globalThis.NexoraArchetypeEngine;
-      return __archetypeEngine;
-    }
-
-    return null;
-  }catch(_){
-    return null;
-  }
-}
 
 // Purpose: ALWAYS return REAL templates (canvas + elements) compatible with index.html preview.
 // Notes:
@@ -210,174 +190,56 @@ try {
       // If invalid/missing, keep default count (1).
       count = Math.max(1, Math.min(200, count));
     }
-// Accept divergence/fork metadata but NEVER require it
-    const divergenceIndexRaw = body.divergenceIndex ?? body.forkIndex ?? body.variantIndex ?? body.i;
-    let divergenceIndex = Number(divergenceIndexRaw);
-    if (!Number.isFinite(divergenceIndex)) divergenceIndex = -1;
 
-    
-    const variationCount = count;
-    const baseCount = 1;
-    const templates = makeTemplates({ prompt, category, style, count: baseCount, divergenceIndex });
-
-    const withContracts = templates.map((t, i) => {
-      let size = { w: 1080, h: 1080 };
-try{
-  if(typeof __normalizeCategory === "function"){
-    const spec = __normalizeCategory(category);
-    if(spec && spec.canvas && spec.canvas.w && spec.canvas.h){
-      size = { w: spec.canvas.w, h: spec.canvas.h };
-    }
-  }
-}catch(_){}
-size = size || CATEGORIES[category] || { w:1080, h:1080 };
-      const content = {
-        headline: (t.elements||[]).find(e=>e.type==="text")?.text || "",
-        subhead: (t.elements||[]).filter(e=>e.type==="text")[1]?.text || "",
-        cta: (t.elements||[]).find(e=>e.type==="pill"||e.type==="chip")?.text || ""
-      };
-      const layers = (t.elements||[]).map(e => ({
-        role:
-          e.type==="bg" ? "background" :
-          e.type==="photo" ? "image" :
-          e.type==="pill" || e.type==="chip" ? "cta" :
-          "headline"
-      }));
-            let contract = (t && t.contract) ? t.contract : buildContractV1(String(t?.id || ('tpl_'+String(i+1))), category, { w: size.w, h: size.h }, (t.elements||[]));
-      // P5.2: Template Shape Normalization (category-safe layers)
-      try{
-        if(typeof __normalizeCategory === "function"){
-          const spec = __normalizeCategory(category);
-          if(spec) contract = normalizeContractToSpec(contract, spec);
-        }
-      }catch(_){}
-      return Object.assign({}, t, { contract, content });
-    });
-    
-// ---- P8 Phase-2: Real structural templates (P7-authoritative family) ----
-const expanded = [];
-const base = withContracts[0] || null;
-if (!base) return res.end(JSON.stringify({ success: true, templates: [] }));
-
-// Resolve layout family via P7 selector (mechanical wiring)
-// IMPORTANT: this file typically runs as /api/generate.js on Vercel.
-// So we must resolve selector paths robustly (../ + ./) and NEVER crash.
-let familyId = null;
-try{
-  const selFn = getSelectLayoutFamily();
-  if (typeof selFn === "function") {
-    familyId = selFn({ category, prompt });
-  }
-  if(!familyId && typeof globalThis !== "undefined" && typeof globalThis.selectLayoutFamily === "function"){
-    familyId = globalThis.selectLayoutFamily({ category, prompt });
-  }
-}catch(_){}
-
-// Load P8 factory (pure logic)
-let factory = null;
-try{
-  if(typeof require === "function"){
-    // Vercel: /api/generate.js -> ../template-structure-factory.js
-    try{ factory = require("../template-structure-factory.js"); }catch(_){ }
-    // Local/dev: same folder
-    if(!factory){ try{ factory = require("./template-structure-factory.js"); }catch(_){ } }
-  }
-  if(!factory && typeof globalThis !== "undefined") factory = globalThis.NexoraTemplateFactory;
-}catch(_){}
-
-// Helper: filter elements[] to match contract roles (non-destructive, safe fallback)
-function applyContractToElements(template, contract){
-  try{
-    if(!template || !contract || !Array.isArray(template.elements) || !Array.isArray(contract.layers)) return template;
-
-    const els = template.elements.map(e => Object.assign({}, e));
-    const keep = [];
-    let textIdx = 0;
-
-    function takeText(){
-      const texts = els.filter(e => e && e.type === "text");
-      const t = texts[textIdx] || null;
-      textIdx++;
-      return t;
-    }
-
-    for(const layer of contract.layers){
-      const role = String(layer && layer.role || "");
-      if(role === "background"){
-        const bg = els.find(e => e && e.type === "bg") || null;
-        if(bg) keep.push(bg);
-      } else if(role === "image"){
-        const ph = els.find(e => e && e.type === "photo") || null;
-        if(ph) keep.push(ph);
-      } else if(role === "cta"){
-        const cta = els.find(e => e && (e.type === "pill" || e.type === "chip")) || null;
-        if(cta) keep.push(cta);
-      } else if(role === "badge"){
-        const badge = els.find(e => e && (e.type === "badge" || e.type === "chip")) || null;
-        if(badge) keep.push(badge);
-      } else if(role === "headline" || role === "subhead" || role === "body"){
-        const t = takeText();
-        if(t) keep.push(t);
-      } else {
-        // Unknown role: ignore safely
-      }
-    }
-
-    // If contract filtering would empty template, keep original elements
-    template.elements = keep.length ? keep : template.elements;
-    return template;
-  }catch(_){
-    return template;
-  }
+    // ---------- Spine-first generation (authoritative) ----------
+// Spine-only: no legacy fallback. If Spine is unavailable or fails, we return an empty list with an error.
+const spine = getSpine();
+if (!spine || typeof spine.createTemplateFromInput !== "function") {
+  throw new Error("Spine-only mode: createTemplateFromInput() not found. Ensure spine-core.js is deployed and importable.");
 }
 
-for (let i = 0; i < variationCount; i++) {
-  const p = VARIATION_PROFILES[i % VARIATION_PROFILES.length];
+const templates = [];
+for (let i = 0; i < count; i++) {
+  const seed = stableHash32(category + "|" + style + "|" + prompt + "|" + String(i + 1));
+  const out = spine.createTemplateFromInput({
+    category,
+    style,
+    prompt,
+    notes: String(body?.notes || ""),
+    seed
+  });
 
-  // Start from base template, then inject a structurally different contract
-  let t = JSON.parse(JSON.stringify(base));
+  const tpl = out && out.template ? out.template : null;
+  const doc = out && out.doc ? out.doc : null;
 
-  // Build a new contract using P7 familyId as authority
-  try{
-    if(factory && typeof factory.createTemplateContract === "function"){
-      const baseContract = (t && t.contract) ? t.contract : null;
-      const c = factory.createTemplateContract(baseContract || {}, i, { familyId });
-      t.contract = c;
-      // Align ids with contract
-      t.id = c.templateId;
-      t.templateId = c.templateId;
-      // Apply contract roles to element selection
-      t = applyContractToElements(t, c);
-    }
-  }catch(_){}
+  // API compatibility: must return elements[] for existing UI
+  if (!tpl || !Array.isArray(tpl.elements)) {
+    throw new Error("Spine-only mode: spine returned an invalid template (missing elements[]).");
+  }
 
-  // Then apply P6 variation routing / density adjustments
-  expanded.push(applyVariation(t, p, i));
+  const contract = doc && doc.contract ? doc.contract : (tpl.contract || null);
+  const content = doc && doc.content ? doc.content : (tpl.content || null);
+  templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
 }
-return res.end(JSON.stringify({ success: true, templates: expanded }));
+
+return res.end(JSON.stringify({ success: true, templates }));
+
+
 } catch (err) {
-    // Hard-safe: NEVER return 500
+    // Hard-safe: NEVER return 500, and NEVER fall back to legacy generation (spine-only mode).
     try {
-      const templates = makeTemplates({
-        prompt: "",
-        category: "Instagram Post",
-        style: "Dark Premium",
-        count: Number.isFinite(count) ? count : 1,
-        divergenceIndex: -1
-});
       return res.end(
         JSON.stringify({
           success: true,
-          templates,
+          templates: [],
           error: String(err && err.message ? err.message : err)
-})
+        })
       );
-    } catch {
+    } catch (_) {
       return res.end(JSON.stringify({ success: true, templates: [] }));
     }
   }
-};
-
+}
 /* ===========================
    AUTO_VARIATION_P6 (Additive)
    - Deterministic variations within SAME template shape
@@ -657,24 +519,29 @@ function brandFromPrompt(prompt) {
   return { brand, tagline };
 }
 
-function pickCTA(vibe, seed) {
+function pickCTA(category, seed) {
   const choices = {
     Branding: ["Learn More", "Discover", "Explore", "Get Started"],
     Urgency: ["Shop Now", "Limited Offer", "Buy Now", "Get 30% Off"],
     Info: ["See Details", "Learn More", "Read More", "Get Info"],
     CTA: ["Get Started", "Join Now", "Try Now", "Sign Up"]
 };
-  const list = choices[vibe] || choices.CTA;
+  const c = String(category || '').toLowerCase();
+  const key = c.includes('thumbnail') ? 'Urgency' : (c.includes('resume') ? 'Info' : 'CTA');
+  const list = choices[key] || choices.CTA;
   return pick(list, seed);
 }
 
-function layoutFromHint(hint, seed) {
-  const h = String(hint || "").toLowerCase();
-  if (h.includes("split")) return "splitHero";
-  if (h.includes("badge")) return "badgePromo";
-  if (h.includes("feature")) return "featureGrid";
-  if (h.includes("quote")) return "minimalQuote";
-  if (h.includes("photo")) return "photoCard";
+function layoutFromFamilyId(familyId, seed) {
+  const id = String(familyId || "").toLowerCase();
+
+  // Map P7 family ids/canon ids to legacy layout names (legacy engine only; spine path is authoritative)
+  if (id.includes("split") || id.includes("hero")) return "splitHero";
+  if (id.includes("promo") || id.includes("badge")) return "badgePromo";
+  if (id.includes("grid") || id.includes("feature") || id.includes("dense")) return "featureGrid";
+  if (id.includes("quote") || id.includes("minimal")) return "minimalQuote";
+  if (id.includes("photo") || id.includes("image")) return "photoCard";
+
   // fallback deterministic rotation
   const rot = ["splitHero", "badgePromo", "featureGrid", "minimalQuote", "photoCard"];
   return pick(rot, seed);
@@ -873,13 +740,13 @@ function buildElements(layout, spec) {
   return els;
 }
 
-function materializeTemplate({ prompt, category, style, i, vibe, layoutHint, headline, subhead, cta }) {
-  const baseSeed = hash32(`${prompt}|${category}|${style}|${i}|${vibe}|${layoutHint}`);
+function materializeTemplate({ prompt, category, style, i, familyId, headline, subhead, cta }) {
+  const baseSeed = hash32(`${prompt}|${category}|${style}|${i}|${familyId || ''}`);
   const size = CATEGORIES[category] || CATEGORIES["Instagram Post"];
   const pal = paletteForStyle(style, baseSeed);
   const brand = brandFromPrompt(prompt).brand;
 
-  const layout = layoutFromHint(layoutHint, baseSeed ^ 0xa5a5);
+  const layout = layoutFromFamilyId(familyId, baseSeed ^ 0xa5a5);
   const elements = buildElements(layout, {
     w: size.w,
     h: size.h,
@@ -901,184 +768,7 @@ function materializeTemplate({ prompt, category, style, i, vibe, layoutHint, hea
 }
 
 
-// ===========================
-// YouTube Archetypes → Template Adapter
-// - Uses external archetype-engine + archetypes_1-20_compiled
-// - Produces templates compatible with index.html preview + invisible-editor handoff
-// ===========================
-function makeYouTubeArchetypeTemplates({ prompt, category, style, count, divergenceIndex }) {
-  const cat = category || "YouTube Thumbnail";
-  const canvas = { w: 1280, h: 720 }; // YouTube Thumbnail canonical
-  const seedBase = hash32(String(prompt || "") + "|" + String(style || "") + "|" + String(cat || ""));
-  const palBase = paletteForStyle(style, seedBase);
 
-  const eng = getArchetypeEngine();
-  const ids = (eng && typeof eng.listArchetypes === "function") ? eng.listArchetypes() : [];
-  if(!ids.length){ return []; }
-// Stable copy defaults (strong hooks for YouTube)
-  const raw = String(prompt || "").trim();
-  const cleaned = raw
-    .replace(/^[\s\-–—:]+/g, "")
-    .replace(/^(why|how|what|when|where|the truth about|truth about)\s+/i, "")
-    .replace(/\?+$/, "")
-    .trim();
-
-  function ytHeadline(seed){
-    let head = cleaned || "WATCH THIS";
-    let words = head.split(/\s+/).filter(Boolean);
-    if(words.length > 7) head = words.slice(0,7).join(" ");
-    if(head.length > 34) head = head.slice(0,34).trim();
-    return head.toUpperCase();
-  }
-
-  function ytSubhead(seed){
-    const micro = ["WATCH NOW", "DON'T MISS", "FULL STORY", "NEW VIDEO", "IN 5 MINUTES"];
-    return pick(micro, seed ^ 0x7171);
-  }
-
-  // Deterministic archetype selection per variant
-  const basePick = (divergenceIndex != null && Number.isFinite(Number(divergenceIndex)) && Number(divergenceIndex) >= 0)
-    ? (Number(divergenceIndex) | 0)
-    : 0;
-
-  const out = [];
-  for (let i = 0; i < count; i++) {
-    const seed = (seedBase ^ ((i + 1) * 2654435761) ^ (basePick * 97531)) >>> 0;
-    const pal = paletteForStyle(style, seed);
-
-    const headline = ytHeadline(seed);
-    const subhead = ytSubhead(seed);
-
-    const archetypeId = ids[(seed % ids.length + ids.length) % ids.length];
-    const ctx = { headline, subhead, imageProvided: true, faceDetected: false };
-
-    let compiled;
-    try {
-      const eng = getArchetypeEngine();
-      compiled = eng && typeof eng.compileArchetype === "function"
-        ? eng.compileArchetype({ archetypeId, canvas, ctx })
-        : null;
-    } catch (e) {
-      compiled = null;
-    }
-    if (!compiled || !Array.isArray(compiled.blocks)) {
-      // no archetype available -> skip this variant safely
-      continue;
-    }
-const elements = blocksToElements(compiled.blocks || [], canvas, pal, seed, headline);
-    const id = "yt_" + String(seedBase) + "_" + String(i + 1);
-
-    out.push({
-      id,
-      category: cat,
-      style: style || "Dark Premium",
-      title: "YouTube Thumbnail • " + (compiled.archetype || archetypeId || "ARCHETYPE"),
-      description: "Archetype: " + String(compiled.archetype || archetypeId || "YT"),
-      canvas: { w: canvas.w, h: canvas.h },
-      palette: pal,
-      archetype: compiled.archetype || archetypeId,
-      elements,
-      contract: buildContractV1(id, cat, canvas, elements)
-    });
-  }
-  return out;
-}
-
-function blocksToElements(blocks, canvas, pal, seed, labelText) {
-  const els = [];
-  // Always add a bg for renderer robustness
-  els.push({ type:"bg", role:"background", x:0,y:0,w:canvas.w,h:canvas.h, fill: pal.bg, fill2: pal.bg2, style:"radial" });
-
-  const brandLabel = String(labelText || "Nexora").split(/\s+/).slice(0,2).join(" ").slice(0,18) || "Nexora";
-  const photoSrc = smartPhotoSrc(seed, pal, brandLabel);
-
-  const sorted = (Array.isArray(blocks) ? blocks : []).slice().sort((a,b)=> (a?.z||0)-(b?.z||0));
-  for (const b of sorted) {
-    if (!b || !b.zone) continue;
-    const z = b.zone;
-    const role = String(b.role || "").toLowerCase() || "badge";
-    const t = String(b.type || "").toLowerCase();
-
-    if (t === "image") {
-      els.push({
-        type: "photo",
-        role: role || "image",
-        x: z.x, y: z.y, w: z.w, h: z.h,
-        src: photoSrc,
-        radius: Number(b?.style?.radius ?? b?.style?.r ?? 24),
-        opacity: Number(b?.style?.opacity ?? 1)
-      });
-      continue;
-    }
-
-    if (t === "background") {
-      // background block is already covered by bg; ignore unless it has a special fill
-      if (b?.style?.fill || b?.style?.color) {
-        els.push({
-          type: "shape",
-          role: "background",
-          x: z.x, y: z.y, w: z.w, h: z.h,
-          fill: b.style.fill || b.style.color,
-          opacity: Number(b?.style?.opacity ?? 1),
-          radius: Number(b?.style?.radius ?? 24)
-        });
-      }
-      continue;
-    }
-
-    if (t === "overlay") {
-      els.push({
-        type: "shape",
-        role: role || "badge",
-        x: z.x, y: z.y, w: z.w, h: z.h,
-        fill: b?.style?.fill || b?.style?.color || "rgba(0,0,0,0.45)",
-        opacity: Number(b?.style?.opacity ?? 1),
-        radius: Number(b?.style?.radius ?? b?.style?.r ?? 24),
-        stroke: b?.style?.stroke || null
-      });
-      continue;
-    }
-
-    if (t === "badge") {
-      els.push({
-        type: "pill",
-        role: role || "badge",
-        x: z.x, y: z.y, w: z.w, h: z.h,
-        text: String(b?.value ?? b?.text ?? "NEW"),
-        fill: b?.style?.fill || pal.accent,
-        color: b?.style?.color || pal.ink,
-        size: Number(b?.style?.fontSize ?? 24),
-        weight: Number(b?.style?.weight ?? 800),
-        radius: Number(b?.style?.radius ?? 999),
-        align: b?.style?.align || "center",
-        opacity: Number(b?.style?.opacity ?? 1)
-      });
-      continue;
-    }
-
-    if (t === "text") {
-      els.push({
-        type: "text",
-        role: role || "headline",
-        x: z.x, y: z.y, w: z.w, h: z.h,
-        text: String(b?.value ?? ""),
-        size: Number(b?.style?.fontSize ?? 56),
-        weight: Number(b?.style?.weight ?? 900),
-        color: b?.style?.color || pal.ink,
-        align: b?.style?.align || "left",
-        lineHeight: Number(b?.style?.lineHeight ?? 1.05),
-        letterSpacing: Number(b?.style?.letterSpacing ?? 0),
-        opacity: Number(b?.style?.opacity ?? 1),
-	        shadow: b?.style?.shadow || null,
-      });
-      continue;
-    }
-
-    // unknown block: ignore safely
-  }
-
-  return els;
-}
 
 
 
@@ -1111,8 +801,8 @@ function normalizeContractToSpec(contract, spec){
       // create a stable placeholder layer id
       let id = "auto_"+role;
       if(out.some(x=>String(x.id||"")===id)) id = id + "_" + String(Date.now()).slice(-6);
-      out.push({ id, role, locked: Boolean(contract.layers?.[0]?.locked) });
-      countByRole[role] = 1;
+    // (removed) strict mode: do not auto-create layers
+countByRole[role] = 1;
     }
 
     if(out.length) contract.layers = out;
@@ -1124,215 +814,70 @@ function normalizeContractToSpec(contract, spec){
   }
 }
 
-function buildContractV1(templateId, category, canvas, elements){
-  try{
-    const layers = (elements||[]).filter(Boolean).map((e, i)=>({
-      id: String(e.id || ("l_"+i)),
-      role: String(e.role || (e.type==="photo" ? "image" : (e.type==="bg" ? "background" : "badge"))),
-      locked: false
-    }));
-    return {
-      version: "v1",
-      templateId: String(templateId),
-      category: String(category || "Unknown"),
-      canvas: { w: canvas.w, h: canvas.h },
-      exportProfiles: [{ id:"default", label:String(category||"Export"), w: canvas.w, h: canvas.h, format:"png" }],
-      layers,
-      constraints: {},
-      roles: { required: ["headline"], optional: ["subhead","cta","badge","image","background"] }
-    };
-  }catch(_){
-    return null;
+// ---------------------------------------------------------------------------
+// Public API for reuse by wrappers (e.g., /api/generate.js thin handler)
+// ---------------------------------------------------------------------------
+async function generateTemplates(payload) {
+  let body = payload;
+  if (typeof body === "string") {
+    try { body = JSON.parse(body); } catch (_) {}
   }
-}
+  body = body || {};
 
-function makeTemplates({ prompt, category, style, count, divergenceIndex }) {
-  // YouTube Thumbnails: REAL archetypes (1–20) only
-  if (String(category || "").toLowerCase().includes("youtube")) {
-    const yt = makeYouTubeArchetypeTemplates({ prompt, category, style, count, divergenceIndex });
-    if (Array.isArray(yt) && yt.length) return yt;
-    // Fallback: if archetype engine is unavailable, use generic deterministic templates
+  let prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+  let rawCategory = typeof body.category === "string" ? body.category : "Instagram Post";
+  let category = rawCategory;
+  let style = typeof body.style === "string" ? body.style : "Dark Premium";
+
+  // Count (1–200)
+  let count = 3;
+  {
+    const raw = body && (body.count ?? body.c);
+    const parsed = Number.parseInt(raw, 10);
+    if (Number.isFinite(parsed)) count = parsed;
+    count = Math.max(1, Math.min(200, count));
   }
 
-  const words = splitWords(prompt);
-  const base = prompt ? titleCase(prompt) : "New Collection";
+  // P5.1 normalize category label when available
+  try {
+    const norm = await getNormalizeCategory();
+    if (typeof norm === "function") {
+      __normalizeCategory = norm;
+      const spec = norm(rawCategory);
+      if (spec && typeof spec.label === "string" && spec.label.trim()) category = spec.label.trim();
+    }
+  } catch (_) {}
 
-  // Archetype set with layout hints (deterministic variety)
-  const archetypes = [
-    { vibe: "Branding", layoutHint: "clean", cta: "Learn More" },
-    { vibe: "Urgency", layoutHint: "badge-promo", cta: "Shop Now" },
-    { vibe: "Info", layoutHint: "feature-grid", cta: "See Details" },
-    { vibe: "CTA", layoutHint: "split-hero", cta: "Get Started" },
-    { vibe: "Branding", layoutHint: "photo-card", cta: "Discover" },
-    { vibe: "Info", layoutHint: "minimal-quote", cta: "Explore" },
-  ];
-
-  let start = 0;
-  if (Number.isFinite(divergenceIndex) && divergenceIndex >= 0) {
-    start = Math.floor(divergenceIndex) % archetypes.length;
+  // Spine-only
+  const spine = getSpine();
+  if (!spine || typeof spine.createTemplateFromInput !== "function") {
+    throw new Error("Spine-only mode: createTemplateFromInput() not found. Ensure spine-core.js is deployed and importable.");
   }
 
   const templates = [];
   for (let i = 0; i < count; i++) {
-    const a = archetypes[(start + i) % archetypes.length];
-
-    // deterministic copy (varies, but stays premium)
-    const maxH = 42;
-    const headline = (base.length > maxH ? base.slice(0, maxH) : base) || "New Collection";
-    const subhead =
-      a.vibe === "Info"
-        ? words.length
-          ? "Clear details • Simple structure"
-          : "Clear details • Simple structure"
-        : a.vibe === "Urgency"
-        ? "Limited time • Act fast"
-        : a.vibe === "Branding"
-        ? "Premium quality • Trusted"
-        : "Tap to begin • Instant results";
-
-    const seed = hash32(`${prompt}|${category}|${style}|${i}`);
-    const cta = pickCTA(a.vibe, seed);
-
-    const composed = materializeTemplate({
+    const seed = stableHash32(category + "|" + style + "|" + prompt + "|" + String(i + 1));
+    const out = spine.createTemplateFromInput({
+      category,
+      style,
       prompt,
-      category,
-      style,
-      i,
-      vibe: a.vibe,
-      layoutHint: a.layoutHint,
-      headline,
-      subhead,
-      cta
-});
+      notes: String(body?.notes || ""),
+      seed
+    });
 
-    // Attach semantic roles + stable-ish ids (non-breaking)
-    const elements = Array.isArray(composed.elements) ? composed.elements.map((e) => ({ ...e })) : [];
-    let textSeen = 0;
-    for (const el of elements) {
-      const t = String(el && el.type ? el.type : "").toLowerCase();
-      if (t === "bg") {
-        el.role = "background";
-        el.id = el.id || "bg";
-        continue;
-      }
-      if (t === "photo" || t === "image") {
-        el.role = "image";
-        el.id = el.id || "media";
-        continue;
-      }
-      if (t === "pill") {
-        const txt = String((el && (el.text || el.title)) || "").trim();
-        if (txt && String(cta || "").trim() && txt === String(cta).trim()) {
-          el.role = "cta";
-          el.id = el.id || "cta";
-        } else {
-          el.role = "badge";
-          el.id = el.id || "badge";
-        }
-        continue;
-      }
-      if (t === "badge" || t === "chip") {
-        el.role = "badge";
-        el.id = el.id || (t === "badge" ? "badge" : "chip");
-        continue;
-      }
-      if (t === "text") {
-        textSeen += 1;
-        el.role = textSeen === 1 ? "headline" : "subhead";
-        el.id = el.id || (textSeen === 1 ? "headline" : textSeen === 2 ? "subhead" : `text_${textSeen}`);
-        continue;
-      }
-      el.role = el.role || "badge";
-      el.id = el.id || `el_${seed.toString(16)}_${i}_${Math.random().toString(16).slice(2)}`;
+    const tpl = out && out.template ? out.template : null;
+    const doc = out && out.doc ? out.doc : null;
+
+    if (!tpl || !Array.isArray(tpl.elements)) {
+      throw new Error("Spine-only mode: spine returned an invalid template (missing elements[]).");
     }
 
-    // TemplateContract (pure JSON)
-    const canvasN = {
-      width: Math.round(Number(composed && composed.canvas ? composed.canvas.w : 0)),
-      height: Math.round(Number(composed && composed.canvas ? composed.canvas.h : 0))
-};
-    const templateId = `tpl_${seed.toString(16)}_${i + 1}`;
-    const pal = composed && composed._palette ? composed._palette : null;
-    let contract = {
-      version: "v1",
-      templateId,
-      category,
-      canvas: canvasN,
-      palette: pal ? { bg: pal.bg || null, accent: pal.accent || pal.accent2 || null, ink: pal.ink || null } : null,
-      layers: elements.map((e) => ({ id: String(e.id || "layer"), role: String(e.role || "badge"), locked: true })),
-      exportProfiles: [String(category).replace(/\s+/g, "_").toLowerCase()],
-      layoutFamily: (function(){
-        try{
-          const sel = getSelectLayoutFamily();
-          return (typeof sel === "function") ? String(sel({ category, prompt }) || "") : null;
-        }catch(_){ return null; }
-      })(),
-      createdAt: Date.now()
-};
-
-    try{
-      if(typeof __normalizeCategory === "function"){
-        const spec = __normalizeCategory(category);
-        contract = normalizeContractToSpec(contract, spec);
-      }
-    }catch(_){/* no-op */}
-
-    templates.push({
-      id: templateId,
-      contract,
-      title: `${category} #${i + 1}`,
-      subtitle: `${style} • ${a.vibe}`,
-      category,
-      style,
-      headline,
-      subhead,
-      cta,
-      vibe: a.vibe,
-      layoutHint: a.layoutHint,
-      canvas: composed.canvas,
-      elements,
-      _layout: composed._layout,
-      _palette: composed._palette && composed._palette.name ? composed._palette.name : null,
-      _seed: composed._seed
-});
+    const contract = doc && doc.contract ? doc.contract : (tpl.contract || null);
+    const content = doc && doc.content ? doc.content : (tpl.content || null);
+    templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
   }
+
   return templates;
-}
-
-
-/* ===========================
-   Archetype Engine (1–20)
-   - Wrapped to avoid polluting existing generate.js symbols.
-   - Not wired into makeTemplates yet; safe merge-only.
-=========================== */
-
-// ---------------------------------------------------------------------------
-// Public API for reuse by wrappers (e.g., /api/generate.js thin handler) 
-// ---------------------------------------------------------------------------
-async function generateTemplates(payload) {
-  let body = payload;
-  if (typeof body === 'string') {
-    try { body = JSON.parse(body); } catch (_) {}
-  }
-  body = body || {};
-  const normalized = {
-    prompt: body.prompt || '',
-    category: body.category || 'Instagram Post',
-    style: body.style || 'Dark Premium',
-    count: Number.isFinite(Number(body.count)) ? Number(body.count) : 3,
-    divergenceIndex: Number.isFinite(Number(body.divergenceIndex)) ? Number(body.divergenceIndex) : 0,
-  };
-
-  // P5.1: normalize category label via CategorySpecV1 when available
-  try {
-    const norm = await getNormalizeCategory();
-    if (typeof norm === "function") {
-      const spec = norm(normalized.category);
-      if (spec && typeof spec.label === "string" && spec.label.trim()) normalized.category = spec.label.trim();
-    }
-  } catch (_) {}
-
-  return makeTemplates(normalized);
 }
 
 module.exports = handler;
