@@ -62,7 +62,7 @@
   // These are the ONLY families used by Zone Registry/Executor.
   // -----------------------------
   const CANONICAL_FAMILIES = {
-    "text-first": ["text-first","headline-first","copy-led","generic"],
+    "text-first": ["text-first","headline-first","copy-led"],
     "image-led": ["image-led","image-dominant","visual-first","promo-badge","photo-card","photo","image"],
     "split": ["split","split-balanced","split-hero","dominance-left","dominance-right","two-column","two-col"],
     "stacked": ["stacked","top-bottom","bottom-top","center-stack","vertical-stack"],
@@ -96,7 +96,13 @@
   };
 
   function getLayoutFamily(id){
-    const canon = normalizeFamily(String(id || ""));
+    const raw = String(id || "").trim().toLowerCase();
+    const key = raw.replace(/\s+/g,"-").replace(/_+/g,"-").replace(/-+/g,"-");
+    // If caller already passed a legacy family id, preserve it.
+    if (REGISTRY[key]) return REGISTRY[key];
+
+    // Otherwise treat as canonical (or canonical alias) and bridge to legacy.
+    const canon = normalizeFamily(key);
     const legacyKey = CANONICAL_TO_LEGACY[canon] || canon;
     return REGISTRY[legacyKey] || REGISTRY.generic;
   }
@@ -119,3 +125,4 @@
   }catch(_){}
 
 })(typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : global));
+
