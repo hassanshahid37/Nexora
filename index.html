@@ -787,13 +787,13 @@
       if(node) thumb.appendChild(node);
     }
 
-  }catch(err){
+  } catch (err) {
     // silent fail: show something instead of breaking
     try{
       thumb.innerHTML = "";
       thumb.style.backgroundImage = "linear-gradient(135deg, rgba(11,95,255,.55), rgba(136,71,255,.45))";
-    }catch(_){}
-  }
+    }catch(e){}
+}
 }
 
 // Unified preview router (no UI changes):
@@ -826,7 +826,7 @@ function __synthContentFromElements(tpl){
     if(imageUrl) out.imageUrl = imageUrl;
 
     return Object.keys(out).length ? out : null;
-  }catch(_){ return null; }
+  } catch (e) { return null; }
 }
 
 // Prefer Preview Renderer v1 when contract exists; synthesize content if missing.
@@ -842,21 +842,37 @@ function renderThumb(thumb, tplOrElements, bg){
       if(content && typeof content === "object"){
         thumb.innerHTML = "";
         window.NexoraPreview.renderTo(thumb, { contract: tpl.contract, content });
-
-        // Only exit if something was actually rendered.
-        if(thumb.childNodes && thumb.childNodes.length > 0){
-          return;
-        }
+        return;
       }
     }
-}
-    }
-  }catch(_){ }
+  } catch (e) {}
   drawThumb(thumb, tplOrElements, bg);
 }
 
 
-  function seedTemplates(n){
+  
+
+  // --------- SPINE-FIRST local generator (no server required) ---------
+  function generateLocalSpineTemplates(payload){
+    try{
+      const ns = window.NexoraSpine || null;
+      if(!ns || typeof ns.createTemplateFromInput !== "function") return null;
+      const count = Math.max(1, Math.min(200, Number(payload?.count||3)||3));
+      const base = { category: payload?.category, style: payload?.style, prompt: payload?.prompt, notes: payload?.notes || "" };
+      const baseSeed = (payload && payload.seed != null) ? Number(payload.seed) : null;
+      const out = [];
+      for(let i=0;i<count;i++){
+        const seed = (baseSeed != null && Number.isFinite(baseSeed)) ? (baseSeed + i*9973) : undefined;
+        const res = ns.createTemplateFromInput({ ...base, seed }, { debug:false });
+        if(res && res.template) out.push(res.template);
+      }
+      return out.length ? out : null;
+    }catch(_){
+      return null;
+    }
+  }
+
+function seedTemplates(n){
   if (window.__NEXORA_AI_COMMITTED__) return;
 grid.innerHTML = "";
     __lastTemplates = [];
@@ -901,7 +917,7 @@ if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === 
 
     statusEl.textContent = `Generated ${templates.length}`;
     return;
-  }catch(e){
+  } catch (e) {
     // fall through to legacy seeds
   }
 }
@@ -962,6 +978,9 @@ if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === 
       grid.appendChild(div);
     }
   }
+  // Expose for cross-script access
+  window.seedTemplates = seedTemplates;
+
 
 function toEditorTemplate(tpl){
     if(!tpl) return tpl;
@@ -1031,12 +1050,12 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
     // keep latest settings for editor intelligence
     try{
       localStorage.setItem("nexora_last_settings_v1", JSON.stringify({ category: cat, style, prompt: $("#prompt").value.trim(), notes: $("#notes").value.trim(), count: Number($("#count")?.value||24) }));
-    }catch(e){}
+    } catch (e) {}
 
     // Also store selected template in a stable key
     try{
       if(tpl) localStorage.setItem("nexora_selected_template_v1", JSON.stringify(tpl));
-    }catch(e){}
+    } catch (e) {}
 
     // Store draft so editor can load a REAL template (elements/positions)
     localStorage.setItem("templify_draft", JSON.stringify({
@@ -1054,8 +1073,8 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
     }));
 
     // allow homepage to restore when user comes back from editor
-    try{ sessionStorage.setItem("nexora_restore_home_v1","1"); }catch(_){}
-    try{ saveHomeState && saveHomeState(); }catch(_){}
+    try{ sessionStorage.setItem("nexora_restore_home_v1","1"); } catch (e) {}
+    try{ saveHomeState && saveHomeState(); } catch (e) {}
     window.location.href = location.origin + "/editor.html";
   }
 
@@ -1069,14 +1088,14 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
     try{
       const nav = performance.getEntriesByType && performance.getEntriesByType("navigation");
       if(nav && nav[0] && nav[0].type) return nav[0].type;
-    }catch(_){}
+    } catch (e) {}
     try{
       if(performance && performance.navigation){
         const t = performance.navigation.type;
         if(t === 1) return "reload";
         if(t === 2) return "back_forward";
       }
-    }catch(_){}
+    } catch (e) {}
     return "navigate";
   }
 
@@ -1101,7 +1120,7 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
         templates: Array.isArray(__lastTemplates) ? __lastTemplates : []
       };
       sessionStorage.setItem(HOME_STATE_KEY, JSON.stringify(state));
-    }catch(_){}
+    } catch (e) {}
   }
 
   function loadHomeState(){
@@ -1111,12 +1130,12 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
       const st = JSON.parse(raw);
       if(!st || !Array.isArray(st.templates) || !st.settings) return null;
       return st;
-    }catch(_){ return null; }
+    } catch (e) { return null; }
   }
 
   function clearHomeState(){
-    try{ sessionStorage.removeItem(HOME_STATE_KEY); }catch(_){}
-    try{ sessionStorage.removeItem("nexora_restore_home_v1"); }catch(_){}
+    try{ sessionStorage.removeItem(HOME_STATE_KEY); } catch (e) {}
+    try{ sessionStorage.removeItem("nexora_restore_home_v1"); } catch (e) {}
   }
 
   
@@ -1173,6 +1192,9 @@ function renderTemplatesFromList(list){
     window.NEXORA = window.NEXORA || {};
     window.NEXORA.lastTemplates = __lastTemplates;
   }
+  // Expose for cross-script access
+  window.renderTemplatesFromList = renderTemplatesFromList;
+
 
   function tryRestoreHome(){
     // only restore when we explicitly came back from editor; refresh should reset
@@ -1210,10 +1232,13 @@ function renderTemplatesFromList(list){
       sessionStorage.removeItem("nexora_restore_home_v1");
       return true;
     }catch(_){
-      try{ sessionStorage.removeItem("nexora_restore_home_v1"); }catch(__){}
+      try{ sessionStorage.removeItem("nexora_restore_home_v1"); } catch (e) {}
       return false;
     }
   }
+  // Expose for cross-script access
+  window.tryRestoreHome = tryRestoreHome;
+
 
   function escapeHtml(s){
     return String(s||"")
@@ -1257,8 +1282,8 @@ document.addEventListener("DOMContentLoaded", () => {
   // Globals used by some UI modules (avoid ReferenceError)
   let currentLayout = "";
   let currentStyle = "";
-    const restored = tryRestoreHome();
-    if(!restored){ seedTemplates(12); }
+    const restored = (window.tryRestoreHome ? window.tryRestoreHome() : false);
+    if(!restored){ (window.seedTemplates ? window.seedTemplates(12) : null); }
 
   const btn = document.getElementById("generateBtn");
   if (!btn) {
@@ -1282,13 +1307,21 @@ currentStyle = "Dark Premium";
 
     try {
       // Instant client-side templates (design.js) — never blocks UI.
-      // Use the requested count for ALL categories (YouTube included)
-      if (!window.__NEXORA_AI_COMMITTED__) seedTemplates(payload.count);
-      try{ saveHomeState(); }catch(_){ }
+      // Prefer real Spine templates locally (works even without serverless /api).
+      const local = generateLocalSpineTemplates(payload);
+      if(local && Array.isArray(local) && local.length){
+        window.__NEXORA_AI_COMMITTED__ = true;
+        __lastTemplates = local;
+        (window.renderTemplatesFromList ? window.renderTemplatesFromList(__lastTemplates) : null);
+      } else {
+        // Fallback: seed templates (design.js) so UI never blocks.
+        if (!window.__NEXORA_AI_COMMITTED__) (window.seedTemplates ? window.seedTemplates(payload.count) : null);
+      }
+      try{ saveHomeState(); } catch (e) {}
       statusEl.textContent = `Generated ${payload.count}`;
 
-      // Optional backend copy enrichment (fire-and-forget). Never blocks and never throws.
-      fetch("/api/generate", {
+      // Optional backend generation/enrichment (fire-and-forget). Never blocks and never throws.
+fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, count: payload.count, mode: "templates" })
@@ -1303,16 +1336,16 @@ currentStyle = "Dark Premium";
     __lastTemplates = data.templates;
 
     // Re-render the grid using the same UI (template boxes remain identical).
-    renderTemplatesFromList(__lastTemplates);
+    (window.renderTemplatesFromList ? window.renderTemplatesFromList(__lastTemplates) : null);
 
-    try{ saveHomeState(); }catch(_){}
+    try{ saveHomeState(); } catch (e) {}
 
     statusEl.textContent = `Generated ${__lastTemplates.length} (AI templates)`;
   }).catch(() => {});
 
 } catch (e) {
       // ✅ Fallback: never leave user with "nothing happened"
-      if (!window.__NEXORA_AI_COMMITTED__) seedTemplates(payload.count);
+      if (!window.__NEXORA_AI_COMMITTED__) (window.seedTemplates ? window.seedTemplates(payload.count) : null);
     }
   });
 });
