@@ -794,16 +794,19 @@ function normalizeContractToSpec(contract, spec){
       countByRole[role] = cur + 1;
       out.push(l);
     }
-
     for(const r of required){
       const role = String(r||"");
       if((countByRole[role]||0) > 0) continue;
       // create a stable placeholder layer id
       let id = "auto_"+role;
       if(out.some(x=>String(x.id||"")===id)) id = id + "_" + String(Date.now()).slice(-6);
-    // (removed) strict mode: do not auto-create layers
-countByRole[role] = 1;
+
+      // In strict-contract mode we STILL must ensure required roles exist at the contract level.
+      // This is structural only (no geometry): downstream zone executor + preview renderer rely on these layers.
+      out.push({ id, role, locked: (role === "background") });
+      countByRole[role] = 1;
     }
+
 
     if(out.length) contract.layers = out;
     // keep roles metadata aligned if present
