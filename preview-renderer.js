@@ -179,7 +179,9 @@
 
       // Preferred: P8 registry contract
       if (typeof zoneRegistry.getZoneRects === "function") {
-        const rects = zoneRegistry.getZoneRects({ family: familyCanon, canvas: { w: cv.width, h: cv.height } });
+        const rects = (zoneRegistry.getZoneRects.length >= 3)
+          ? zoneRegistry.getZoneRects(familyCanon, cv.width, cv.height)
+          : zoneRegistry.getZoneRects({ family: familyCanon, canvas: { w: cv.width, h: cv.height } });
         if (!rects || typeof rects !== "object") return null;
 
         const frac = Object.create(null);
@@ -271,7 +273,23 @@
         ? window.NexoraZoneExecutor
         : null;
 
+      // placements: Map<idx, {rect:{x,y,w,h}}>
       let placements = null;
+
+      // Helper: apply absolute placement
+      function applyPlacementStyle(node, rect){
+        if(!node || !rect) return;
+        try{
+          node.style.position = "absolute";
+          node.style.margin = "0";
+          node.style.left = Math.round(rect.x) + "px";
+          node.style.top = Math.round(rect.y) + "px";
+          node.style.width = Math.round(rect.w) + "px";
+          node.style.height = Math.round(rect.h) + "px";
+        }catch(_){ }
+      }
+
+      // 1) Preferred: use ZoneExecutor if it supports computePlacements + applyPlacementStyle
       try {
         if (zoneExec && zoneRegistry && cv?.width && cv?.height) {
           const famCanon = (typeof zoneExec.canonFamilyId === "function") ? zoneExec.canonFamilyId(contract) : "text-first";
@@ -289,6 +307,34 @@
         placements = null;
       }
 
+      // 2) Fallback: compute placements directly from ZoneRegistry pixel rects
+      try{
+        if(!placements && zoneRegistry && cv?.width && cv?.height && typeof zoneRegistry.getZoneRects === "function"){
+          const famCanon = String(contract?.layoutFamilyCanonical || contract?.layoutFamily || "text-first");
+          const rects = (zoneRegistry.getZoneRects.length >= 3)
+            ? zoneRegistry.getZoneRects(famCanon, cv.width, cv.height)
+            : zoneRegistry.getZoneRects({ family: famCanon, canvas: { w: cv.width, h: cv.height } });
+
+          if(rects && typeof rects === "object"){
+            const getRoleToZone = (typeof zoneRegistry.getRoleToZone === "function")
+              ? (role) => zoneRegistry.getRoleToZone(famCanon, role)
+              : (role) => role;
+
+            const map = new Map();
+            ordered.forEach((layer, idx) => {
+              const role = String(layer?.role || "");
+              if(!role || role === "background") return;
+              const zoneName = String(getRoleToZone(role) || role);
+              const r = rects[zoneName] || rects[role] || null;
+              if(r && Number.isFinite(Number(r.x)) && Number.isFinite(Number(r.y)) && Number.isFinite(Number(r.w)) && Number.isFinite(Number(r.h))){
+                map.set(idx, { rect: { x:Number(r.x), y:Number(r.y), w:Number(r.w), h:Number(r.h) } });
+              }
+            });
+            placements = map.size ? map : null;
+          }
+        }
+      }catch(_){ placements = placements; }
+
       // Render
       ordered.forEach((layer, idx) => {
         const node = renderLayer(layer, content, meta);
@@ -302,9 +348,12 @@
 
         // Apply zone placement if available
         try {
-          if (placements && zoneExec && typeof zoneExec.applyPlacementStyle === "function") {
+          if (placements) {
             const p = placements.get(idx);
-            if (p && p.rect) zoneExec.applyPlacementStyle(node, p.rect);
+            if (p && p.rect) {
+              if (zoneExec && typeof zoneExec.applyPlacementStyle === "function") zoneExec.applyPlacementStyle(node, p.rect);
+              else applyPlacementStyle(node, p.rect);
+            }
           }
         } catch (_) {}
 
