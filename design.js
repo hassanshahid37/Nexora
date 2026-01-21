@@ -885,14 +885,42 @@ if(layout==="posterHero"){
     };
   }
 
-  function generateTemplates(opts){
+  
+
+// Attach TemplateContract v1 when possible (non-breaking).
+function attachContractIfPossible(tpl){
+  try{
+    if(!tpl || tpl.contract) return tpl;
+    const ns = (typeof window !== "undefined") ? (window.NexoraSpine || {}) : {};
+    if(typeof ns.createContract !== "function" || typeof ns.validateContract !== "function") return tpl;
+    const canvas = tpl.canvas || { w: 980, h: 620 };
+    const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
+    const layers = elements.map((e)=>{
+      const role = String(e?.role || e?.type || "");
+      if(!role) return null;
+      const r = (role === "bg" || role === "background") ? "background" : role;
+      return { id: String(e?.id || ("layer_"+Math.random().toString(16).slice(2))), role: r, locked: (r === "background") };
+    }).filter(Boolean);
+    const built = ns.createContract({
+      templateId: String(tpl.id || ("tpl_"+Date.now())),
+      category: String(tpl.category || "Instagram Post"),
+      canvas: { w: canvas.w || canvas.width || 980, h: canvas.h || canvas.height || 620, width: canvas.w || canvas.width || 980, height: canvas.h || canvas.height || 620 },
+      palette: null,
+      layers
+    });
+    if(built && ns.validateContract(built)) tpl.contract = built;
+  }catch(_){ }
+  return tpl;
+}
+
+function generateTemplates(opts){
     const category = opts?.category || "Instagram Post";
     const prompt = opts?.prompt || "";
     const style = opts?.style || "Dark Premium";
     const count = clamp(parseInt(opts?.count ?? 24,10) || 24, 1, 200);
     const out=[];
     for(let i=0;i<count;i++) out.push(generateOne(category, prompt, style, i));
-    return out;
+    return out.map(attachContractIfPossible);
   }
 
   function renderPreview(template, container) {
@@ -903,24 +931,20 @@ if(layout==="posterHero"){
   if (!container) return;
 
 // === Preview Renderer v1 HARD GUARD ===
-  // Prefer contract-based preview when available, but NEVER block legacy fallback.
-  // Some renderers may no-op for unsupported categories without throwing.
+  // If contract exists, legacy preview MUST NOT run
   try {
     if (template && template.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === 'function') {
       const content = template.content || template.doc?.content || {};
       container.innerHTML = '';
       window.NexoraPreview.renderTo(container, { contract: template.contract, content });
-
-      // Only stop legacy rendering if something was actually rendered.
-      if (container.childNodes && container.childNodes.length > 0) {
-        return;
-      }
+      return; // 🚫 STOP legacy rendering completely
     }
   } catch (e) {
     // fail silently and allow legacy fallback
   }
 
-if(!container) return;
+
+    if(!container) return;
     container.innerHTML = "";
     const w=template?.canvas?.w||1080, h=template?.canvas?.h||1080;
     const boxW=container.clientWidth||260;
