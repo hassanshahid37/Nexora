@@ -1,7 +1,7 @@
 // Applies dominance via NON-geometric channels only.
 // This file MUST NOT change any geometry, position, or element structure.
 
-import { Profile, VisualHierarchyOptions } from './hierarchyTypes';
+import { HierarchyProfile, VisualHierarchyOptions } from './hierarchyTypes';
 import { assertStyleSafe } from './hierarchyGuards';
 
 type Ctx = { profile: HierarchyProfile; options: VisualHierarchyOptions };
