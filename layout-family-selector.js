@@ -82,7 +82,7 @@
   function selectLayoutFamilyResolved(input) {
     const id = selectLayoutFamily(input);
     const reg = loadRegistry();
-    return reg ? ((typeof reg.getLayoutFamilyContract === "function") ? reg.getLayoutFamilyContract(id) : ((typeof reg.getLayoutFamily === "function") ? reg.getLayoutFamily(id) : { id })) : { id };
+    return reg && typeof reg.getLayoutFamily === "function" ? reg.getLayoutFamily(id) : { id };
   }
 
   try {
