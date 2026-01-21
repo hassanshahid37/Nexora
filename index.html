@@ -842,8 +842,14 @@ function renderThumb(thumb, tplOrElements, bg){
       if(content && typeof content === "object"){
         thumb.innerHTML = "";
         window.NexoraPreview.renderTo(thumb, { contract: tpl.contract, content });
-        return;
+
+        // Only exit if something was actually rendered.
+        if(thumb.childNodes && thumb.childNodes.length > 0){
+          return;
+        }
       }
+    }
+}
     }
   }catch(_){ }
   drawThumb(thumb, tplOrElements, bg);
