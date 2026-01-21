@@ -1,6 +1,6 @@
 export type PriorityScore = number;
 
-export type Profile = string[];
+export type HierarchyProfile = string[];
 
 export type VisualHierarchyOptions = {
   // Typography emphasis tuning
