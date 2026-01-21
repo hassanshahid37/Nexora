@@ -394,11 +394,29 @@
       doc
     };
 
+    template = applyP9ElementNormalization(template);
     return applyP9VisualEngines(template);
   }
 
   
-  // ---------- P9.2/P9.3: Visual post-process (NO geometry/structure changes) ----------
+  
+  // ---------- P9.1: Element Normalization (Render-safety only; NO geometry changes) ----------
+  function applyP9ElementNormalization(tpl){
+    try{
+      const normalizer =
+        (typeof window !== "undefined" && window.NexoraElementNormalizer) ||
+        (typeof require === "function" ? (()=>{ try{return require("./element-normalization-engine.js");}catch(_){return null;} })() : null);
+
+      if(normalizer && typeof normalizer.normalizeElements === "function"){
+        const canvas = tpl?.canvas || (tpl?.contract && tpl.contract.canvas) || null;
+        const nextEls = normalizer.normalizeElements(Array.isArray(tpl?.elements) ? tpl.elements : [], { canvas }) || null;
+        if(Array.isArray(nextEls)) tpl.elements = nextEls;
+      }
+    }catch(_){}
+    return tpl;
+  }
+
+// ---------- P9.2/P9.3: Visual post-process (NO geometry/structure changes) ----------
   // This runs AFTER layout/zone binding and only touches visual fields.
   function applyP9VisualEngines(tpl){
     try{
