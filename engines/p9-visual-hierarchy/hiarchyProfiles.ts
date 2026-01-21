@@ -1,4 +1,4 @@
-// Category-based (data-only).
+// Category-based hierarchy profiles (data-only).
 // These define intended reading order of roles.
 
 export const hierarchyProfiles: Record<string, string[]> = {
