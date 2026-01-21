@@ -645,11 +645,11 @@
   else if (s.casing === "capitalize") d.style.textTransform = "capitalize";
   else d.style.textTransform = e.uppercase ? "uppercase" : "none";
 
-  const baseFont = (s.fontSize != null ? s.fontSize : toNum(e.size, 22));
+  const baseFont = (s.fontSize != null ? s.fontSize : toNum((e.size != null ? e.size : e.fontSize), 22));
   const fontSize0 = Math.max(10, baseFont * Math.min(sx, sy));
   d.style.fontSize = fontSize0 + "px";
 
-  d.style.fontWeight = String(s.fontWeight || e.weight || 800);
+  d.style.fontWeight = String(s.fontWeight || e.weight || e.fontWeight || 800);
   d.style.fontFamily = e.font || "system-ui, -apple-system, Segoe UI, Inter, Arial, sans-serif";
   d.style.color = (s.color || e.color || "#fff");
 
@@ -703,7 +703,7 @@
   }
 
   // Content
-  const txt = String(e.text ?? e.title ?? e.subtitle ?? "");
+  const txt = String(e.text ?? e.title ?? e.label ?? e.subtitle ?? e.sub ?? "");
   d.textContent = txt;
 
   // Auto-fit: shrink font until it fits box (Canva-like safety)
@@ -774,11 +774,11 @@
         node = mkRect(e);
       }else if(type === "photo" || type === "image"){
         node = mkPhoto(e);
-      }else if(type === "text" || type === "headline" || type === "subhead"){
+      }else if(type === "text" || type === "headline" || type === "subhead" || type === "heading" || type === "title" || type === "h1"){
         node = mkText(e);
       }else if(type === "badge"){
         node = mkBadge(e);
-      }else if(type === "pill" || type === "chip"){
+      }else if(type === "pill" || type === "chip" || type === "cta" || type === "button"){
         node = mkPill(e);
       }else{
         // ignore unknown types (safe)
@@ -880,10 +880,10 @@ if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "func
         // Prefer design.js renderer for non-YouTube. For YouTube, use drawThumb so backend archetype styles can show.
 const isYT = String(category).toLowerCase().includes("youtube");
 if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
-  window.NexoraDesign.renderPreview(t, thumb);
+  renderThumb(thumb, t, (t.bg || null));
 }else{
   // Use our renderer (supports element.style bridge via mkText)
-  renderThumb(thumb, toEditorTemplate(t), (t.bg || null));
+  renderThumb(thumb, t, (t.bg || null));
 }
       }
 
@@ -1143,17 +1143,18 @@ function renderTemplatesFromList(list){
         const hasStyle = Array.isArray(t.elements) && t.elements.some(e => e && typeof e === "object" && e.style);
         const hasContract = !!t.contract;
 
-        const tpl = toEditorTemplate(t);
+        const tpl = toEditorTemplate(t); // editor payload
+      const rawTplForPreview = t; // preserve visual fields for homepage preview
 
         // SINGLE AUTHORITY ROUTING:
         // - Contract ALWAYS uses unified renderer
         // - After AI commit, legacy renderer is NEVER allowed (prevents renderer fights / flashing)
         if (hasContract || window.__NEXORA_AI_COMMITTED__) {
-          renderThumb(thumb, tpl, tpl.bg);
+          renderThumb(thumb, rawTplForPreview, (rawTplForPreview.bg || null));
         } else if (!isYT && !hasStyle && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function") {
-          window.NexoraDesign.renderPreview(t, thumb);
+          renderThumb(thumb, t, (t.bg || null));
         } else {
-          renderThumb(thumb, tpl, tpl.bg);
+          renderThumb(thumb, rawTplForPreview, (rawTplForPreview.bg || null));
         }
       }
 
