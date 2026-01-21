@@ -12,10 +12,7 @@ if (typeof window !== 'undefined') {
    No external deps. Exposes window.NexoraDesign.
 */
 (function(){
-  try{
-    if (typeof window !== "undefined" && window.__NEXORA_AI_COMMITTED__) return;
-  }catch(_){ }
-
+  // NOTE: Do not early-return based on __NEXORA_AI_COMMITTED__. The homepage still needs the fallback generator API.
   // Prevent double / late renders after AI preview
 
   const clamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -1039,6 +1036,18 @@ if(layout==="posterHero"){
     g.style.background="linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent)";
     container.appendChild(g);
   }
+
+  // === Global API Export (required by index.html) ===
+  // Safe: additive only, no logic changes.
+  try {
+    if (typeof window !== "undefined") {
+      window.NexoraDesign = window.NexoraDesign || {};
+      window.NexoraDesign.CATEGORIES = CATEGORIES;
+      // expose generator + preview renderer
+      window.NexoraDesign.generateTemplates = generateTemplates;
+      window.NexoraDesign.renderPreview = renderPreview;
+    }
+  } catch (_) {}
 
 })();
 
