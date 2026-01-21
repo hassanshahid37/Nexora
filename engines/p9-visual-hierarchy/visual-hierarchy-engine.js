@@ -1,5 +1,5 @@
 /**
- * Nexora (bundled JS)
+ * NexoraVisualHierarchyEngine (bundled JS)
  * Generated from TS sources for Nexora browser + Node without a build step.
  * Mutates style only (no geometry/structure changes).
  */
