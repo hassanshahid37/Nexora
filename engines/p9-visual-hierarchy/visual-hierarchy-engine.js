@@ -5,6 +5,11 @@
  */
 (function(root){
   "use strict";
+  // Some builds do not ship the TS hierarchy rules modules. Keep P9.2 non-fatal.
+  const applyHierarchyRules = (typeof root.applyHierarchyRules === "function")
+    ? root.applyHierarchyRules
+    : (arr) => Array.isArray(arr) ? arr : [];
+
 // Category-based hierarchy profiles (data-only).
 // These define intended reading order of roles.
 
