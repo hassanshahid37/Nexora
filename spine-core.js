@@ -353,21 +353,22 @@
     for(const n of nodes){
       const b = boxFor(n);
       if(n.type === "background"){
-        elements.push({ id:n.id, type:"bg", x:0, y:0, w:canvas.w, h:canvas.h, fill: n.props?.fill || "#0b1020" });
+        elements.push({ id:n.id, role:"background", type:"bg", x:0, y:0, w:canvas.w, h:canvas.h, fill: n.props?.fill || "#0b1020" });
         continue;
       }
       if(n.type === "image"){
-        elements.push({ id:n.id, type:"image", x:b.x, y:b.y, w:b.w, h:b.h, src: n.props?.src || null, fit: n.props?.fit || "cover", radius: n.props?.radius ?? 24, fill: n.props?.fill || "rgba(255,255,255,0.08)" });
+        elements.push({ id:n.id, role:str(n.role || "image"), type:"image", x:b.x, y:b.y, w:b.w, h:b.h, src: n.props?.src || null, fit: n.props?.fit || "cover", radius: n.props?.radius ?? 24, fill: n.props?.fill || "rgba(255,255,255,0.08)" });
         continue;
       }
       if(n.type === "shape"){
-        elements.push({ id:n.id, type:"shape", x:b.x, y:b.y, w:b.w, h:b.h, radius: n.props?.radius ?? 18, fill: n.props?.fill || "rgba(255,255,255,0.12)", stroke: n.props?.stroke || "rgba(255,255,255,0.22)" });
+        elements.push({ id:n.id, role:str(n.role || "shape"), type:"shape", x:b.x, y:b.y, w:b.w, h:b.h, radius: n.props?.radius ?? 18, fill: n.props?.fill || "rgba(255,255,255,0.12)", stroke: n.props?.stroke || "rgba(255,255,255,0.22)" });
         continue;
       }
       if(n.type === "text"){
         const val = (n.valueRef && n.valueRef.startsWith("content.")) ? content[n.valueRef.slice("content.".length)] : (n.text || "");
         elements.push({
           id:n.id,
+          role:str(n.role || "text"),
           type:"text",
           x:b.x, y:b.y, w:b.w, h:b.h,
           text: str(val),
@@ -383,7 +384,7 @@
       }
     }
 
-    return {
+        const template = {
       id: "doc_"+String(doc?.meta?.seed ?? stableHash(JSON.stringify(doc||{}))),
       title: str(doc?.content?.headline || doc?.meta?.category || "Untitled"),
       category: str(doc?.meta?.category || "Instagram Post"),
@@ -392,9 +393,121 @@
       // Keep doc embedded for future Studio
       doc
     };
+
+    return applyP9VisualEngines(template);
   }
 
-  // ---------- Pipeline runner ----------
+  
+  // ---------- P9.2/P9.3: Visual post-process (NO geometry/structure changes) ----------
+  // This runs AFTER layout/zone binding and only touches visual fields.
+  function applyP9VisualEngines(tpl){
+    try{
+function normalizeCategoryKeyP9(raw){
+  const s = String(raw || '').trim();
+  if(!s) return 'Unknown';
+  const compact = s.replace(/[_\s-]+/g,' ').trim();
+  const joined = compact.split(' ').map(w => w ? (w[0].toUpperCase()+w.slice(1)) : '').join('');
+  const map = {
+    Instagram: 'InstagramPost',
+    Instagrampost: 'InstagramPost',
+    InstagramPost: 'InstagramPost',
+    YouTube: 'YouTubeThumbnail',
+    Youtubethumbnail: 'YouTubeThumbnail',
+    YouTubeThumbnail: 'YouTubeThumbnail',
+    Presentation: 'PresentationSlide',
+    Presentationslide: 'PresentationSlide',
+    PresentationSlide: 'PresentationSlide',
+  };
+  return map[joined] || joined || 'Unknown';
+}
+
+      let vh = null, se = null;
+
+      // Browser globals
+      try{ vh = root?.NexoraVisualHierarchyEngine?.applyVisualHierarchy || null; }catch(_){}
+      try{ se = root?.NexoraStyleEnforcementEngine?.applyStyleEnforcement || null; }catch(_){}
+
+      // Node requires (generate.js)
+      if(!vh){
+        try{ vh = require("./visual-hierarchy-engine.js")?.applyVisualHierarchy || null; }catch(_){}
+      }
+      if(!se){
+        try{ se = require("./style-enforcement-engine.js")?.applyStyleEnforcement || null; }catch(_){}
+      }
+
+      if(!vh && !se) return tpl;
+
+      const els = Array.isArray(tpl?.elements) ? tpl.elements : [];
+      const contractLike = {
+        category: normalizeCategoryKeyP9(tpl?.category || "Unknown"),
+        canvas: tpl?.canvas || { w: 1080, h: 1080 },
+        elements: els.map((e)=> {
+          const role =
+            (e && e.role) ? str(e.role).toLowerCase()
+            : (e && e.type === "bg") ? "background"
+            : (e && e.type === "image") ? "image"
+            : (e && e.type === "shape") ? "shape"
+            : "text";
+
+          const style = {
+            fontFamily: e?.fontFamily,
+            fontSize: e?.fontSize,
+            fontWeight: e?.fontWeight,
+            color: e?.color,
+            fill: e?.fill,
+            stroke: e?.stroke,
+            radius: e?.radius,
+            opacity: e?.opacity,
+            align: e?.align
+          };
+          for(const k of Object.keys(style)){
+            if(style[k] == null) delete style[k];
+          }
+
+          return {
+            id: e?.id,
+            role,
+            type: e?.type,
+            geometry: { x: e?.x, y: e?.y, w: e?.w, h: e?.h },
+            style
+          };
+        })
+      };
+
+      let next = contractLike;
+      if(typeof vh === "function") next = vh(next, { seed: tpl?.id || null }) || next;
+      if(typeof se === "function") next = se(next) || next;
+
+      const byId = new Map((next?.elements || []).map((el)=> [str(el?.id), el]));
+      tpl.elements = els.map((e)=>{
+        const ne = byId.get(str(e?.id));
+        const s = ne?.style || null;
+        if(!s) return e;
+
+        const out = Object.assign({}, e);
+        if(s.fontFamily != null) out.fontFamily = s.fontFamily;
+        if(s.fontSize != null) out.fontSize = s.fontSize;
+        if(s.fontWeight != null) out.fontWeight = s.fontWeight;
+        if(s.color != null) out.color = s.color;
+        if(s.fill != null) out.fill = s.fill;
+        if(s.stroke != null) out.stroke = s.stroke;
+        if(s.radius != null) out.radius = s.radius;
+        if(s.opacity != null) out.opacity = s.opacity;
+        if(s.align != null) out.align = s.align;
+        return out;
+      });
+
+      // Non-breaking: keep a contract-like view for future renderers/exporters.
+      tpl.renderContract = next;
+
+      return tpl;
+    }catch(e){
+      try{ console.warn("[P9] Visual engines failed (non-fatal):", e); }catch(_){}
+      return tpl;
+    }
+  }
+
+// ---------- Pipeline runner ----------
   const CORE_STAGES = [
     ["S0", createEmptyDoc],
     ["S1", stageIntentResolve],
