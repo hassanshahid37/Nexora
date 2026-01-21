@@ -14,9 +14,22 @@ const ROLE_TYPE_MAP = {
   cta: "text",
   badge: "text",
   image: "image",
+  hero: "image",
   logo: "image",
   background: "shape"
 };
+
+const ALLOWED_TYPES = new Set(["text","image","shape"]);
+
+// Accept common legacy synonyms without changing geometry/structure.
+const TYPE_SYNONYMS = {
+  bg: "shape",
+  background: "shape",
+  photo: "image",
+  picture: "image",
+  img: "image"
+};
+
 
 const DEFAULTS = {
   typography: { fontFamily: "Inter", fontWeight: 400, fontSize: "auto", lineHeight: 1.2 },
@@ -49,8 +62,15 @@ function stableElementId(el, index, seed){
 }
 
 function resolveType(el){
-  if (el && el.type) return el.type;
-  if (el && el.role && ROLE_TYPE_MAP[el.role]) return ROLE_TYPE_MAP[el.role];
+  if (el && el.type) {
+    const raw = String(el.type).toLowerCase();
+    const mapped = TYPE_SYNONYMS[raw] || raw;
+    if (ALLOWED_TYPES.has(mapped)) return mapped;
+  }
+  if (el && el.role) {
+    const r = String(el.role).toLowerCase();
+    if (ROLE_TYPE_MAP[r]) return ROLE_TYPE_MAP[r];
+  }
   return null;
 }
 
@@ -80,10 +100,14 @@ function normalizeElement(el, index, seed){
   const c = normalizeContent(el, type);
   if (!c) return null;
 
+  // Role canonicalization (render-safety). Keeps old generators compatible.
+  const roleRaw = (el && el.role != null) ? String(el.role) : null;
+  const roleCanon = roleRaw && roleRaw.toLowerCase() === "hero" ? "image" : roleRaw;
+
   return {
     id: String(el.id || stableElementId({ ...el, type }, index, seed)),
     type,
-    role: el.role || null,
+    role: roleCanon || null,
     content: c.content,
     geometry: { x: el.x, y: el.y, w: el.w, h: el.h },
     typography: Object.assign({}, DEFAULTS.typography, el.typography || {}),
