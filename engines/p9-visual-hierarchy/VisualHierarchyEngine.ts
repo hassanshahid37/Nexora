@@ -1,4 +1,4 @@
-// P9.2 
+// P9.2 Visual Hierarchy Engine
 // Controls attention & dominance WITHOUT changing layout/geometry/structure.
 // Allowed mutations: element.style (non-geometric), and only safe visual-emphasis fields.
 
