@@ -190,7 +190,8 @@ function validateContract(contract) {
       if (!normalizedLayers.length) return null;
 
       // P5.2: enforce category-safe template shape (optional)
-      const shapedLayers = (STRICT_CONTRACT ? normalizedLayers : normalizeLayersForCategory(normalizedLayers, cat));
+      // STRICT_CONTRACT=true means we MUST normalize/shape layers for the category.
+      const shapedLayers = (STRICT_CONTRACT ? normalizeLayersForCategory(normalizedLayers, cat) : normalizedLayers);
 
       const contract = {
         version: VERSION,
