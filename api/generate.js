@@ -883,3 +883,9 @@ async function generateTemplates(payload) {
 module.exports = handler;
 module.exports.generateTemplates = generateTemplates;
 module.exports.default = handler;
+
+
+// UI bridge for Generate button
+if (typeof window !== 'undefined') {
+    window.generateTemplates = generateTemplates;
+}
