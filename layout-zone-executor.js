@@ -1,155 +1,114 @@
-
 /**
- * layout-zone-executor.js — P8 Phase-3 Zone Execution Authority
+ * layout-zone-executor.js — Nexora P8 Phase-3 (Zone Execution Authority)
  *
- * Purpose:
- * - Centralize LayoutFamily -> Zones -> deterministic placement computation.
- * - Preview uses this to place contract layers into zone rects.
- * - NO silent fallbacks: missing zone returns null placement (caller may warn/skip).
- *
- * This module is UMD-safe:
- * - Node: module.exports
- * - Browser: window.NexoraZoneExecutor
+ * Takes a template's elements + layoutFamily and applies canonical zone-based placement.
+ * No generation logic; only geometry placement (x,y,w,h) + light alignment hints.
  */
+(function(){
+  const root = typeof window !== "undefined" ? window : globalThis;
 
-function canonFamilyId(contract){
-  try{
-    const c = contract || {};
-    const raw = String(c.layoutFamilyCanonical || c.layoutFamily || c.layoutFamilyId || "").trim();
-    if(!raw) return "text-first";
-    // Canonical aliases (keep backwards compatibility)
-    if(raw === "promo-badge") return "image-led";
-    if(raw === "minimal-quote") return "minimal";
-    if(raw === "feature-grid") return "dense";
-    if(raw === "generic") return "split-hero";
-    return raw;
-  }catch(_){
-    return "text-first";
-  }
-}
+  function num(v, d){ v = Number(v); return Number.isFinite(v) ? v : d; }
+  function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
 
-function roleToZone(family, role){
-  const r = String(role||"");
-  if(r === "background") return null;
-
-  if(family === "text-first"){
-    if(r === "headline" || r === "badge") return "header";
-    if(r === "subhead" || r === "body" || r === "image") return "body";
-    if(r === "cta") return "footer";
-    return "body";
+  function canonFamilyId(familyId){
+    const fam = root.NexoraLayoutFamilyRegistry;
+    if(fam && typeof fam.normalizeFamily === "function") return fam.normalizeFamily(familyId);
+    // fallback: minimal normalization
+    return String(familyId || "text-first").toLowerCase().replace(/\s+/g,"-").replace(/_+/g,"-");
   }
 
-  if(family === "image-led"){
-    if(r === "image") return "hero";
-    if(r === "badge") return "hero";
-    if(r === "headline" || r === "subhead" || r === "body") return "support";
-    if(r === "cta") return "footer";
-    return "support";
+  function getCanvas(tpl){
+    const cv = (tpl && (tpl.canvas || (tpl.contract && tpl.contract.canvas))) || {};
+    const w = num(cv.w ?? cv.width, 1080);
+    const h = num(cv.h ?? cv.height, 1080);
+    return { w, h };
   }
 
-  if(family === "split-hero"){
-    if(r === "image") return "left";
-    return "right";
+  function getRole(el){
+    const r = (el && el.role) ? String(el.role).toLowerCase() : "";
+    if(r) return r;
+    const t = String(el && el.type || "").toLowerCase();
+    if(t === "bg" || t === "background") return "background";
+    if(t === "image" || t === "photo") return "image";
+    if(t === "cta" || t === "button") return "cta";
+    if(t === "badge" || t === "pill" || t === "chip") return "badge";
+    if(t === "headline" || t === "title") return "headline";
+    return "subhead";
   }
 
-  if(family === "minimal"){
-    return "focus";
+  function placeInRect(el, rect, opts){
+    opts = opts || {};
+    const pad = clamp(num(opts.pad, 18), 0, 80);
+    const minW = clamp(num(opts.minW, 80), 0, rect.w);
+    const minH = clamp(num(opts.minH, 40), 0, rect.h);
+    const maxW = rect.w - pad*2;
+    const maxH = rect.h - pad*2;
+
+    const w = clamp(num(el.w, maxW), minW, maxW);
+    const h = clamp(num(el.h, maxH), minH, maxH);
+
+    let x = rect.x + pad;
+    let y = rect.y + pad;
+
+    const ax = String(opts.alignX || "left");
+    const ay = String(opts.alignY || "top");
+
+    if(ax === "center") x = rect.x + Math.round((rect.w - w)/2);
+    if(ax === "right")  x = rect.x + rect.w - pad - w;
+    if(ay === "middle") y = rect.y + Math.round((rect.h - h)/2);
+    if(ay === "bottom") y = rect.y + rect.h - pad - h;
+
+    el.x = x; el.y = y; el.w = w; el.h = h;
+    return el;
   }
 
-  if(family === "dense"){
-    if(r === "headline") return "header";
-    if(r === "cta") return "footer";
-    return "grid";
+  function applyZonePlacement(template){
+    const tpl = template || {};
+    const elements = Array.isArray(tpl.elements) ? tpl.elements : [];
+    if(!elements.length) return tpl;
+
+    const familyRaw =
+      (tpl.contract && (tpl.contract.layoutFamilyCanonical || tpl.contract.layoutFamily)) ||
+      tpl.layoutFamily ||
+      tpl.layoutHint ||
+      "text-first";
+
+    const family = canonFamilyId(familyRaw);
+    const cv = getCanvas(tpl);
+
+    const zr = root.NexoraZoneRegistry;
+    if(!zr || typeof zr.getZoneRects !== "function" || typeof zr.getRoleToZone !== "function") return tpl;
+
+    const rects = zr.getZoneRects(family, cv.w, cv.h) || {};
+    const roleToZone = zr.getRoleToZone(family) || {};
+
+    for(const el of elements){
+      if(!el) continue;
+      const role = getRole(el);
+      if(role === "background") continue;
+
+      const zoneKey = roleToZone[role] || roleToZone.subhead || "center";
+      const rect = rects[zoneKey] || rects.center || rects.text || rects.left || rects.bottom || null;
+      if(!rect) continue;
+
+      // Basic alignment heuristics per role
+      let alignX = "left", alignY = "top", pad = 18;
+      if(role === "image") { alignX = "center"; alignY = "middle"; pad = 14; }
+      if(role === "cta")   { alignX = "center"; alignY = "middle"; pad = 16; }
+      if(role === "badge") { alignX = "left";   alignY = "top";    pad = 14; }
+      if(role === "headline"){ alignX = "left"; alignY = "top";    pad = 18; }
+
+      placeInRect(el, rect, { alignX, alignY, pad });
+    }
+
+    // Persist canonical on template for downstream (non-destructive)
+    tpl.layoutFamilyCanonical = family;
+    if(tpl.contract && typeof tpl.contract === "object"){
+      tpl.contract.layoutFamilyCanonical = tpl.contract.layoutFamilyCanonical || family;
+      tpl.contract.layoutFamily = tpl.contract.layoutFamily || familyRaw;
+    }
+    return tpl;
   }
 
-  return null;
-}
-
-/**
- * Compute placements for ordered layers, using fractional zones.
- * Returns { familyCanon, zonesFrac, placements }
- * placements: Map(index -> { zoneKey, slotIndex, slotCount, rect:{x,y,w,h} })
- */
-function computePlacements({ contract, orderedLayers, getZones }){
-  try{
-    const familyCanon = canonFamilyId(contract);
-    const zonesFrac = (typeof getZones === "function") ? getZones(familyCanon) : null;
-    if(!zonesFrac) return { familyCanon, zonesFrac: null, placements: null };
-
-    // bucket indices per zone
-    const buckets = Object.create(null);
-    (orderedLayers || []).forEach((layer, idx)=>{
-      const zk = roleToZone(familyCanon, layer && layer.role);
-      if(!zk) return;
-      (buckets[zk] = buckets[zk] || []).push(idx);
-    });
-
-    const cursor = Object.create(null);
-    const placements = new Map();
-
-    (orderedLayers || []).forEach((layer, idx)=>{
-      const zk = roleToZone(familyCanon, layer && layer.role);
-      if(!zk) return;
-      const z = zonesFrac[zk];
-      if(!z) return;
-
-      const bucket = buckets[zk] || [];
-      const n = Math.max(1, bucket.length);
-      const slot = cursor[zk] || 0;
-      cursor[zk] = slot + 1;
-
-      const x = (z.x != null) ? z.x : 0;
-      const y = (z.y != null) ? z.y : 0;
-      const w = (z.w != null) ? z.w : 1;
-      const h = (z.h != null) ? z.h : 1;
-
-      const slotH = h / n;
-      const slotY = y + (slotH * slot);
-
-      placements.set(idx, {
-        zoneKey: zk,
-        slotIndex: slot,
-        slotCount: n,
-        rect: { x, y: slotY, w, h: slotH }
-      });
-    });
-
-    return { familyCanon, zonesFrac, placements };
-  }catch(_){
-    return { familyCanon: "text-first", zonesFrac: null, placements: null };
-  }
-}
-
-/**
- * Apply rect placement (fractional) to a DOM node within a positioned root.
- */
-function applyPlacementStyle(node, rect){
-  try{
-    if(!node || !rect) return;
-    node.style.position = "absolute";
-    node.style.left = (rect.x * 100) + "%";
-    node.style.top = (rect.y * 100) + "%";
-    node.style.width = (rect.w * 100) + "%";
-    node.style.height = (rect.h * 100) + "%";
-    node.style.boxSizing = "border-box";
-    node.style.padding = node.style.padding || "10%";
-    node.style.display = "flex";
-    node.style.alignItems = "center";
-    node.style.justifyContent = "center";
-    node.style.textAlign = node.style.textAlign || "center";
-  }catch(_){}
-}
-
-const api = { canonFamilyId, roleToZone, computePlacements, applyPlacementStyle };
-
-try{
-  if(typeof module !== "undefined" && module.exports){
-    module.exports = api;
-  }
-}catch(_){}
-
-try{
-  if(typeof window !== "undefined"){
-    window.NexoraZoneExecutor = api;
-  }
-}catch(_){}
+  root.NexoraZoneExecutor = { applyZonePlacement, canonFamilyId };
+})();
