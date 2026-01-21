@@ -357,11 +357,35 @@
         continue;
       }
       if(n.type === "image"){
-        elements.push({ id:n.id, role:str(n.role || "image"), type:"image", x:b.x, y:b.y, w:b.w, h:b.h, src: n.props?.src || null, fit: n.props?.fit || "cover", radius: n.props?.radius ?? 24, fill: n.props?.fill || "rgba(255,255,255,0.08)" });
+        // IMPORTANT: legacy compatibility
+        // The existing Nexora preview/editor historically expects `type: "photo"`.
+        // Some UI paths also look for `r` (radius) instead of `radius`.
+        const rad = (n.props?.radius ?? 24);
+        elements.push({
+          id: n.id,
+          role: str(n.role || "image"),
+          type: "photo",
+          x: b.x, y: b.y, w: b.w, h: b.h,
+          src: n.props?.src || null,
+          fit: n.props?.fit || "cover",
+          radius: rad,
+          r: rad,
+          fill: n.props?.fill || "rgba(255,255,255,0.08)"
+        });
         continue;
       }
       if(n.type === "shape"){
-        elements.push({ id:n.id, role:str(n.role || "shape"), type:"shape", x:b.x, y:b.y, w:b.w, h:b.h, radius: n.props?.radius ?? 18, fill: n.props?.fill || "rgba(255,255,255,0.12)", stroke: n.props?.stroke || "rgba(255,255,255,0.22)" });
+        const rad = (n.props?.radius ?? 18);
+        elements.push({
+          id: n.id,
+          role: str(n.role || "shape"),
+          type: "shape",
+          x: b.x, y: b.y, w: b.w, h: b.h,
+          radius: rad,
+          r: rad,
+          fill: n.props?.fill || "rgba(255,255,255,0.12)",
+          stroke: n.props?.stroke || "rgba(255,255,255,0.22)"
+        });
         continue;
       }
       if(n.type === "text"){
@@ -384,7 +408,7 @@
       }
     }
 
-        const template = {
+        let template = {
       id: "doc_"+String(doc?.meta?.seed ?? stableHash(JSON.stringify(doc||{}))),
       title: str(doc?.content?.headline || doc?.meta?.category || "Untitled"),
       category: str(doc?.meta?.category || "Instagram Post"),
