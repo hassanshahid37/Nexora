@@ -903,20 +903,24 @@ if(layout==="posterHero"){
   if (!container) return;
 
 // === Preview Renderer v1 HARD GUARD ===
-  // If contract exists, legacy preview MUST NOT run
+  // Prefer contract-based preview when available, but NEVER block legacy fallback.
+  // Some renderers may no-op for unsupported categories without throwing.
   try {
     if (template && template.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === 'function') {
       const content = template.content || template.doc?.content || {};
       container.innerHTML = '';
       window.NexoraPreview.renderTo(container, { contract: template.contract, content });
-      return; // 🚫 STOP legacy rendering completely
+
+      // Only stop legacy rendering if something was actually rendered.
+      if (container.childNodes && container.childNodes.length > 0) {
+        return;
+      }
     }
   } catch (e) {
     // fail silently and allow legacy fallback
   }
 
-
-    if(!container) return;
+if(!container) return;
     container.innerHTML = "";
     const w=template?.canvas?.w||1080, h=template?.canvas?.h||1080;
     const boxW=container.clientWidth||260;
