@@ -960,7 +960,24 @@ async function generateTemplates(payload) {
     templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
   }
 
-  return templates;
+  
+
+// === FORCE FALLBACK PATCH ===
+// Guarantee: never return an empty template list to the UI.
+// If Spine (or upstream) yields no usable templates, deterministically materialize them here.
+if (!Array.isArray(templates) || templates.length === 0) {
+  console.warn("[Nexora] Generation produced no templates. Using deterministic fallback.");
+  templates = buildDeterministicTemplates({
+    prompt,
+    category,
+    style,
+    count,
+    notes: String(body?.notes || "")
+  });
+}
+// === END FORCE FALLBACK PATCH ===
+
+return templates;
 }
 
 module.exports = handler;
