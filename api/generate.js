@@ -1023,8 +1023,38 @@ const brandInfo = brandFromPrompt(prompt);
     templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
   }
 
-  return templates;
+
+  // ---- UI FLATTENING (FINAL AUTHORITY) ----
+  // Guarantee UI always receives flat templates: { canvas, elements[] } at top-level.
+  const flat = [];
+  for (const t of templates) {
+    if (!t) continue;
+    // Lift from nested shapes if present
+    const elements =
+      Array.isArray(t.elements) && t.elements.length ? t.elements :
+      (t.template && Array.isArray(t.template.elements) ? t.template.elements : null);
+    const canvas =
+      t.canvas ||
+      (t.template && t.template.canvas) ||
+      (t.contract && t.contract.canvas) ||
+      null;
+
+    if (elements && canvas) {
+      flat.push({ ...t, elements, canvas });
+    } else {
+      // Absolute safety: force minimal renderable
+      flat.push({
+        ...t,
+        canvas: canvas || { w: 1080, h: 1080 },
+        elements: elements || [
+          { type: "bg", x: 0, y: 0, w: 1080, h: 1080, fill: "#0b1020" }
+        ]
+      });
+    }
+  }
+  return flat;
 }
+
 
 module.exports = handler;
 module.exports.generateTemplates = generateTemplates;
