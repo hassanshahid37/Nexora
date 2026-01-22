@@ -149,9 +149,10 @@ async function handler(req, res) {
 
     if (req.method === "OPTIONS") return res.end();
     if (req.method !== "POST") {
-      const templates = buildDeterministicTemplates({ prompt, category, style, count: 1, notes: "" });
-      return res.end(JSON.stringify({ success: true, templates }));
-    }
+  // Safe default response for non-POST: return at least 1 deterministic template.
+  let templates = buildDeterministicTemplates({ prompt, category, style, count: 1, notes: "" });
+return res.end(JSON.stringify({ success: true, templates }));
+}
 
     // Parse body safely (Vercel/Node may not populate req.body)
     body = {};
@@ -772,15 +773,8 @@ function buildDeterministicTemplates(input){
   const out = [];
   for(let i=0;i<count;i++){
     const seed = stableHash32(category + "|" + style + "|" + prompt + "|" + notes + "|" + String(i + 1));
-    const tpl = materializeTemplate({
-      category,
-      style,
-      prompt,
-      seed,
-      variantIndex: i + 1
-    });
-
-    const brandInfo = brandFromPrompt(prompt);
+    const tpl = materializeTemplate({ category, style, prompt, i: i + 1, seed, variantIndex: i + 1 });
+const brandInfo = brandFromPrompt(prompt);
     const content = {
       headline: tpl && tpl._headline ? tpl._headline : (brandInfo.brand || prompt || "Template"),
       subhead: tpl && tpl._subhead ? tpl._subhead : (brandInfo.tagline || ""),
@@ -793,9 +787,12 @@ function buildDeterministicTemplates(input){
   return out;
 }
 
-function materializeTemplate({ prompt, category, style, i, familyId, headline, subhead, cta }) {
-  const baseSeed = hash32(`${prompt}|${category}|${style}|${i}|${familyId || ''}`);
-  const size = CATEGORIES[category] || CATEGORIES["Instagram Post"];
+function materializeTemplate({ prompt, category, style, i, seed, variantIndex, familyId, headline, subhead, cta }) {
+  const _i = (Number.isFinite(Number(i)) ? Number(i) : (Number.isFinite(Number(variantIndex)) ? Number(variantIndex) : 1));
+const baseSeed = Number.isFinite(Number(seed))
+  ? (Number(seed) >>> 0)
+  : hash32(`${prompt}|${category}|${style}|${_i}|${familyId || ''}`);
+const size = CATEGORIES[category] || CATEGORIES["Instagram Post"];
   const pal = paletteForStyle(style, baseSeed);
   const brand = brandFromPrompt(prompt).brand;
 
@@ -934,15 +931,8 @@ async function generateTemplates(payload) {
     if (!tpl || !Array.isArray(tpl.elements)) {
       // HARD SAFETY: never return empty templates to UI.
       // If Spine output is invalid for this seed, deterministically materialize a valid template.
-      const det = materializeTemplate({
-        category,
-        style,
-        prompt,
-        seed,
-        variantIndex: i + 1
-      });
-
-      const brandInfo = brandFromPrompt(prompt);
+      const det = materializeTemplate({ category, style, prompt, i: i + 1, seed, variantIndex: i + 1 });
+const brandInfo = brandFromPrompt(prompt);
       const content = {
         headline: det && det._headline ? det._headline : (brandInfo.brand || prompt || "Template"),
         subhead: det && det._subhead ? det._subhead : (brandInfo.tagline || ""),
@@ -960,24 +950,7 @@ async function generateTemplates(payload) {
     templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
   }
 
-  
-
-// === FORCE FALLBACK PATCH ===
-// Guarantee: never return an empty template list to the UI.
-// If Spine (or upstream) yields no usable templates, deterministically materialize them here.
-if (!Array.isArray(templates) || templates.length === 0) {
-  console.warn("[Nexora] Generation produced no templates. Using deterministic fallback.");
-  templates = buildDeterministicTemplates({
-    prompt,
-    category,
-    style,
-    count,
-    notes: String(body?.notes || "")
-  });
-}
-// === END FORCE FALLBACK PATCH ===
-
-return templates;
+  return templates;
 }
 
 module.exports = handler;
