@@ -133,6 +133,12 @@ async function getNormalizeCategory() {
 
 async function handler(req, res) {
   let count = 1; // default if missing/invalid; UI should pass 1–200
+  // IMPORTANT: these must be function-scoped (not inside try) so the catch block can safely use them.
+  let body = {};
+  let prompt = "";
+  let rawCategory = "Instagram Post";
+  let category = rawCategory;
+  let style = "Dark Premium";
   try {
     // Basic CORS / preflight safety
     res.statusCode = 200;
@@ -142,10 +148,13 @@ async function handler(req, res) {
     res.setHeader("Content-Type", "application/json");
 
     if (req.method === "OPTIONS") return res.end();
-    if (req.method !== "POST") return res.end(JSON.stringify({ success: true, templates: [] }));
+    if (req.method !== "POST") {
+      const templates = buildDeterministicTemplates({ prompt, category, style, count: 1, notes: "" });
+      return res.end(JSON.stringify({ success: true, templates }));
+    }
 
     // Parse body safely (Vercel/Node may not populate req.body)
-    let body = {};
+    body = {};
     try {
       if (req.body && typeof req.body === "object") {
         body = req.body;
@@ -164,10 +173,9 @@ async function handler(req, res) {
     } catch {
       body = {};
     }
-
-    const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-    const rawCategory = typeof body.category === "string" ? body.category : "Instagram Post";
-let category = rawCategory;
+    prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+    rawCategory = typeof body.category === "string" ? body.category : "Instagram Post";
+category = rawCategory;
 
 // P5.1: normalize category through CategorySpecV1 when available (label stays backwards-compatible)
 try {
@@ -180,7 +188,7 @@ try {
 } catch (_) {
   // leave raw category
 }
-    const style = typeof body.style === "string" ? body.style : "Dark Premium";
+    style = typeof body.style === "string" ? body.style : "Dark Premium";
 
     // Count (authoritative; 1–200)
     {
@@ -191,47 +199,53 @@ try {
       count = Math.max(1, Math.min(200, count));
     }
 
-    // ---------- Spine-first generation (authoritative) ----------
-// Spine-only: no legacy fallback. If Spine is unavailable or fails, we return an empty list with an error.
-const spine = getSpine();
-if (!spine || typeof spine.createTemplateFromInput !== "function") {
-  throw new Error("Spine-only mode: createTemplateFromInput() not found. Ensure spine-core.js is deployed and importable.");
-}
+    // ---------- Generation (spine-first, with deterministic hard-fallback) ----------
+    // Contract goal: UI must always receive templates with elements[].
+    // We prefer Spine output, but if Spine is missing/fails, we deterministically materialize templates
+    // using the built-in legacy-safe engine in this file (no external AI required).
+    let templates = [];
+    try {
+      templates = await generateTemplates(body);
+    } catch (e) {
+      templates = buildDeterministicTemplates({
+        prompt,
+        category,
+        style,
+        count,
+        notes: String(body?.notes || "")
+      });
+    }
 
-const templates = [];
-for (let i = 0; i < count; i++) {
-  const seed = stableHash32(category + "|" + style + "|" + prompt + "|" + String(i + 1));
-  const out = spine.createTemplateFromInput({
-    category,
-    style,
-    prompt,
-    notes: String(body?.notes || ""),
-    seed
-  });
+    return res.end(JSON.stringify({ success: true, templates }));
 
-  const tpl = out && out.template ? out.template : null;
-  const doc = out && out.doc ? out.doc : null;
 
-  // API compatibility: must return elements[] for existing UI
-  if (!tpl || !Array.isArray(tpl.elements)) {
-    throw new Error("Spine-only mode: spine returned an invalid template (missing elements[]).");
-  }
-
-  const contract = doc && doc.contract ? doc.contract : (tpl.contract || null);
-  const content = doc && doc.content ? doc.content : (tpl.content || null);
-  templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
-}
-
-return res.end(JSON.stringify({ success: true, templates }));
 
 
 } catch (err) {
-    // Hard-safe: NEVER return 500, and NEVER fall back to legacy generation (spine-only mode).
+    // Hard-safe: NEVER return 500. Always return at least deterministic templates.
     try {
+      const fallbackBody = (typeof body === "object" && body) ? body : {};
+      const fallbackPrompt = typeof fallbackBody.prompt === "string" ? fallbackBody.prompt.trim() : "";
+      const fallbackCategory = typeof fallbackBody.category === "string" ? fallbackBody.category : "Instagram Post";
+      const fallbackStyle = typeof fallbackBody.style === "string" ? fallbackBody.style : "Dark Premium";
+      let fallbackCount = 1;
+      {
+        const raw = fallbackBody && (fallbackBody.count ?? fallbackBody.c);
+        const parsed = Number.parseInt(raw, 10);
+        if (Number.isFinite(parsed)) fallbackCount = parsed;
+        fallbackCount = Math.max(1, Math.min(200, fallbackCount));
+      }
+      const templates = buildDeterministicTemplates({
+        prompt: fallbackPrompt,
+        category: fallbackCategory,
+        style: fallbackStyle,
+        count: fallbackCount,
+        notes: String(fallbackBody?.notes || "")
+      });
       return res.end(
         JSON.stringify({
           success: true,
-          templates: [],
+          templates,
           error: String(err && err.message ? err.message : err)
         })
       );
@@ -740,6 +754,45 @@ function buildElements(layout, spec) {
   return els;
 }
 
+
+// ---------------------------------------------------------------------------
+// Deterministic hard-fallback generator (used when Spine is missing/fails)
+// - Produces real templates (canvas + elements[]) for the UI every time.
+// - No external AI required; uses the deterministic layout/palette engine below.
+// ---------------------------------------------------------------------------
+function buildDeterministicTemplates(input){
+  const prompt = typeof input?.prompt === "string" ? input.prompt : "";
+  const category = typeof input?.category === "string" ? input.category : "Instagram Post";
+  const style = typeof input?.style === "string" ? input.style : "Dark Premium";
+  const notes = typeof input?.notes === "string" ? input.notes : "";
+  let count = Number.parseInt(input?.count, 10);
+  if(!Number.isFinite(count)) count = 1;
+  count = Math.max(1, Math.min(200, count));
+
+  const out = [];
+  for(let i=0;i<count;i++){
+    const seed = stableHash32(category + "|" + style + "|" + prompt + "|" + notes + "|" + String(i + 1));
+    const tpl = materializeTemplate({
+      category,
+      style,
+      prompt,
+      seed,
+      variantIndex: i + 1
+    });
+
+    const brandInfo = brandFromPrompt(prompt);
+    const content = {
+      headline: tpl && tpl._headline ? tpl._headline : (brandInfo.brand || prompt || "Template"),
+      subhead: tpl && tpl._subhead ? tpl._subhead : (brandInfo.tagline || ""),
+      cta: tpl && tpl._cta ? tpl._cta : pickCTA(category, seed),
+      brand: brandInfo.brand || ""
+    };
+
+    out.push(Object.assign({}, tpl, { i: i + 1, doc: null, contract: null, content }));
+  }
+  return out;
+}
+
 function materializeTemplate({ prompt, category, style, i, familyId, headline, subhead, cta }) {
   const baseSeed = hash32(`${prompt}|${category}|${style}|${i}|${familyId || ''}`);
   const size = CATEGORIES[category] || CATEGORIES["Instagram Post"];
@@ -851,10 +904,17 @@ async function generateTemplates(payload) {
     }
   } catch (_) {}
 
-  // Spine-only
+  // Spine-first when available; deterministic fallback when Spine is missing.
   const spine = getSpine();
-  if (!spine || typeof spine.createTemplateFromInput !== "function") {
-    throw new Error("Spine-only mode: createTemplateFromInput() not found. Ensure spine-core.js is deployed and importable.");
+  const canUseSpine = !!(spine && typeof spine.createTemplateFromInput === "function");
+  if (!canUseSpine) {
+    return buildDeterministicTemplates({
+      prompt,
+      category,
+      style,
+      count,
+      notes: String(body?.notes || "")
+    });
   }
 
   const templates = [];
@@ -872,8 +932,28 @@ async function generateTemplates(payload) {
     const doc = out && out.doc ? out.doc : null;
 
     if (!tpl || !Array.isArray(tpl.elements)) {
-      throw new Error("Spine-only mode: spine returned an invalid template (missing elements[]).");
+      // HARD SAFETY: never return empty templates to UI.
+      // If Spine output is invalid for this seed, deterministically materialize a valid template.
+      const det = materializeTemplate({
+        category,
+        style,
+        prompt,
+        seed,
+        variantIndex: i + 1
+      });
+
+      const brandInfo = brandFromPrompt(prompt);
+      const content = {
+        headline: det && det._headline ? det._headline : (brandInfo.brand || prompt || "Template"),
+        subhead: det && det._subhead ? det._subhead : (brandInfo.tagline || ""),
+        cta: det && det._cta ? det._cta : pickCTA(category, seed),
+        brand: brandInfo.brand || ""
+      };
+
+      templates.push(Object.assign({}, det, { i: i + 1, doc: null, contract: null, content }));
+      continue;
     }
+
 
     const contract = doc && doc.contract ? doc.contract : (tpl.contract || null);
     const content = doc && doc.content ? doc.content : (tpl.content || null);
