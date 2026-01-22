@@ -850,29 +850,7 @@ function renderThumb(thumb, tplOrElements, bg){
 }
 
 
-  
-
-  // --------- SPINE-FIRST local generator (no server required) ---------
-  function generateLocalSpineTemplates(payload){
-    try{
-      const ns = window.NexoraSpine || null;
-      if(!ns || typeof ns.createTemplateFromInput !== "function") return null;
-      const count = Math.max(1, Math.min(200, Number(payload?.count||3)||3));
-      const base = { category: payload?.category, style: payload?.style, prompt: payload?.prompt, notes: payload?.notes || "" };
-      const baseSeed = (payload && payload.seed != null) ? Number(payload.seed) : null;
-      const out = [];
-      for(let i=0;i<count;i++){
-        const seed = (baseSeed != null && Number.isFinite(baseSeed)) ? (baseSeed + i*9973) : undefined;
-        const res = ns.createTemplateFromInput({ ...base, seed }, { debug:false });
-        if(res && res.template) out.push(res.template);
-      }
-      return out.length ? out : null;
-    }catch(_){
-      return null;
-    }
-  }
-
-function seedTemplates(n){
+  function seedTemplates(n){
   if (window.__NEXORA_AI_COMMITTED__) return;
 grid.innerHTML = "";
     __lastTemplates = [];
@@ -902,14 +880,14 @@ if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "func
         // Prefer design.js renderer for non-YouTube. For YouTube, use drawThumb so backend archetype styles can show.
 const isYT = String(category).toLowerCase().includes("youtube");
 if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
-  renderThumb(thumb, t, (t.bg || null));
+  TemplateOutputController.renderThumb(t, thumb);
 }else{
   // Use our renderer (supports element.style bridge via mkText)
-  renderThumb(thumb, t, (t.bg || null));
+  TemplateOutputController.renderThumb(t, thumb);
 }
       }
 
-      __lastTemplates.push(t);               // RAW
+      __lastTemplates.push(t); TemplateOutputController.setTemplates(__lastTemplates);               // RAW
       div.addEventListener("click", ()=>openEditorWith(t)); // conversion happens in openEditorWith()
       div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(t); });
       grid.appendChild(div);
@@ -1150,7 +1128,7 @@ function renderTemplatesFromList(list){
       if(!t) return;
 
       // Keep RAW templates; convert only when opening the editor.
-      __lastTemplates.push(t);
+      __lastTemplates.push(t); TemplateOutputController.setTemplates(__lastTemplates);
 
       const div = document.createElement("div");
       div.className = "tile";
@@ -1177,7 +1155,7 @@ function renderTemplatesFromList(list){
         if (hasContract || window.__NEXORA_AI_COMMITTED__) {
           renderThumb(thumb, rawTplForPreview, (rawTplForPreview.bg || null));
         } else if (!isYT && !hasStyle && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function") {
-          renderThumb(thumb, t, (t.bg || null));
+          TemplateOutputController.renderThumb(t, thumb);
         } else {
           renderThumb(thumb, rawTplForPreview, (rawTplForPreview.bg || null));
         }
@@ -1307,21 +1285,13 @@ currentStyle = "Dark Premium";
 
     try {
       // Instant client-side templates (design.js) — never blocks UI.
-      // Prefer real Spine templates locally (works even without serverless /api).
-      const local = generateLocalSpineTemplates(payload);
-      if(local && Array.isArray(local) && local.length){
-        window.__NEXORA_AI_COMMITTED__ = true;
-        __lastTemplates = local;
-        (window.renderTemplatesFromList ? window.renderTemplatesFromList(__lastTemplates) : null);
-      } else {
-        // Fallback: seed templates (design.js) so UI never blocks.
-        if (!window.__NEXORA_AI_COMMITTED__) (window.seedTemplates ? window.seedTemplates(payload.count) : null);
-      }
+      // Use the requested count for ALL categories (YouTube included)
+      if (!window.__NEXORA_AI_COMMITTED__) (window.seedTemplates ? window.seedTemplates(payload.count) : null);
       try{ saveHomeState(); } catch (e) {}
       statusEl.textContent = `Generated ${payload.count}`;
 
-      // Optional backend generation/enrichment (fire-and-forget). Never blocks and never throws.
-fetch("/api/generate", {
+      // Optional backend copy enrichment (fire-and-forget). Never blocks and never throws.
+      fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...payload, count: payload.count, mode: "templates" })
