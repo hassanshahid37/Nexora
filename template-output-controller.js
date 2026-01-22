@@ -2,28 +2,10 @@
 // Purpose: single authority for what the home "preview tiles" render, and what gets exported/opened.
 // Must be: crash-proof, contract-aware, and never blank the UI.
 
-(function(root){
-  const TOC = root.TemplateOutputController || {};
-  let committed = false;
 
-  TOC.templates = Array.isArray(TOC.templates) ? TOC.templates : [];
-
-  TOC.setTemplates = function(templates, opts){
-    const commit = !(opts && opts.commit === false);
-    if(commit) committed = true;
-    TOC.templates = Array.isArray(templates) ? templates : [];
-  };
-
-  TOC.setPreviewTemplates = function(templates){
-    TOC.setTemplates(templates, { commit:false });
-  };
-
-  TOC.isCommitted = function(){ return committed; };
-
-  // --- Internal fallback thumb renderer (legacy-safe) ---
-// Renders from template.elements + template.canvas without requiring TemplateContract.
-// IMPORTANT: design.js's DOM preview can be guarded after AI commit, so this must be robust.
 function renderLegacyThumb(template, mount){
+  // DOM-based miniature renderer (editor-like) so previews are never "blank boxes".
+  // This is intentionally independent from NexoraDesign (which can be disabled after AI commit).
   try{
     if(!mount) return false;
 
@@ -36,297 +18,259 @@ function renderLegacyThumb(template, mount){
     // Clear mount
     mount.innerHTML = "";
 
-    // Preserve aspect ratio so tiles don't look "weird"
-    const boxW = Math.max(160, (mount.clientWidth || 260));
-    const boxH = Math.max(120, Math.round(boxW * (baseH / baseW)));
-    mount.style.height = boxH + "px";
+    // Root wrapper keeps aspect ratio stable inside tiles
+    const wrap = document.createElement("div");
+    wrap.style.position = "relative";
+    wrap.style.width = "100%";
+    wrap.style.aspectRatio = baseW + " / " + baseH;
+    wrap.style.borderRadius = "16px";
+    wrap.style.overflow = "hidden";
+    wrap.style.background = "rgba(255,255,255,0.06)";
+    wrap.style.border = "1px solid rgba(255,255,255,0.10)";
 
-    const dpr = (typeof devicePixelRatio === "number" && devicePixelRatio>0) ? devicePixelRatio : 1;
+    // Scale factor based on available width
+    const boxW = Math.max(1, mount.clientWidth || mount.getBoundingClientRect().width || 1);
+    const scale = boxW / baseW;
 
-    const c = document.createElement("canvas");
-    c.width = Math.round(boxW * dpr);
-    c.height = Math.round(boxH * dpr);
-    c.style.width = "100%";
-    c.style.height = "100%";
-    c.style.display = "block";
-    c.style.borderRadius = "14px";
-    c.style.background = "rgba(255,255,255,0.06)";
-    mount.appendChild(c);
+    // Helper: normalize element fields (legacy + spine-to-template)
+    const els = Array.isArray(template?.elements) ? template.elements
+              : Array.isArray(template?.content?.elements) ? template.content.elements
+              : [];
 
-    const ctx = c.getContext("2d");
-    if(!ctx) return false;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const els = Array.isArray(template?.elements) ? template.elements : [];
-
-    // Heuristic: support both absolute pixels and normalized 0..1 coords.
-    const toPx = (v, base)=>{
-      const n = Number(v);
-      if(!Number.isFinite(n)) return 0;
-      if(Math.abs(n) <= 1.5) return n * base;
-      return n;
-    };
-
-    const sx = boxW / baseW;
-    const sy = boxH / baseH;
-
-    const pxX = (x)=> Math.round(toPx(x, baseW) * sx);
-    const pxY = (y)=> Math.round(toPx(y, baseH) * sy);
-    const pxW = (w)=> Math.round(toPx(w, baseW) * sx);
-    const pxH = (h)=> Math.round(toPx(h, baseH) * sy);
-
-    const safeColor = (v, fallback)=>{
-      const s = (v==null ? "" : String(v)).trim();
-      return s ? s : fallback;
-    };
-
-    // Draw background (supports radial gradient used by generator)
-    let bgFill = template?.bg || template?.contract?.palette?.bg || "#0b1020";
-    let bgFill2 = null;
-    let bgStyle = null;
-    const bgEl = els.find(e => String(e?.role||"").toLowerCase()==="background" || String(e?.type||"").toLowerCase()==="bg");
-    if(bgEl){
-      bgFill = bgEl.fill || bgEl.color || bgEl?.style?.backgroundColor || bgEl?.style?.fill || bgFill;
-      bgFill2 = bgEl.fill2 || bgEl.bg2 || bgEl.color2 || null;
-      bgStyle = bgEl.style || bgEl.kind || null;
+    // If there are no elements, draw a minimal but non-blank placeholder.
+    if(!els.length){
+      const ph = document.createElement("div");
+      ph.style.position = "absolute";
+      ph.style.left = "0";
+      ph.style.top = "0";
+      ph.style.right = "0";
+      ph.style.bottom = "0";
+      ph.style.display = "flex";
+      ph.style.alignItems = "center";
+      ph.style.justifyContent = "center";
+      ph.style.color = "rgba(255,255,255,0.85)";
+      ph.style.fontWeight = "700";
+      ph.style.fontSize = "16px";
+      ph.textContent = (template?.content?.headline || template?.headline || template?.title || "Template").toString().slice(0, 40);
+      wrap.appendChild(ph);
+      mount.appendChild(wrap);
+      return true;
     }
 
-    try{
-      const style = String(bgStyle||"").toLowerCase();
-      if(style === "radial" && bgFill2){
-        const g = ctx.createRadialGradient(boxW*0.20, boxH*0.10, 0, boxW*0.60, boxH*0.60, Math.max(boxW, boxH));
-        g.addColorStop(0, safeColor(bgFill2, "#1b2d6e"));
-        g.addColorStop(1, safeColor(bgFill, "#0b1020"));
-        ctx.fillStyle = g;
-      }else if(bgFill2){
-        const g = ctx.createLinearGradient(0,0,boxW,boxH);
-        g.addColorStop(0, safeColor(bgFill2, "#1b2d6e"));
-        g.addColorStop(1, safeColor(bgFill, "#0b1020"));
-        ctx.fillStyle = g;
+    // Sort so backgrounds go first
+    const sorted = els.slice().sort((a,b)=>{
+      const ra = String(a?.role || a?.type || "");
+      const rb = String(b?.role || b?.type || "");
+      if(ra === "background" && rb !== "background") return -1;
+      if(rb === "background" && ra !== "background") return 1;
+      return 0;
+    });
+
+    for(const e of sorted){
+      const type = String(e?.type || "");
+      const role = String(e?.role || "");
+      const isImg = (type === "image") || (role === "image") || (e?.src || e?.url);
+      const x = Number(e?.x ?? 0), y = Number(e?.y ?? 0), w = Number(e?.w ?? 0), h = Number(e?.h ?? 0);
+
+// Support both pixel coordinates and 0..1 normalized coordinates (common in deterministic/seed templates).
+// Heuristic: if all geometry looks <= ~2, treat as normalized.
+const looksNormalized = (
+  Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h) &&
+  Math.abs(x) <= 2 && Math.abs(y) <= 2 && Math.abs(w) <= 2 && Math.abs(h) <= 2
+);
+const pxX = looksNormalized ? (x * baseW) : x;
+const pxY = looksNormalized ? (y * baseH) : y;
+const pxW = looksNormalized ? (w * baseW) : w;
+const pxH = looksNormalized ? (h * baseH) : h;
+
+const node = document.createElement("div");
+node.style.position = "absolute";
+node.style.left = (pxX * scale) + "px";
+node.style.top  = (pxY * scale) + "px";
+node.style.width  = Math.max(1, pxW * scale) + "px";
+node.style.height = Math.max(1, pxH * scale) + "px";
+
+      node.style.borderRadius = (Number(e?.radius ?? 16) * scale) + "px";
+      node.style.opacity = String(e?.opacity ?? 1);
+      node.style.overflow = "hidden";
+      node.style.boxSizing = "border-box";
+
+      // Background
+      const bg = e?.bg ?? e?.fill ?? e?.background ?? null;
+      if(typeof bg === "string" && bg){
+        // Handle legacy bg: "url(...)" or color
+        if(bg.startsWith("url(")){
+          node.style.backgroundImage = bg;
+          node.style.backgroundSize = e?.fit || e?.objectFit || "cover";
+          node.style.backgroundPosition = "center";
+          node.style.backgroundRepeat = "no-repeat";
+        }else{
+          node.style.background = bg;
+        }
       }else{
-        ctx.fillStyle = safeColor(bgFill, "#0b1020");
-      }
-    }catch(_){
-      ctx.fillStyle = "#0b1020";
-    }
-    ctx.fillRect(0,0,boxW,boxH);
-
-    const drawRoundRect = (x,y,w,h,r)=>{
-      const rr = Math.max(0, Math.min(r, Math.min(w,h)/2));
-      ctx.beginPath();
-      ctx.moveTo(x+rr, y);
-      ctx.arcTo(x+w, y, x+w, y+h, rr);
-      ctx.arcTo(x+w, y+h, x, y+h, rr);
-      ctx.arcTo(x, y+h, x, y, rr);
-      ctx.arcTo(x, y, x+w, y, rr);
-      ctx.closePath();
-    };
-
-    const drawRectFillStroke = (x,y,w,h,r,fill,stroke,strokeW)=>{
-      if(w<=0 || h<=0) return;
-      drawRoundRect(x,y,w,h,r);
-      if(fill && fill !== "transparent"){
-        ctx.fillStyle = fill;
-        ctx.fill();
-      }
-      if(stroke && stroke !== "transparent"){
-        ctx.strokeStyle = stroke;
-        ctx.lineWidth = Math.max(0.5, strokeW || 2);
-        ctx.stroke();
-      }
-    };
-
-    const order = (e)=>{
-      const t = String(e?.type||"").toLowerCase();
-      if(t === "bg") return 0;
-      if(t === "shape" || t === "rect" || t === "card") return 10;
-      if(t === "photo" || t === "image") return 20;
-      if(t === "pill" || t === "badge") return 30;
-      if(t === "chip") return 40;
-      if(t === "text") return 50;
-      return 60;
-    };
-
-    for(const e of [...els].sort((a,b)=>order(a)-order(b))){
-      if(!e) continue;
-
-      const type = String(e.type || "").toLowerCase();
-      const role = String(e.role || "").toLowerCase();
-      if(role === "background" || type === "bg") continue;
-
-      const x = pxX(e.x ?? 0);
-      const y = pxY(e.y ?? 0);
-      const ww = pxW(e.w ?? 0);
-      const hh = pxH(e.h ?? 0);
-      if(ww<=0 || hh<=0) continue;
-
-      const opacity = (e.opacity==null) ? 1 : Math.max(0, Math.min(1, Number(e.opacity)));
-      ctx.save();
-      ctx.globalAlpha = Number.isFinite(opacity) ? opacity : 1;
-
-      if(type === "shape" || type === "rect" || type === "card"){
-        const fill = safeColor(e.fill || e.bg || e.color || e?.style?.backgroundColor || e?.style?.fill, "rgba(255,255,255,0.12)");
-        const stroke = e.stroke || null;
-        const sw = Number(e.strokeWidth || 2) * Math.min(sx, sy);
-        const r = toPx(e.radius ?? e.r ?? 18, Math.min(baseW, baseH)) * Math.min(sx, sy);
-        drawRectFillStroke(x,y,ww,hh, r, fill, stroke, sw);
-        ctx.restore();
-        continue;
-      }
-
-      if(type === "photo" || type === "image"){
-        const r = toPx(e.radius ?? e.r ?? 16, Math.min(baseW, baseH)) * Math.min(sx, sy);
-        drawRoundRect(x,y,ww,hh, r);
-        ctx.clip();
-        const g = ctx.createLinearGradient(x,y,x+ww,y+hh);
-        g.addColorStop(0, "rgba(11,95,255,0.26)");
-        g.addColorStop(1, "rgba(136,71,255,0.20)");
-        ctx.fillStyle = g;
-        ctx.fillRect(x,y,ww,hh);
-        ctx.restore();
-        continue;
-      }
-
-      if(type === "pill" || type === "badge"){
-        const fill = safeColor(e.fill || e.bg || "rgba(255,255,255,0.10)", "rgba(255,255,255,0.10)");
-        const stroke = e.stroke || null;
-        const sw = Number(e.strokeWidth || 2) * Math.min(sx, sy);
-        const r = toPx(e.radius ?? e.r ?? 999, Math.min(baseW, baseH)) * Math.min(sx, sy);
-        drawRectFillStroke(x,y,ww,hh, r, fill, stroke, sw);
-
-        const t = String(e.text || e.title || "").trim();
-        if(t){
-          const fontSize = Math.max(10, Math.round(toPx(e.tsize || e.fontSize || e.size || 22, baseH) * sy));
-          const weight = String(e.tweight || e.weight || 800);
-          const font = (e.fontFamily || "Poppins, system-ui, sans-serif");
-          ctx.font = `${weight} ${fontSize}px ${font}`;
-          ctx.fillStyle = safeColor(e.tcolor || e.color, "#ffffff");
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          let out = t;
-          const maxW = Math.max(10, ww - 10);
-          while(out.length>2 && ctx.measureText(out).width > maxW){
-            out = out.slice(0, -1);
-          }
-          if(out !== t) out = out.slice(0, Math.max(0,out.length-1)) + "…";
-          ctx.fillText(out, x + ww/2, y + hh/2);
+        // Provide subtle default for shapes/cards
+        if(type === "shape" || type === "card" || type === "pill" || role === "background"){
+          node.style.background = "rgba(255,255,255,0.06)";
+        }else{
+          node.style.background = "transparent";
         }
+      }
 
-        ctx.restore();
+      // Border / stroke (if any)
+      const stroke = e?.stroke ?? e?.border ?? null;
+      if(typeof stroke === "string" && stroke){
+        node.style.border = (Math.max(1, 1*scale)) + "px solid " + stroke;
+      }else{
+        node.style.border = "none";
+      }
+
+      // Shadow (scaled)
+      const sh = e?.shadow;
+      if(sh && typeof sh === "object"){
+        const sx = Number(sh.x ?? 0) * scale;
+        const sy = Number(sh.y ?? 0) * scale;
+        const sb = Number(sh.blur ?? 0) * scale;
+        const sc = String(sh.color ?? "rgba(0,0,0,0.25)");
+        node.style.boxShadow = `${sx}px ${sy}px ${sb}px ${sc}`;
+      }
+
+      if(isImg){
+        const img = document.createElement("img");
+        const src = e?.src || e?.url || (typeof bg === "string" && bg.startsWith("url(") ? bg.slice(4,-1).replace(/['"]/g,"") : null);
+        if(src) img.src = src;
+        img.style.width = "100%";
+        img.style.height = "100%";
+        img.style.objectFit = e?.fit || e?.objectFit || "cover";
+        img.style.display = "block";
+        node.style.background = "transparent";
+        node.appendChild(img);
+        wrap.appendChild(node);
         continue;
       }
 
-      if(type === "chip"){
-        const t = String(e.text || e.title || "").trim();
-        if(t){
-          const fontSize = Math.max(10, Math.round(toPx(e.size || e.fontSize || 18, baseH) * sy));
-          const weight = String(e.weight || 700);
-          const font = (e.fontFamily || "Poppins, system-ui, sans-serif");
-          ctx.font = `${weight} ${fontSize}px ${font}`;
-          ctx.fillStyle = safeColor(e.color, "#f6f7fb");
-          ctx.textAlign = "left";
-          ctx.textBaseline = "top";
-          ctx.fillText(t, x, y);
+      // Text
+      const txt = (e?.title ?? e?.text ?? "").toString();
+      const sub = (e?.subtitle ?? "").toString();
+      if(txt || sub){
+        node.style.display = "flex";
+        node.style.flexDirection = "column";
+        node.style.justifyContent = "center";
+        node.style.gap = (4 * scale) + "px";
+        node.style.padding = (Math.max(2, 10 * scale)) + "px";
+
+        const color = e?.color || "rgba(255,255,255,0.92)";
+        const size = Number(e?.fontSize ?? e?.size ?? 22);
+        const weight = Number(e?.weight ?? 700);
+
+        const t1 = document.createElement("div");
+        t1.textContent = txt;
+        t1.style.color = color;
+        t1.style.fontWeight = String(weight);
+        t1.style.fontSize = Math.max(9, size * scale) + "px";
+        t1.style.lineHeight = "1.15";
+        t1.style.whiteSpace = "nowrap";
+        t1.style.overflow = "hidden";
+        t1.style.textOverflow = "ellipsis";
+        node.appendChild(t1);
+
+        if(sub){
+          const t2 = document.createElement("div");
+          t2.textContent = sub;
+          t2.style.color = color;
+          t2.style.opacity = "0.85";
+          t2.style.fontWeight = String(Math.max(400, Math.min(600, weight-200)));
+          t2.style.fontSize = Math.max(8, (size*0.72) * scale) + "px";
+          t2.style.lineHeight = "1.15";
+          t2.style.whiteSpace = "nowrap";
+          t2.style.overflow = "hidden";
+          t2.style.textOverflow = "ellipsis";
+          node.appendChild(t2);
         }
-        ctx.restore();
-        continue;
       }
 
-      if(type === "text"){
-        const t = (e.text ?? e.title ?? "").toString().trim();
-        if(!t){ ctx.restore(); continue; }
-
-        const size = Math.max(10, Math.round(toPx(e.fontSize ?? e.size ?? 32, baseH) * sy));
-        const weight = String(e.fontWeight ?? e.weight ?? 700);
-        const font = (e.fontFamily || "Poppins, system-ui, sans-serif");
-        ctx.font = `${weight} ${size}px ${font}`;
-        ctx.fillStyle = safeColor(e.color, "#f6f7fb");
-        ctx.textBaseline = "top";
-
-        const align = String(e.align || "left").toLowerCase();
-        ctx.textAlign = (align === "center") ? "center" : (align === "right") ? "right" : "left";
-        const tx = (ctx.textAlign === "center") ? (x + ww/2) : (ctx.textAlign === "right" ? (x + ww) : x);
-
-        const lines = wrapText(ctx, t, ww, 3);
-        const lh = Math.round(size * 1.18);
-        for(let li=0; li<lines.length; li++){
-          ctx.fillText(lines[li], tx, y + li*lh);
-        }
-
-        ctx.restore();
-        continue;
-      }
-
-      ctx.restore();
+      wrap.appendChild(node);
     }
 
+    mount.appendChild(wrap);
     return true;
   }catch(_){
-    return false;
-  }
-}
-
-function wrapText(ctx, text, maxWidth, maxLines){
-  try{
-    const words = String(text).split(/\s+/).filter(Boolean);
-    const lines = [];
-    let line = "";
-    for(const w of words){
-      const test = line ? (line + " " + w) : w;
-      if(ctx.measureText(test).width <= maxWidth){
-        line = test;
-      }else{
-        if(line) lines.push(line);
-        line = w;
-        if(lines.length >= (maxLines||3)-1) break;
-      }
-    }
-    if(line && lines.length < (maxLines||3)) lines.push(line);
-    return lines;
-  }catch(_){
-    return [String(text).slice(0, 50)];
-  }
-}
-
-TOC.renderThumb = function(template, mount){
-  try{
-    if(!mount) return;
-
-    // 1) Contract-aware renderer (correct payload)
-    if(template && template.contract && root.NexoraPreview && typeof root.NexoraPreview.renderTo === "function"){
-      try{
-        const content = template.content || template.doc?.content || null;
-        if(content && typeof content === "object"){
-          mount.innerHTML = "";
-          root.NexoraPreview.renderTo(mount, { contract: template.contract, content, meta: template.meta || template.contract?.meta || {} });
-          return;
-        }
-      }catch(_){ /* fall through */ }
-    }
-
-    // 2) Deterministic legacy canvas preview (never blank)
-    if(template && (template.elements || template.canvas || template.contract?.canvas)){
-      if(renderLegacyThumb(template, mount)) return;
-    }
-
-    // 3) Legacy DOM preview (best effort)
-    if(root.NexoraDesign && typeof root.NexoraDesign.renderPreview === "function"){
-      try{
-        root.NexoraDesign.renderPreview(template, mount);
-        if(mount.childNodes && mount.childNodes.length) return;
-      }catch(_){}
-    }
-
-    // 4) Last resort
-    mount.textContent = (template?.content?.headline || template?.title || "").toString().slice(0, 40);
-  }catch(_){
     try{
-      mount.textContent = (template?.content?.headline || template?.title || "").toString().slice(0, 40);
+      mount.innerHTML = "";
+      const box = document.createElement("div");
+      box.style.padding = "10px";
+      box.style.color = "rgba(255,255,255,0.85)";
+      box.textContent = (template?.content?.headline || template?.title || "Template").toString().slice(0, 40);
+      mount.appendChild(box);
     }catch(__){}
+    return true;
   }
-};
+}
 
+(function(root){
+  const TOC = root.TemplateOutputController || {};
+  let committed = false;
 
+  // Keep the latest list so Export/OpenEditor always has something deterministic.
+  TOC.templates = Array.isArray(TOC.templates) ? TOC.templates : [];
+
+  // Set templates and (by default) mark them as "committed" (AI-backed).
+  // Pass {commit:false} to update the list without flipping committed.
+  TOC.setTemplates = function(templates, opts){
+    const commit = !(opts && opts.commit === false);
+    if(commit) committed = true;
+    TOC.templates = Array.isArray(templates) ? templates : [];
+  };
+
+  // Seed previews update: keep deterministic list but DO NOT mark committed.
+  TOC.setPreviewTemplates = function(templates){
+    TOC.setTemplates(templates, { commit: false });
+  };
+
+  TOC.isCommitted = function(){ return committed; };
+
+  // Render a template into a tile thumb mount.
+  // NOTE: NexoraPreview.renderTo signature is renderTo(targetNode, payload).
+  TOC.renderThumb = function(template, mount){
+    try{
+      if(!mount) return;
+
+      // Prefer the spine-correct preview renderer when available.
+// IMPORTANT: renderTo(target, payload) expects a spine-shaped payload: { contract, content, meta? }.
+if(root.NexoraPreview && typeof root.NexoraPreview.renderTo === "function"){
+  const payload = (template && typeof template === "object") ? {
+    contract: (template.contract && typeof template.contract === "object") ? template.contract : (template.Contract || null),
+    content:  (template.content && typeof template.content === "object") ? template.content : {
+      // Legacy templates: lift elements/headline into content so the preview renderer can still render if it supports it.
+      elements: Array.isArray(template.elements) ? template.elements : undefined,
+      headline: template.headline ?? template.title ?? undefined,
+      subhead: template.subhead ?? template.subtitle ?? undefined
+    },
+    meta: (template.meta && typeof template.meta === "object") ? template.meta : undefined
+  } : template;
+
+  // Try spine renderer first. If it renders nothing, fall through to legacy renderer.
+  try{
+    mount.innerHTML = "";
+    const r = root.NexoraPreview.renderTo(mount, payload);
+    const rendered = (r === true) || (mount.childNodes && mount.childNodes.length > 0);
+    if(rendered) return;
+    // else fall through
+    mount.innerHTML = "";
+  }catch(_){
+    try{ mount.innerHTML = ""; }catch(__){}
+    // fall through
+  }
+}
+
+      // Fallback: legacy DOM renderer (editor-like). Never blank.
+      if(renderLegacyThumb(template, mount)) return;
+
+      // Last resort: keep it visible (never blank).
+      mount.textContent = (template?.content?.headline || template?.title || "").toString().slice(0, 40);
+    }catch(_){
+      // Never throw from preview rendering.
+    }
+  };
 
   root.TemplateOutputController = TOC;
 })(window);
