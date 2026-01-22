@@ -126,6 +126,46 @@ async function getNormalizeCategory() {
 }
 
 
+
+// Template Materializer (authority choke point)
+// - Optional module. If present, we run deterministic output through it so UI never sees partial templates.
+let __materializeTemplate = null;
+let __materializeTemplateTried = false;
+function getMaterializeTemplate(){
+  try{
+    if(typeof __materializeTemplate === "function") return __materializeTemplate;
+    if(__materializeTemplateTried) return null;
+    __materializeTemplateTried = true;
+
+    // Prefer an already-attached global (browser/lab)
+    try{
+      if(typeof globalThis !== "undefined" && typeof globalThis.materializeTemplate === "function"){
+        __materializeTemplate = globalThis.materializeTemplate;
+        return __materializeTemplate;
+      }
+    }catch(_){}
+
+    // Node/serverless module paths
+    if(typeof require === "function"){
+      try{
+        const mod = require("../template-materializer.js");
+        if(mod && typeof mod.materializeTemplate === "function"){
+          __materializeTemplate = mod.materializeTemplate;
+          return __materializeTemplate;
+        }
+      }catch(_){}
+      try{
+        const mod = require("./template-materializer.js");
+        if(mod && typeof mod.materializeTemplate === "function"){
+          __materializeTemplate = mod.materializeTemplate;
+          return __materializeTemplate;
+        }
+      }catch(_){}
+    }
+  }catch(_){}
+  return null;
+}
+
 // Purpose: ALWAYS return REAL templates (canvas + elements) compatible with index.html preview.
 // Notes:
 // - CommonJS handler for Vercel/Netlify-style /api directory.
@@ -787,7 +827,7 @@ const brandInfo = brandFromPrompt(prompt);
   return out;
 }
 
-function materializeTemplate({ prompt, category, style, i, seed, variantIndex, familyId, headline, subhead, cta }) {
+function legacyMaterializeTemplate({ prompt, category, style, i, seed, variantIndex, familyId, headline, subhead, cta }) {
   const _i = (Number.isFinite(Number(i)) ? Number(i) : (Number.isFinite(Number(variantIndex)) ? Number(variantIndex) : 1));
 const baseSeed = Number.isFinite(Number(seed))
   ? (Number(seed) >>> 0)
@@ -815,6 +855,39 @@ const size = CATEGORIES[category] || CATEGORIES["Instagram Post"];
     _palette: pal,
     _seed: baseSeed
 };
+}
+
+function materializeTemplate(args){
+  // Keep existing deterministic visuals, but force-finalize through the authority materializer when available.
+  const fn = getMaterializeTemplate();
+  const det = legacyMaterializeTemplate(args || {});
+  if(typeof fn !== "function") return det;
+
+  try{
+    const out = fn({
+      template: det,
+      canvas: det && det.canvas ? det.canvas : (args && args.canvas ? args.canvas : null),
+      category: args && args.category,
+      style: args && args.style,
+      prompt: args && args.prompt,
+      seed: args && args.seed,
+      headline: args && args.headline,
+      subhead: args && args.subhead,
+      cta: args && args.cta,
+      notes: args && args.notes
+    });
+
+    // Preserve deterministic metadata that downstream callers rely on.
+    return Object.assign({}, det, out || {}, {
+      canvas: (out && out.canvas) ? out.canvas : det.canvas,
+      elements: (out && Array.isArray(out.elements) && out.elements.length) ? out.elements : det.elements,
+      _layout: det._layout,
+      _palette: det._palette,
+      _seed: det._seed
+    });
+  }catch(_){
+    return det;
+  }
 }
 
 
