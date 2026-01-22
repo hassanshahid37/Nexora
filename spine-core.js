@@ -413,8 +413,17 @@
       title: str(doc?.content?.headline || doc?.meta?.category || "Untitled"),
       category: str(doc?.meta?.category || "Instagram Post"),
       canvas: { w: canvas.w, h: canvas.h },
+
+      // IMPORTANT: expose TemplateContract v1 + content at top-level so
+      // index.html can render thumbnails via NexoraPreview (contract-based).
+      // (Previously only embedded in doc, causing blue placeholder cards.)
+      contract: doc?.contract || null,
+      content: doc?.content || null,
+      meta: doc?.meta || null,
+
       elements,
-      // Keep doc embedded for future Studio
+
+      // Keep doc embedded for future Studio / editor handoff
       doc
     };
 
