@@ -877,20 +877,11 @@ function renderThumb(thumb, tplOrElements, bg){
 
     const thumb = div.querySelector(".thumb");
 
-    // Render thumb using the single authority controller if present.
-    if (TOC && typeof TOC.renderThumb === "function") {
-      TOC.renderThumb(template, thumb);
-    } else {
-      // Fallback: legacy thumb renderer
-      try {
-        const isYT = (String(category).toLowerCase().includes("youtube"));
-        if (!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function") {
-          window.NexoraDesign.renderPreview(template, thumb);
-        } else {
-          renderThumb(thumb, template, (template && template.bg) || null);
-        }
-      } catch (_) {}
-    }
+    
+    // Defer thumb rendering until AFTER the tile is attached to the DOM.
+    // Rendering into a detached node makes getBoundingClientRect()/clientWidth return 0 => blank thumbs.
+    div.__tpl = template;
+
 
     nextTemplates.push(template);
 
@@ -967,7 +958,32 @@ function renderThumb(thumb, tplOrElements, bg){
     grid.innerHTML = "";
     grid.appendChild(frag);
 
-    try{ saveHomeState(); } catch (e) {}
+    
+    // Now that tiles are attached, render thumbs deterministically.
+    requestAnimationFrame(()=>{
+      try{
+        const tiles = grid.querySelectorAll(".tile");
+        tiles.forEach(tile=>{
+          const t = tile.__tpl;
+          const thumb = tile.querySelector(".thumb");
+          if(!thumb) return;
+          if (TOC && typeof TOC.renderThumb === "function") {
+            TOC.renderThumb(t, thumb);
+          } else {
+            try {
+              const isYT = (String(category).toLowerCase().includes("youtube"));
+              if (!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function") {
+                window.NexoraDesign.renderPreview(t, thumb);
+              } else {
+                renderThumb(thumb, t, (t && t.bg) || null);
+              }
+            } catch (_) {}
+          }
+        });
+      }catch(_){ }
+    });
+
+try{ saveHomeState(); } catch (e) {}
   }
 }
   // Expose for cross-script access
@@ -1159,20 +1175,10 @@ function renderTemplatesFromList(list){
 
     const thumb = div.querySelector(".thumb");
 
-    // Single authority renderer if present.
-    if(TOC && typeof TOC.renderThumb === "function"){
-      TOC.renderThumb(t, thumb);
-    }else{
-      // Keep backward compatibility
-      try{
-        const isYT = (String(t?.contract?.category || "").toLowerCase().includes("youtube"));
-        if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
-          window.NexoraDesign.renderPreview(t, thumb);
-        }else{
-          renderThumb(thumb, t, (t && t.bg) || null);
-        }
-      }catch(_){}
-    }
+    
+    // Defer thumb rendering until AFTER the tile is attached to the DOM.
+    div.__tpl = t;
+
 
     nextTemplates.push(t);
     __lastTemplates = nextTemplates;
@@ -1197,7 +1203,32 @@ function renderTemplatesFromList(list){
   gridEl.innerHTML = "";
   gridEl.appendChild(frag);
 
-  // expose for debugging
+  
+  // Now that tiles are attached, render thumbs deterministically.
+  requestAnimationFrame(()=>{
+    try{
+      const tiles = gridEl.querySelectorAll(".tile");
+      tiles.forEach(tile=>{
+        const t = tile.__tpl;
+        const thumb = tile.querySelector(".thumb");
+        if(!thumb) return;
+        if(TOC && typeof TOC.renderThumb === "function"){
+          TOC.renderThumb(t, thumb);
+        }else{
+          try{
+            const isYT = (String(t?.contract?.category || "").toLowerCase().includes("youtube"));
+            if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
+              window.NexoraDesign.renderPreview(t, thumb);
+            }else{
+              renderThumb(thumb, t, (t && t.bg) || null);
+            }
+          }catch(_){ }
+        }
+      });
+    }catch(_){ }
+  });
+
+// expose for debugging
   window.NEXORA = window.NEXORA || {};
   window.NEXORA.lastTemplates = __lastTemplates;
 
