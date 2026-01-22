@@ -33,7 +33,6 @@
       const h = Number(contract?.canvas?.height ?? contract?.canvas?.h);
       if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return false;
       if (!Array.isArray(contract.layers)) return false;
-      try{ if (typeof window!=='undefined') window.__NEXORA_AI_COMMITTED__ = true; }catch(_){}
       return true;
     } catch {
       return false;
@@ -80,7 +79,27 @@
       cta: (c.cta == null) ? "" : String(c.cta),
       badge: (c.badge == null) ? "" : String(c.badge),
       body: (c.body == null) ? "" : String(c.body),
+      imageUrl: (c.imageUrl == null) ? "" : String(c.imageUrl),
     };
+  }
+
+  function fillContentFallbacks(content, contract){
+    // Goal: never render an "empty" preview when the template has text layers but content keys differ.
+    // Minimal, deterministic fallbacks only.
+    const c = content || {};
+    const roles = new Set((contract?.layers||[]).map(l=>String(l?.role||"")));
+    const pick = (...vals)=>vals.find(v=>typeof v==="string" && v.trim().length) || "";
+
+    if(roles.has("headline") && !c.headline){
+      c.headline = pick(c.subhead, c.body);
+    }
+    if(roles.has("subhead") && !c.subhead){
+      c.subhead = pick(c.body);
+    }
+    if(roles.has("body") && !c.body){
+      c.body = pick(c.subhead, c.headline);
+    }
+    return c;
   }
 
   function applyStyles(node, style) {
@@ -123,8 +142,36 @@
       const img = el("div", "nr-image");
       img.style.width = "100%";
       img.style.height = "220px";
-      img.style.background = "#222";
       img.style.borderRadius = "16px";
+      img.style.overflow = "hidden";
+
+      const url = (content && content.imageUrl) ? String(content.imageUrl).trim() : "";
+      if(url){
+        const safe = url.replace(/"/g, "%22");
+        img.style.backgroundImage = `url("${safe}")`;
+        img.style.backgroundSize = "cover";
+        img.style.backgroundPosition = "center";
+        img.style.backgroundRepeat = "no-repeat";
+      } else {
+        // Premium placeholder so preview is never "blank"
+        const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='900' height='500' viewBox='0 0 900 500'>
+          <defs>
+            <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+              <stop offset='0' stop-color='%230b5fff' stop-opacity='0.45'/>
+              <stop offset='1' stop-color='%238847ff' stop-opacity='0.35'/>
+            </linearGradient>
+          </defs>
+          <rect width='900' height='500' rx='28' fill='url(%23g)'/>
+          <circle cx='680' cy='190' r='120' fill='rgba(255,255,255,0.10)'/>
+          <rect x='70' y='320' width='520' height='44' rx='22' fill='rgba(255,255,255,0.10)'/>
+          <rect x='70' y='380' width='380' height='34' rx='17' fill='rgba(255,255,255,0.08)'/>
+        </svg>`;
+        img.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+        img.style.backgroundSize = "cover";
+        img.style.backgroundPosition = "center";
+        img.style.backgroundRepeat = "no-repeat";
+      }
+
       wrap.appendChild(img);
       return wrap;
     }
@@ -180,7 +227,9 @@
 
       // Preferred: P8 registry contract
       if (typeof zoneRegistry.getZoneRects === "function") {
-        const rects = zoneRegistry.getZoneRects({ family: familyCanon, canvas: { w: cv.width, h: cv.height } });
+        const rects = (zoneRegistry.getZoneRects.length >= 3)
+          ? zoneRegistry.getZoneRects(familyCanon, cv.width, cv.height)
+          : zoneRegistry.getZoneRects({ family: familyCanon, canvas: { w: cv.width, h: cv.height } });
         if (!rects || typeof rects !== "object") return null;
 
         const frac = Object.create(null);
@@ -210,10 +259,12 @@
     try {
       const contract = payload?.contract;
       const metaIn = payload?.meta || {};
-      const content = normalizeContent(payload?.content);
+      let content = normalizeContent(payload?.content);
 
       if (!root) return false;
       if (!validate(contract)) return false;
+
+      content = fillContentFallbacks(content, contract);
 
       clear(root);
 
@@ -272,7 +323,23 @@
         ? window.NexoraZoneExecutor
         : null;
 
+      // placements: Map<idx, {rect:{x,y,w,h}}>
       let placements = null;
+
+      // Helper: apply absolute placement
+      function applyPlacementStyle(node, rect){
+        if(!node || !rect) return;
+        try{
+          node.style.position = "absolute";
+          node.style.margin = "0";
+          node.style.left = Math.round(rect.x) + "px";
+          node.style.top = Math.round(rect.y) + "px";
+          node.style.width = Math.round(rect.w) + "px";
+          node.style.height = Math.round(rect.h) + "px";
+        }catch(_){ }
+      }
+
+      // 1) Preferred: use ZoneExecutor if it supports computePlacements + applyPlacementStyle
       try {
         if (zoneExec && zoneRegistry && cv?.width && cv?.height) {
           const famCanon = (typeof zoneExec.canonFamilyId === "function") ? zoneExec.canonFamilyId(contract) : "text-first";
@@ -290,6 +357,34 @@
         placements = null;
       }
 
+      // 2) Fallback: compute placements directly from ZoneRegistry pixel rects
+      try{
+        if(!placements && zoneRegistry && cv?.width && cv?.height && typeof zoneRegistry.getZoneRects === "function"){
+          const famCanon = String(contract?.layoutFamilyCanonical || contract?.layoutFamily || "text-first");
+          const rects = (zoneRegistry.getZoneRects.length >= 3)
+            ? zoneRegistry.getZoneRects(famCanon, cv.width, cv.height)
+            : zoneRegistry.getZoneRects({ family: famCanon, canvas: { w: cv.width, h: cv.height } });
+
+          if(rects && typeof rects === "object"){
+            const getRoleToZone = (typeof zoneRegistry.getRoleToZone === "function")
+              ? (role) => zoneRegistry.getRoleToZone(famCanon, role)
+              : (role) => role;
+
+            const map = new Map();
+            ordered.forEach((layer, idx) => {
+              const role = String(layer?.role || "");
+              if(!role || role === "background") return;
+              const zoneName = String(getRoleToZone(role) || role);
+              const r = rects[zoneName] || rects[role] || null;
+              if(r && Number.isFinite(Number(r.x)) && Number.isFinite(Number(r.y)) && Number.isFinite(Number(r.w)) && Number.isFinite(Number(r.h))){
+                map.set(idx, { rect: { x:Number(r.x), y:Number(r.y), w:Number(r.w), h:Number(r.h) } });
+              }
+            });
+            placements = map.size ? map : null;
+          }
+        }
+      }catch(_){ placements = placements; }
+
       // Render
       ordered.forEach((layer, idx) => {
         const node = renderLayer(layer, content, meta);
@@ -303,9 +398,12 @@
 
         // Apply zone placement if available
         try {
-          if (placements && zoneExec && typeof zoneExec.applyPlacementStyle === "function") {
+          if (placements) {
             const p = placements.get(idx);
-            if (p && p.rect) zoneExec.applyPlacementStyle(node, p.rect);
+            if (p && p.rect) {
+              if (zoneExec && typeof zoneExec.applyPlacementStyle === "function") zoneExec.applyPlacementStyle(node, p.rect);
+              else applyPlacementStyle(node, p.rect);
+            }
           }
         } catch (_) {}
 
