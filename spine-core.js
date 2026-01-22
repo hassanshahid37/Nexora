@@ -185,7 +185,7 @@
         constraints: {},
         roles: {
           required: ["headline"],
-          optional: ["subhead","cta","badge","hero","background"]
+          optional: ["subhead","cta","badge","image","background"]
         }
       };
     }
@@ -282,7 +282,7 @@
     }
 
     // Optional hero placeholder (actual AI image feature stitches later)
-    nodes.push({ id:"hero", type:"image", role:"hero", zone:"hero", props:{ src:null, fit:"cover", radius:24, fill:"rgba(255,255,255,0.08)" } });
+    nodes.push({ id:"hero", type:"image", role:"image", zone:"hero", props:{ src:null, fit:"cover", radius:24, fill:"rgba(255,255,255,0.08)" } });
 
     doc.graph = {
       version: "v1",
@@ -407,51 +407,16 @@
         continue;
       }
     }
-    let template = {
+
+        let template = {
       id: "doc_"+String(doc?.meta?.seed ?? stableHash(JSON.stringify(doc||{}))),
       title: str(doc?.content?.headline || doc?.meta?.category || "Untitled"),
       category: str(doc?.meta?.category || "Instagram Post"),
       canvas: { w: canvas.w, h: canvas.h },
       elements,
-      // Attach content + contract for preview/editor; keep doc embedded for future Studio.
-      content: (doc && doc.content) ? doc.content : null,
-      contract: null,
+      // Keep doc embedded for future Studio
       doc
     };
-
-    // Ensure we always have a valid TemplateContract v1 when possible (spine-first).
-    // This unlocks: PreviewRenderer v1, Zone system, Editor handoff, and export sizing.
-    try{
-      const existing = doc?.contract || null;
-      if(existing && validateContract(existing)) {
-        template.contract = existing;
-      } else {
-        // Derive layers from graph nodes (structure only; NO geometry)
-        const safeNodes = Array.isArray(nodes) ? nodes : [];
-        const layers = safeNodes.map((n) => {
-          const t = String(n?.type || "");
-          const role =
-            String(n?.role || "") ||
-            (t === "background" ? "background" :
-             t === "image" ? "image" :
-             t === "text" ? "headline" :
-             "badge");
-          const locked = (t === "background" || String(role) === "background");
-          return { id: String(n?.id || stableId("layer")), role: String(role), locked: !!locked };
-        });
-        const built = createContract({
-          templateId: template.id,
-          category: template.category,
-          canvas: { w: canvas.w, h: canvas.h, width: canvas.w, height: canvas.h },
-          palette: null,
-          layers
-        });
-        if(built && validateContract(built)) {
-          template.contract = built;
-          try{ doc.contract = built; }catch(_){ }
-        }
-      }
-    }catch(_){ }
 
     template = applyP9ElementNormalization(template);
     return applyP9VisualEngines(template);
