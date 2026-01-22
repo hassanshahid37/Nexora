@@ -257,6 +257,64 @@
   // ---------- Render entry ----------
   function renderInto(root, payload) {
     try {
+      // ---- ADAPTER: accept flat templates (elements[]) ----
+      // Nexora UI tiles sometimes pass a full template object: { canvas, elements[], content?, meta? }.
+      // This renderer is contract/layer-based, so we deterministically adapt elements -> minimal contract + content.
+      if (payload && Array.isArray(payload.elements) && payload.elements.length) {
+        const els = payload.elements;
+
+        const cvIn = payload.canvas || payload.contract?.canvas || null;
+        const canvas = cvIn ? cvIn : { w: 1080, h: 1080 };
+
+        // Derive content from elements when not provided (best-effort, deterministic).
+        const textEls = els.filter(e => e && String(e.type || "").toLowerCase() === "text");
+        const firstText = textEls[0] && (textEls[0].text || textEls[0].content || "");
+        const secondText = textEls[1] && (textEls[1].text || textEls[1].content || "");
+        const pill = els.find(e => e && (String(e.type || "").toLowerCase() === "pill" || String(e.type || "").toLowerCase() === "button"));
+        const badge = els.find(e => e && (String(e.type || "").toLowerCase() === "badge" || String(e.type || "").toLowerCase() === "chip"));
+        const photo = els.find(e => e && (String(e.type || "").toLowerCase() === "photo" || String(e.type || "").toLowerCase() === "image"));
+
+        const derivedContent = Object.assign({}, (payload.content && typeof payload.content === "object") ? payload.content : {});
+        if (!derivedContent.headline && firstText) derivedContent.headline = String(firstText);
+        if (!derivedContent.subhead && secondText) derivedContent.subhead = String(secondText);
+        if (!derivedContent.cta && pill && (pill.text || pill.label)) derivedContent.cta = String(pill.text || pill.label);
+        if (!derivedContent.badge && badge && (badge.text || badge.label)) derivedContent.badge = String(badge.text || badge.label);
+        if (!derivedContent.imageUrl && photo && (photo.src || photo.url)) derivedContent.imageUrl = String(photo.src || photo.url);
+
+        // Map element types -> roles so existing renderer can paint something immediately.
+        const roles = new Set();
+        for (const e of els) {
+          const t = String(e && (e.role || e.type) || "").toLowerCase();
+          if (t === "bg" || t === "background") roles.add("background");
+          else if (t === "photo" || t === "image") roles.add("image");
+          else if (t === "pill" || t === "button" || t === "cta") roles.add("cta");
+          else if (t === "badge" || t === "chip") roles.add("badge");
+          else if (t === "text") {
+            // We'll decide which text maps to headline/subhead/body via presence of derived keys.
+            // Add both headline/subhead to ensure something shows.
+            roles.add("headline");
+            roles.add("subhead");
+          }
+        }
+        // If nothing mapped, at least show a headline to avoid blanks.
+        if (!roles.size) roles.add("headline");
+
+        // Always include background role so preview is never empty.
+        roles.add("background");
+
+        const contract = {
+          version: "v1",
+          templateId: payload.id || payload.templateId || ("tpl_" + Math.random().toString(36).slice(2)),
+          category: payload.category || payload.meta?.category || "Instagram Post",
+          canvas,
+          layers: Array.from(roles).map((role, i) => ({ id: "auto_" + role + "_" + i, role })),
+          layoutFamily: payload.layoutFamily || payload.layoutFamilyCanonical || null,
+          palette: (payload.meta && payload.meta.palette) ? payload.meta.palette : (payload.palette || null)
+        };
+
+        payload = Object.assign({}, payload, { contract, content: derivedContent });
+      }
+
       const contract = payload?.contract;
       const metaIn = payload?.meta || {};
       let content = normalizeContent(payload?.content);
