@@ -110,6 +110,42 @@ function normalizeElement(el, index, seed){
     role: roleCanon || null,
     content: c.content,
     geometry: { x: el.x, y: el.y, w: el.w, h: el.h },
+
+    // Legacy field retention (NON-BREAKING): keep the original preview/editor renderers working.
+    // P9.1 is render-safety only; we mirror essential legacy fields without changing geometry.
+    x: el.x, y: el.y, w: el.w, h: el.h,
+
+    // Common text/image/style fields used by existing renderers (index.html drawThumb, TemplateOutputController, editor).
+    text: (el && el.text != null) ? el.text : (type === "text" ? c.content : undefined),
+    title: (el && el.title != null) ? el.title : (type === "text" ? c.content : undefined),
+    subtitle: el && el.subtitle != null ? el.subtitle : undefined,
+    sub: el && el.sub != null ? el.sub : undefined,
+
+    fill: el && el.fill != null ? el.fill : undefined,
+    bg: el && el.bg != null ? el.bg : undefined,
+    color: el && el.color != null ? el.color : undefined,
+    stroke: el && el.stroke != null ? el.stroke : undefined,
+    strokeW: el && el.strokeW != null ? el.strokeW : undefined,
+    shadow: el && el.shadow != null ? el.shadow : undefined,
+    opacity: el && el.opacity != null ? el.opacity : undefined,
+    radius: el && el.radius != null ? el.radius : (el && el.r != null ? el.r : undefined),
+    r: el && el.r != null ? el.r : undefined,
+
+    size: (el && el.size != null) ? el.size : (el && el.fontSize != null ? el.fontSize : undefined),
+    weight: (el && el.weight != null) ? el.weight : (el && el.fontWeight != null ? el.fontWeight : undefined),
+    font: (el && el.font != null) ? el.font : (el && el.fontFamily != null ? el.fontFamily : undefined),
+    fontFamily: el && el.fontFamily != null ? el.fontFamily : undefined,
+    align: el && el.align != null ? el.align : undefined,
+    textAlign: el && el.textAlign != null ? el.textAlign : undefined,
+    letterSpacing: el && el.letterSpacing != null ? el.letterSpacing : undefined,
+    lineHeight: el && el.lineHeight != null ? el.lineHeight : undefined,
+    uppercase: el && el.uppercase === true ? true : undefined,
+
+    src: el && el.src != null ? el.src : undefined,
+    url: el && el.url != null ? el.url : undefined,
+    fit: el && el.fit != null ? el.fit : undefined,
+    objectFit: el && el.objectFit != null ? el.objectFit : undefined,
+
     typography: Object.assign({}, DEFAULTS.typography, el.typography || {}),
     alignment: Object.assign({}, DEFAULTS.alignment, el.alignment || {}),
     spacing: Object.assign({}, DEFAULTS.spacing, el.spacing || {}),
