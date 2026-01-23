@@ -134,7 +134,7 @@
       wrap.style.margin = "0";
       wrap.style.zIndex = "0";
       wrap.style.pointerEvents = "none";
-      wrap.style.background = meta.palette?.bg || "#111";
+      wrap.style.background = meta.palette?.bg || "linear-gradient(135deg,#0b5fff 0%,#6a5cff 100%)";
       return wrap;
     }
 
@@ -179,7 +179,7 @@
     if (role === "headline") {
       const h = el("div", "nr-headline");
       h.textContent = content.headline || "";
-      applyStyles(h, style);
+      applyStyles(h, style); if(!style || (typeof style==="object" && !Object.keys(style).length)){ h.style.fontSize="42px"; h.style.fontWeight="800"; h.style.lineHeight="1.1"; }
       wrap.appendChild(h);
       return wrap;
     }
@@ -187,7 +187,7 @@
     if (role === "subhead") {
       const p = el("div", "nr-subhead");
       p.textContent = content.subhead || "";
-      applyStyles(p, style);
+      applyStyles(p, style); if(!style || (typeof style==="object" && !Object.keys(style).length)){ p.style.fontSize="22px"; p.style.opacity="0.9"; }
       wrap.appendChild(p);
       return wrap;
     }
@@ -196,7 +196,7 @@
       const b = el("button", "nr-cta");
       b.type = "button";
       b.textContent = content.cta || "CTA";
-      applyStyles(b, style);
+      applyStyles(b, style); if(!style || (typeof style==="object" && !Object.keys(style).length)){ b.style.padding="12px 18px"; b.style.borderRadius="999px"; b.style.background="#ffffff"; b.style.color="#111"; b.style.fontWeight="700"; }
       wrap.appendChild(b);
       return wrap;
     }
@@ -315,7 +315,7 @@
         payload = Object.assign({}, payload, { contract, content: derivedContent });
       }
 
-      const contract = payload?.contract;
+      const contract = payload?.renderContract || payload?.contract;
       const metaIn = payload?.meta || {};
       let content = normalizeContent(payload?.content);
 
