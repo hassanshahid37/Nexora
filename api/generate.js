@@ -18,6 +18,77 @@ try {
     // leave no-op
   }
 }
+// P9 pipeline (server-side): Element Normalization (P9.1) -> Visual Hierarchy (P9.2) -> Style Enforcement (P9.3)
+// These modules are optional; if missing, generation must still succeed.
+let __p91 = null;
+let __p92 = null;
+let __p93 = null;
+try { __p91 = require('../element-normalization-engine.js'); } catch (_) { try { __p91 = require('./element-normalization-engine.js'); } catch (_) {} }
+try { __p92 = require('../visual-hierarchy-engine.js'); } catch (_) { try { __p92 = require('./visual-hierarchy-engine.js'); } catch (_) {} }
+try { __p93 = require('../style-enforcement-engine.js'); } catch (_) { try { __p93 = require('./style-enforcement-engine.js'); } catch (_) {} }
+
+function __flattenStyleForThumb(el){
+  if(!el || typeof el !== "object") return el;
+  const s = el.style && typeof el.style === "object" ? el.style : null;
+  if(!s) return el;
+  const out = { ...el };
+  // text fields
+  if(out.type === "text" || out.role === "headline" || out.role === "subhead" || out.role === "body" || out.role === "cta" || out.role === "badge"){
+    if(out.color == null && s.color != null) out.color = s.color;
+    if(out.color == null && s.fill != null) out.color = s.fill;
+    if(out.fontSize == null && Number.isFinite(s.fontSize)) out.fontSize = s.fontSize;
+    if(out.weight == null && Number.isFinite(s.fontWeight)) out.weight = s.fontWeight;
+  }
+  // shapes/background
+  if(out.bg == null && typeof s.background === "string") out.bg = s.background;
+  if(out.fill == null && typeof s.fill === "string") out.fill = s.fill;
+  if(out.radius == null && Number.isFinite(s.radius)) out.radius = s.radius;
+  if(out.stroke == null && typeof s.stroke === "string") out.stroke = s.stroke;
+  return out;
+}
+
+function __applyP9PipelineToTemplate(tpl, ctx){
+  try{
+    const category = (ctx && ctx.category) ? ctx.category : (tpl && tpl.category);
+    const style = (ctx && ctx.style) ? ctx.style : (tpl && (tpl.style || tpl.archetype));
+    const canvas = tpl && tpl.canvas ? tpl.canvas : null;
+
+    const elementsIn = Array.isArray(tpl && tpl.elements) ? tpl.elements : [];
+    if(!elementsIn.length) return tpl;
+
+    // Contract-like wrapper for P9 engines (they operate on contract.elements + contract.category/style)
+    let contract = { category, style, canvas, elements: elementsIn.map(e => ({...e, style: (e && e.style && typeof e.style === "object") ? {...e.style} : (e && e.style ? e.style : undefined) })) };
+
+    // P9.1 normalize (render-safe IDs/types/visibility)
+    if(__p91 && typeof __p91.normalizeElements === "function"){
+      contract.elements = __p91.normalizeElements(contract.elements, { seed: tpl.id || tpl.templateId || "" });
+    } else if(__p91 && __p91.NexoraElementNormalizer && typeof __p91.NexoraElementNormalizer.normalizeElements === "function"){
+      contract.elements = __p91.NexoraElementNormalizer.normalizeElements(contract.elements, { seed: tpl.id || tpl.templateId || "" });
+    }
+
+    // P9.2 hierarchy (style-only)
+    if(__p92 && typeof __p92.applyVisualHierarchy === "function"){
+      contract = __p92.applyVisualHierarchy(contract);
+    } else if(__p92 && __p92.NexoraVisualHierarchyEngine && typeof __p92.NexoraVisualHierarchyEngine.applyVisualHierarchy === "function"){
+      contract = __p92.NexoraVisualHierarchyEngine.applyVisualHierarchy(contract);
+    }
+
+    // P9.3 style enforcement (style-only + contrast/components)
+    if(__p93 && typeof __p93.applyStyleEnforcement === "function"){
+      contract = __p93.applyStyleEnforcement(contract);
+    } else if(__p93 && __p93.StyleEnforcementEngine && typeof __p93.StyleEnforcementEngine.applyStyleEnforcement === "function"){
+      contract = __p93.StyleEnforcementEngine.applyStyleEnforcement(contract);
+    }
+
+    // Flatten style for the current home tile renderer (renderLegacyThumb reads flat props)
+    const outEls = Array.isArray(contract.elements) ? contract.elements.map(__flattenStyleForThumb) : elementsIn;
+
+    return { ...tpl, elements: outEls };
+  }catch(_){
+    return tpl;
+  }
+}
+
 
 
 
@@ -125,46 +196,6 @@ async function getNormalizeCategory() {
   }
 }
 
-
-
-// Template Materializer (authority choke point)
-// - Optional module. If present, we run deterministic output through it so UI never sees partial templates.
-let __materializeTemplate = null;
-let __materializeTemplateTried = false;
-function getMaterializeTemplate(){
-  try{
-    if(typeof __materializeTemplate === "function") return __materializeTemplate;
-    if(__materializeTemplateTried) return null;
-    __materializeTemplateTried = true;
-
-    // Prefer an already-attached global (browser/lab)
-    try{
-      if(typeof globalThis !== "undefined" && typeof globalThis.materializeTemplate === "function"){
-        __materializeTemplate = globalThis.materializeTemplate;
-        return __materializeTemplate;
-      }
-    }catch(_){}
-
-    // Node/serverless module paths
-    if(typeof require === "function"){
-      try{
-        const mod = require("../template-materializer.js");
-        if(mod && typeof mod.materializeTemplate === "function"){
-          __materializeTemplate = mod.materializeTemplate;
-          return __materializeTemplate;
-        }
-      }catch(_){}
-      try{
-        const mod = require("./template-materializer.js");
-        if(mod && typeof mod.materializeTemplate === "function"){
-          __materializeTemplate = mod.materializeTemplate;
-          return __materializeTemplate;
-        }
-      }catch(_){}
-    }
-  }catch(_){}
-  return null;
-}
 
 // Purpose: ALWAYS return REAL templates (canvas + elements) compatible with index.html preview.
 // Notes:
@@ -827,7 +858,7 @@ const brandInfo = brandFromPrompt(prompt);
   return out;
 }
 
-function legacyMaterializeTemplate({ prompt, category, style, i, seed, variantIndex, familyId, headline, subhead, cta }) {
+function materializeTemplate({ prompt, category, style, i, seed, variantIndex, familyId, headline, subhead, cta }) {
   const _i = (Number.isFinite(Number(i)) ? Number(i) : (Number.isFinite(Number(variantIndex)) ? Number(variantIndex) : 1));
 const baseSeed = Number.isFinite(Number(seed))
   ? (Number(seed) >>> 0)
@@ -855,39 +886,6 @@ const size = CATEGORIES[category] || CATEGORIES["Instagram Post"];
     _palette: pal,
     _seed: baseSeed
 };
-}
-
-function materializeTemplate(args){
-  // Keep existing deterministic visuals, but force-finalize through the authority materializer when available.
-  const fn = getMaterializeTemplate();
-  const det = legacyMaterializeTemplate(args || {});
-  if(typeof fn !== "function") return det;
-
-  try{
-    const out = fn({
-      template: det,
-      canvas: det && det.canvas ? det.canvas : (args && args.canvas ? args.canvas : null),
-      category: args && args.category,
-      style: args && args.style,
-      prompt: args && args.prompt,
-      seed: args && args.seed,
-      headline: args && args.headline,
-      subhead: args && args.subhead,
-      cta: args && args.cta,
-      notes: args && args.notes
-    });
-
-    // Preserve deterministic metadata that downstream callers rely on.
-    return Object.assign({}, det, out || {}, {
-      canvas: (out && out.canvas) ? out.canvas : det.canvas,
-      elements: (out && Array.isArray(out.elements) && out.elements.length) ? out.elements : det.elements,
-      _layout: det._layout,
-      _palette: det._palette,
-      _seed: det._seed
-    });
-  }catch(_){
-    return det;
-  }
 }
 
 
@@ -1013,48 +1011,20 @@ const brandInfo = brandFromPrompt(prompt);
         brand: brandInfo.brand || ""
       };
 
-      templates.push(Object.assign({}, det, { i: i + 1, doc: null, contract: null, content }));
+      const __detFinal = __applyP9PipelineToTemplate(det, { category, style });
+      templates.push(Object.assign({}, __detFinal, { i: i + 1, doc: null, contract: null, content }));
       continue;
     }
 
 
     const contract = doc && doc.contract ? doc.contract : (tpl.contract || null);
     const content = doc && doc.content ? doc.content : (tpl.content || null);
-    templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
+    const __tplFinal = __applyP9PipelineToTemplate(tpl, { category, style });
+    templates.push(Object.assign({}, __tplFinal, { i: i + 1, doc, contract, content }));
   }
 
-
-  // ---- UI FLATTENING (FINAL AUTHORITY) ----
-  // Guarantee UI always receives flat templates: { canvas, elements[] } at top-level.
-  const flat = [];
-  for (const t of templates) {
-    if (!t) continue;
-    // Lift from nested shapes if present
-    const elements =
-      Array.isArray(t.elements) && t.elements.length ? t.elements :
-      (t.template && Array.isArray(t.template.elements) ? t.template.elements : null);
-    const canvas =
-      t.canvas ||
-      (t.template && t.template.canvas) ||
-      (t.contract && t.contract.canvas) ||
-      null;
-
-    if (elements && canvas) {
-      flat.push({ ...t, elements, canvas });
-    } else {
-      // Absolute safety: force minimal renderable
-      flat.push({
-        ...t,
-        canvas: canvas || { w: 1080, h: 1080 },
-        elements: elements || [
-          { type: "bg", x: 0, y: 0, w: 1080, h: 1080, fill: "#0b1020" }
-        ]
-      });
-    }
-  }
-  return flat;
+  return templates;
 }
-
 
 module.exports = handler;
 module.exports.generateTemplates = generateTemplates;
