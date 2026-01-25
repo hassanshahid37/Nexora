@@ -1,0 +1,873 @@
+[
+  {
+    "id": "ig-bold-creator-pro",
+    "name": "Bold Creator Pro",
+    "category": "Instagram Post",
+    "role": "Hero / Promo",
+    "visual_identity": "Confident, high‑energy, creator‑focused",
+    "font_system": {
+      "headline": "Poppins 800",
+      "body": "Inter 500",
+      "cta": "Inter 700"
+    },
+    "typography_scale": {
+      "headline": "1.7x",
+      "subhead": "1.1x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "primary": "#0B5FFF",
+      "secondary": "#6A5CFF",
+      "accent": "#FFFFFF",
+      "text_dark": "#0F172A",
+      "background": "linear-gradient(135deg,#0B5FFF,#6A5CFF)"
+    },
+    "spacing": {
+      "outer": "6–8%",
+      "gaps": "1.5x",
+      "cta_margin_top": "2x"
+    },
+    "cta_style": {
+      "shape": "pill",
+      "radius": "999px",
+      "padding": "14px 26px",
+      "bg": "#FFFFFF",
+      "text": "#0F172A",
+      "weight": "700"
+    },
+    "image_treatment": "Supporting image, rounded 16px, subtle overlay",
+    "archetypes": [
+      "hero-centered",
+      "promo-split"
+    ],
+    "post_role": "Hero / Promo",
+    "brand_intent": "Confident",
+    "design_logic": "Clear hierarchy with headline dominance and deliberate whitespace",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 800, body:Inter 500, cta:Inter 700)",
+    "layout_rules": "Headline dominates; optional image in secondary zone; CTA isolated",
+    "usage": [
+      "Launch promos",
+      "Creator announcements"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-minimal-quote-luxe",
+    "name": "Minimal Quote Luxe",
+    "category": "Instagram Post",
+    "role": "Quote",
+    "visual_identity": "Calm, premium, timeless",
+    "font_system": {
+      "quote": "Playfair Display 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "quote": "1.6x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#FFFFFF",
+      "accent": "#6A5CFF"
+    },
+    "spacing": {
+      "outer": "8–10%",
+      "gaps": "1.6x"
+    },
+    "image_treatment": "None",
+    "archetypes": [
+      "quote",
+      "minimal"
+    ],
+    "post_role": "Quote",
+    "brand_intent": "Calm",
+    "design_logic": "Typography-led quote with strong whitespace and balanced line breaks",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (quote:Playfair Display 700, body:Inter 500)",
+    "layout_rules": "Centered quote block; attribution optional; no extra elements",
+    "usage": [
+      "Quotes",
+      "Thought leadership"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-image-story-pro",
+    "name": "Image Story Pro",
+    "category": "Instagram Post",
+    "role": "Storytelling",
+    "visual_identity": "Emotional, visual‑first",
+    "font_system": {
+      "headline": "Poppins 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.4x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#FFFFFF",
+      "overlay": "linear-gradient(180deg,transparent,#00000080)"
+    },
+    "spacing": {
+      "outer": "6%",
+      "gaps": "1.4x"
+    },
+    "image_treatment": "Full image with soft gradient overlay",
+    "archetypes": [
+      "image-led",
+      "narrative"
+    ],
+    "post_role": "Storytelling",
+    "brand_intent": "Emotional",
+    "design_logic": "Image leads the narrative; text overlays remain secondary and readable",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 600, body:Inter 400)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "usage": [
+      "Lifestyle posts",
+      "Storytelling"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-product-spotlight-clean",
+    "name": "Product Spotlight Clean",
+    "category": "Instagram Post",
+    "role": "Product",
+    "visual_identity": "Clean, modern, trustworthy",
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "headline": "1.5x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#0B5FFF",
+      "background": "#F8FAFC"
+    },
+    "spacing": {
+      "outer": "7%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Product centered, soft shadow",
+    "archetypes": [
+      "product-focus",
+      "clarity"
+    ],
+    "post_role": "Product",
+    "brand_intent": "Clean",
+    "design_logic": "Clear hierarchy with headline dominance and deliberate whitespace",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 700, body:Inter 500)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "usage": [
+      "Product highlights",
+      "Feature spotlights"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-before-after-proof",
+    "name": "Before / After Proof",
+    "category": "Instagram Post",
+    "role": "Transformation",
+    "visual_identity": "Clear, evidence‑based",
+    "font_system": {
+      "label": "Inter 600",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "label": "1.1x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#22C55E",
+      "background": "#FFFFFF"
+    },
+    "spacing": {
+      "outer": "6%",
+      "gaps": "1.4x"
+    },
+    "image_treatment": "Split grid, labels top",
+    "archetypes": [
+      "comparison",
+      "proof"
+    ],
+    "post_role": "Transformation",
+    "brand_intent": "Clear",
+    "design_logic": "Two-panel comparison with equal visual weight and clear labeling",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (label:Inter 600, body:Inter 500)",
+    "layout_rules": "Two columns; clear divider; max 3 points per side",
+    "usage": [
+      "Transformations",
+      "Case proof"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-expert-tip-card",
+    "name": "Expert Tip Card",
+    "category": "Instagram Post",
+    "role": "Education",
+    "visual_identity": "Helpful, authoritative",
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "headline": "1.4x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#0B5FFF",
+      "background": "#FFFFFF"
+    },
+    "spacing": {
+      "outer": "7%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Icon optional",
+    "archetypes": [
+      "tip",
+      "value"
+    ],
+    "post_role": "Education",
+    "brand_intent": "Helpful",
+    "design_logic": "Clear hierarchy with headline dominance and deliberate whitespace",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 700, body:Inter 500)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "usage": [
+      "Tips",
+      "Educational posts"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-carousel-hook-master",
+    "name": "Carousel Hook Master",
+    "category": "Instagram Post",
+    "role": "Carousel Cover",
+    "visual_identity": "Scroll‑stopping",
+    "font_system": {
+      "headline": "Poppins 800"
+    },
+    "typography_scale": {
+      "headline": "1.8x"
+    },
+    "color_system": {
+      "primary": "#6A5CFF",
+      "background": "#0F172A",
+      "text": "#FFFFFF"
+    },
+    "spacing": {
+      "outer": "6%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Optional supporting image",
+    "archetypes": [
+      "carousel-cover",
+      "hook"
+    ],
+    "post_role": "Carousel Cover",
+    "brand_intent": "Scroll‑stopping",
+    "design_logic": "Hook-first headline dominance to trigger swipe",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 800)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "usage": [
+      "Carousel cover",
+      "Series opener"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-carousel-content-flow",
+    "name": "Carousel Content Flow",
+    "category": "Instagram Post",
+    "role": "Carousel Content",
+    "visual_identity": "Clear, readable",
+    "font_system": {
+      "header": "Inter 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "background": "#F8FAFC",
+      "text": "#0F172A"
+    },
+    "spacing": {
+      "outer": "7%",
+      "gaps": "1.4x"
+    },
+    "image_treatment": "Icons or small visuals",
+    "archetypes": [
+      "carousel-content",
+      "info"
+    ],
+    "post_role": "Carousel Content",
+    "brand_intent": "Clear",
+    "design_logic": "Clear hierarchy with headline dominance and deliberate whitespace",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (header:Inter 700, body:Inter 500)",
+    "layout_rules": "Title + 3–5 bullets; consistent rhythm; margin-safe",
+    "usage": [
+      "Carousel series",
+      "Educational breakdowns"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-carousel-cta-close",
+    "name": "Carousel CTA Close",
+    "category": "Instagram Post",
+    "role": "Carousel CTA",
+    "visual_identity": "Direct, action‑oriented",
+    "font_system": {
+      "headline": "Poppins 700",
+      "cta": "Inter 700"
+    },
+    "typography_scale": {
+      "headline": "1.4x",
+      "cta": "1.0x"
+    },
+    "color_system": {
+      "primary": "#22C55E",
+      "background": "#FFFFFF"
+    },
+    "spacing": {
+      "outer": "8%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "None",
+    "archetypes": [
+      "carousel-cta",
+      "action"
+    ],
+    "post_role": "Carousel CTA",
+    "brand_intent": "Direct",
+    "design_logic": "Clear hierarchy with headline dominance and deliberate whitespace",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 700, cta:Inter 700)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "cta_style": {
+      "shape": "pill",
+      "radius": "999px",
+      "padding": "12px 22px",
+      "bg": "#FFFFFF",
+      "text": "#0F172A",
+      "weight": "700"
+    },
+    "usage": [
+      "Carousel series",
+      "Follow/Save prompts"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-high-impact-offer",
+    "name": "High‑Impact Offer",
+    "category": "Instagram Post",
+    "role": "Promotion",
+    "visual_identity": "Urgent, bold",
+    "font_system": {
+      "headline": "Poppins 800",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "headline": "1.7x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#DC2626",
+      "background": "#FFFFFF"
+    },
+    "spacing": {
+      "outer": "6%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Optional product image",
+    "archetypes": [
+      "promo",
+      "urgency"
+    ],
+    "post_role": "Promotion",
+    "brand_intent": "Urgent",
+    "design_logic": "Offer-first hierarchy with urgency cues and one clear CTA",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 800, body:Inter 500)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "cta_style": {
+      "shape": "pill",
+      "radius": "999px",
+      "padding": "12px 22px",
+      "bg": "#FFFFFF",
+      "text": "#0F172A",
+      "weight": "700"
+    },
+    "usage": [
+      "Promotions",
+      "Limited-time offers"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-brand-origin-story",
+    "name": "Brand Origin Story",
+    "category": "Instagram Post",
+    "role": "Brand Story",
+    "visual_identity": "Authentic, warm",
+    "font_system": {
+      "headline": "Poppins 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "background": "#F8FAFC",
+      "text": "#0F172A"
+    },
+    "spacing": {
+      "outer": "8%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Image optional",
+    "archetypes": [
+      "story",
+      "brand"
+    ],
+    "post_role": "Brand Story",
+    "brand_intent": "Authentic",
+    "design_logic": "Clear hierarchy with headline dominance and deliberate whitespace",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 600, body:Inter 400)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "usage": [
+      "Brand storytelling",
+      "Founder posts"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-testimonial-authority",
+    "name": "Testimonial Authority",
+    "category": "Instagram Post",
+    "role": "Social Proof",
+    "visual_identity": "Trustworthy, clean",
+    "font_system": {
+      "quote": "Inter 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "quote": "1.2x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "spacing": {
+      "outer": "7%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Avatar optional",
+    "archetypes": [
+      "testimonial",
+      "trust"
+    ],
+    "post_role": "Social Proof",
+    "brand_intent": "Trustworthy",
+    "design_logic": "Clear hierarchy with headline dominance and deliberate whitespace",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (quote:Inter 600, body:Inter 400)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "usage": [
+      "Testimonials",
+      "Social proof"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-stat-power-post",
+    "name": "Stat Power Post",
+    "category": "Instagram Post",
+    "role": "Metric",
+    "visual_identity": "Bold, numeric‑first",
+    "font_system": {
+      "metric": "Poppins 800",
+      "label": "Inter 500"
+    },
+    "typography_scale": {
+      "metric": "2.0x",
+      "label": "1.0x"
+    },
+    "color_system": {
+      "background": "#0F172A",
+      "text": "#FFFFFF"
+    },
+    "spacing": {
+      "outer": "10%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "None",
+    "archetypes": [
+      "metric",
+      "impact"
+    ],
+    "post_role": "Metric",
+    "brand_intent": "Bold",
+    "design_logic": "Single metric isolation for instant comprehension",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (metric:Poppins 800, label:Inter 500)",
+    "layout_rules": "One number + one label only; centered focus",
+    "usage": [
+      "Stats",
+      "Credibility posts"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-comparison-clear",
+    "name": "Comparison Clear",
+    "category": "Instagram Post",
+    "role": "Comparison",
+    "visual_identity": "Balanced, logical",
+    "font_system": {
+      "header": "Inter 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "background": "#FFFFFF",
+      "accent": "#6A5CFF"
+    },
+    "spacing": {
+      "outer": "7%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Icons optional",
+    "archetypes": [
+      "comparison",
+      "contrast"
+    ],
+    "post_role": "Comparison",
+    "brand_intent": "Balanced",
+    "design_logic": "Two-panel comparison with equal visual weight and clear labeling",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (header:Inter 700, body:Inter 500)",
+    "layout_rules": "Two columns; clear divider; max 3 points per side",
+    "usage": [
+      "Comparisons",
+      "Decision support"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-feature-grid-pro",
+    "name": "Feature Grid Pro",
+    "category": "Instagram Post",
+    "role": "Features",
+    "visual_identity": "Structured, clear",
+    "font_system": {
+      "header": "Inter 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "background": "#F8FAFC",
+      "accent": "#0B5FFF"
+    },
+    "spacing": {
+      "outer": "7%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Icons",
+    "archetypes": [
+      "features",
+      "structure"
+    ],
+    "post_role": "Features",
+    "brand_intent": "Structured",
+    "design_logic": "Grid-based feature blocks for fast scanning",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (header:Inter 700, body:Inter 500)",
+    "layout_rules": "3–4 feature tiles; consistent icon size; equal padding",
+    "usage": [
+      "Feature breakdowns",
+      "Service lists"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-brand-mark-minimal",
+    "name": "Brand Mark Minimal",
+    "category": "Instagram Post",
+    "role": "Branding",
+    "visual_identity": "Minimal, premium",
+    "font_system": {
+      "brand": "Poppins 700"
+    },
+    "typography_scale": {
+      "brand": "1.2x"
+    },
+    "color_system": {
+      "background": "#FFFFFF",
+      "text": "#0F172A"
+    },
+    "spacing": {
+      "outer": "12%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Logo only",
+    "archetypes": [
+      "brand",
+      "minimal"
+    ],
+    "post_role": "Branding",
+    "brand_intent": "Minimal",
+    "design_logic": "Extreme restraint for brand recognition; no secondary clutter",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (brand:Poppins 700)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "usage": [
+      "Brand presence",
+      "Logo/mark posts"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-event-webinar-pro",
+    "name": "Event / Webinar Pro",
+    "category": "Instagram Post",
+    "role": "Announcement",
+    "visual_identity": "Clear, informative",
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "headline": "1.4x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "background": "#FFFFFF",
+      "accent": "#6A5CFF"
+    },
+    "spacing": {
+      "outer": "7%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Speaker image optional",
+    "archetypes": [
+      "event",
+      "info"
+    ],
+    "post_role": "Announcement",
+    "brand_intent": "Clear",
+    "design_logic": "Date/time/topic hierarchy; information-first",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 700, body:Inter 500)",
+    "layout_rules": "Top: topic; middle: date/time; bottom: CTA or link cue",
+    "usage": [
+      "Events",
+      "Webinars"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-community-question",
+    "name": "Community Question",
+    "category": "Instagram Post",
+    "role": "Engagement",
+    "visual_identity": "Friendly, conversational",
+    "font_system": {
+      "headline": "Poppins 600",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "headline": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "background": "#F8FAFC",
+      "accent": "#22C55E"
+    },
+    "spacing": {
+      "outer": "8%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Emoji or icon optional",
+    "archetypes": [
+      "engagement",
+      "community"
+    ],
+    "post_role": "Engagement",
+    "brand_intent": "Friendly",
+    "design_logic": "Question-first layout to invite replies and comments",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 600, body:Inter 500)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "usage": [
+      "Engagement posts",
+      "Community prompts"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-mood-aesthetic",
+    "name": "Mood Aesthetic",
+    "category": "Instagram Post",
+    "role": "Aesthetic",
+    "visual_identity": "Vibe‑driven, expressive",
+    "font_system": {
+      "caption": "Inter 400"
+    },
+    "typography_scale": {
+      "caption": "1.0x"
+    },
+    "color_system": {
+      "background": "image"
+    },
+    "spacing": {
+      "outer": "0%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "Full‑bleed image",
+    "archetypes": [
+      "aesthetic",
+      "emotion"
+    ],
+    "post_role": "Aesthetic",
+    "brand_intent": "Vibe‑driven",
+    "design_logic": "Full-bleed visual sets the mood; caption is minimal and secondary",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (caption:Inter 400)",
+    "layout_rules": "Full-bleed image; caption optional, bottom-corner safe",
+    "usage": [
+      "General Instagram posts"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  },
+  {
+    "id": "ig-follow-save-cta",
+    "name": "Follow / Save CTA",
+    "category": "Instagram Post",
+    "role": "Growth CTA",
+    "visual_identity": "Direct, simple",
+    "font_system": {
+      "headline": "Poppins 700"
+    },
+    "typography_scale": {
+      "headline": "1.4x"
+    },
+    "color_system": {
+      "background": "#0B5FFF",
+      "text": "#FFFFFF"
+    },
+    "spacing": {
+      "outer": "8%",
+      "gaps": "1.5x"
+    },
+    "image_treatment": "None",
+    "archetypes": [
+      "cta",
+      "growth"
+    ],
+    "post_role": "Growth CTA",
+    "brand_intent": "Direct",
+    "design_logic": "Clear hierarchy with headline dominance and deliberate whitespace",
+    "font_philosophy": "Intentional pairing for hierarchy and legibility (headline:Poppins 700)",
+    "layout_rules": "One primary focal block; secondary details reduced",
+    "cta_style": {
+      "shape": "pill",
+      "radius": "999px",
+      "padding": "12px 22px",
+      "bg": "#FFFFFF",
+      "text": "#0F172A",
+      "weight": "700"
+    },
+    "usage": [
+      "Growth posts",
+      "Follow/Save CTA"
+    ],
+    "rules": [
+      "Mobile-first readability",
+      "No clutter",
+      "Strong hierarchy"
+    ]
+  }
+]
