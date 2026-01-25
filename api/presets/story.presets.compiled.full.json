@@ -1,0 +1,902 @@
+[
+  {
+    "id": "creator-intro",
+    "name": "Creator Intro",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Creator Intro story preset",
+      "feels_like": "Creator Intro"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Clean contrast; Neutral or brand color"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Follow / react"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "bold-text-hook",
+    "name": "Bold Text Hook",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Bold Text Hook story preset",
+      "feels_like": "Bold Text Hook"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "High contrast only"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Optional (tap / react)"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "question-hook",
+    "name": "Question Hook",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Question Hook story preset",
+      "feels_like": "Question Hook"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "High contrast; Neutral background preferred"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Tap / reply"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "shock-statement",
+    "name": "Shock Statement",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Shock Statement story preset",
+      "feels_like": "Shock Statement"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Aggressive contrast; Bold colors allowed"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Optional swipe"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "quote-thought",
+    "name": "Quote / Thought",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Quote / Thought story preset",
+      "feels_like": "Quote / Thought"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Calm contrast; Soft background allowed"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "React / share"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "daily-update",
+    "name": "Daily Update",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Daily Update story preset",
+      "feels_like": "Daily Update"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Natural tones; Friendly contrast"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Tap / reply"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "product-promo",
+    "name": "Product Promo",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Product Promo story preset",
+      "feels_like": "Product Promo"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Brand colors allowed; High contrast mandatory"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Shop now / Learn more"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "limited-offer",
+    "name": "Limited Offer",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Limited Offer story preset",
+      "feels_like": "Limited Offer"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "High-energy contrast; Bold colors allowed"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Swipe / Tap now"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "link-swipe-cta",
+    "name": "Link / Swipe CTA",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Link / Swipe CTA story preset",
+      "feels_like": "Link / Swipe CTA"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "High contrast; Simple background"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Swipe up / Tap link"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "tip-hack",
+    "name": "Tip / Hack",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Tip / Hack story preset",
+      "feels_like": "Tip / Hack"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Clean contrast; Neutral background preferred"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Save / Share"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "before-after",
+    "name": "Before / After",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Before / After story preset",
+      "feels_like": "Before / After"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Neutral with contrast accents"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Swipe / Learn more"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "step-indicator",
+    "name": "Step Indicator",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Step Indicator story preset",
+      "feels_like": "Step Indicator"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Calm contrast; Consistent across series"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Next / Tap"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "testimonial",
+    "name": "Testimonial",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Testimonial story preset",
+      "feels_like": "Testimonial"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Calm contrast; Neutral background preferred"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Swipe / Learn more"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "results-metrics",
+    "name": "Results / Metrics",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Results / Metrics story preset",
+      "feels_like": "Results / Metrics"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "High contrast; Clean numeric emphasis"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Tap / Learn more"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "user-mention",
+    "name": "User Mention",
+    "category": "Story",
+    "visual_identity": {
+      "description": "User Mention story preset",
+      "feels_like": "User Mention"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Friendly contrast; Tag-safe background"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Reply / React"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "mood-story",
+    "name": "Mood Story",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Mood Story story preset",
+      "feels_like": "Mood Story"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Soft gradients or muted tones"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Optional (react)"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "announcement",
+    "name": "Announcement",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Announcement story preset",
+      "feels_like": "Announcement"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Calm authority; Brand colors allowed"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Learn more / tap"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "universal-story",
+    "name": "Universal Story",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Universal Story story preset",
+      "feels_like": "Universal Story"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Neutral, adaptable; Brand-safe"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Optional"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "series-cover",
+    "name": "Series Cover",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Series Cover story preset",
+      "feels_like": "Series Cover"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Consistent brand palette; High contrast title"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Tap next"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  },
+  {
+    "id": "behind-the-scenes",
+    "name": "Behind the Scenes",
+    "category": "Story",
+    "visual_identity": {
+      "description": "Behind the Scenes story preset",
+      "feels_like": "Behind the Scenes"
+    },
+    "font_system": {
+      "headline": "Poppins (800)",
+      "body": "Inter (500)"
+    },
+    "typography_scale": {
+      "headline": "1.8x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "notes": [
+        "Natural tones; Low polish allowed"
+      ]
+    },
+    "spacing_rhythm": {
+      "top_reserved": "12% UI",
+      "bottom_reserved": "18% CTA"
+    },
+    "cta": {
+      "type": "Reply / react"
+    },
+    "image_treatment": {
+      "notes": []
+    },
+    "archetypes": {
+      "allowed": [
+        "headline-dominant",
+        "creator-intro",
+        "promo-split"
+      ],
+      "blocked": [
+        "dense-grid",
+        "multi-column"
+      ]
+    },
+    "scalability": "Content swap while preserving intent"
+  }
+]
