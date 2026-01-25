@@ -1,4 +1,10 @@
 
+// PATCH: Global sandboxing — legacy style engine is opt-in only.
+function shouldApplyLegacyStyle(category){
+  return false;
+}
+
+
 // style-engine.js (CommonJS)
 // Decides HOW elements should look
 
@@ -12,7 +18,7 @@ function applyStyle({ category, archetype, elementType }) {
     imageFilter: null
   };
 
-  if (category !== "YouTube Thumbnail") return style;
+  if(!shouldApplyLegacyStyle(category)) return style;
 
   if (elementType === "headline") {
     if (archetype === "AUTHORITY_EXPERT") {
