@@ -20,6 +20,75 @@ try {
 }
 
 
+// ---- Design Preset Integration (Visual DNA Authority) ----
+function inferStyleProfileFromPreset(preset){
+  if(!preset) return null;
+  const id = String(preset.id || preset.name || '').toLowerCase();
+  if(id.includes('bold') || id.includes('creator') || id.includes('thumbnail')) return 'bold';
+  if(id.includes('professional') || id.includes('resume') || id.includes('corporate')) return 'professional';
+  if(id.includes('minimal') || id.includes('clean')) return 'clean';
+  if(id.includes('expressive') || id.includes('vibrant') || id.includes('color')) return 'expressive';
+  return null;
+}
+
+function injectDesignPresetIntoContract(contract, preset){
+  if(!contract || !preset) return;
+  contract.brand = contract.brand || {};
+  // stash original preset object for P9.3 hook
+  contract.brand.__designPreset = preset;
+  // ensure style_profile exists for P9.3 stylePresets
+  if(!preset.style_profile && !preset.styleProfile){
+    const sp = inferStyleProfileFromPreset(preset);
+    if(sp) preset.style_profile = sp;
+  }
+}
+
+let __selectDesignPreset = null;
+let __selectDesignPresetTried = false;
+function getSelectDesignPreset(){
+  try{
+    if (typeof __selectDesignPreset === "function") return __selectDesignPreset;
+    if (__selectDesignPresetTried) return null;
+    __selectDesignPresetTried = true;
+
+    // /api/generate.js -> /api/presets/design-preset-selector.js
+    try{
+      // eslint-disable-next-line global-require
+      const mod = require("./presets/design-preset-selector.js");
+      __selectDesignPreset = (mod && typeof mod.selectDesignPreset === "function") ? mod.selectDesignPreset : null;
+      if(typeof __selectDesignPreset === "function") return __selectDesignPreset;
+    }catch(_){}
+
+    // Local/dev flat fallback
+    try{
+      // eslint-disable-next-line global-require
+      const mod = require("../api/presets/design-preset-selector.js");
+      __selectDesignPreset = (mod && typeof mod.selectDesignPreset === "function") ? mod.selectDesignPreset : null;
+      if(typeof __selectDesignPreset === "function") return __selectDesignPreset;
+    }catch(_){}
+
+    return null;
+  }catch(_){ return null; }
+}
+
+// P9 engines (optional; if missing, generation still works)
+function loadEngine(paths){
+  for(const p of paths){
+    try{
+      // eslint-disable-next-line global-require
+      const mod = require(p);
+      if(mod) return mod;
+    }catch(_){}
+  }
+  return null;
+}
+
+const __ElemNorm = loadEngine(["../element-normalization-engine.js","./element-normalization-engine.js"]);
+const __VisHierarchy = loadEngine(["../visual-hierarchy-engine.js","./visual-hierarchy-engine.js"]);
+const __StyleEnforcer = loadEngine(["../style-enforcement-engine.js","./style-enforcement-engine.js"]);
+
+
+
 
 
 // Layout Family selector is optional at runtime (P7).
@@ -125,77 +194,6 @@ async function getNormalizeCategory() {
   }
 }
 
-
-
-// Template Materializer (authority choke point)
-// - Optional module. If present, we run deterministic output through it so UI never sees partial templates.
-let __materializeTemplate = null;
-let __materializeTemplateTried = false;
-function getMaterializeTemplate(){
-  try{
-    if(typeof __materializeTemplate === "function") return __materializeTemplate;
-    if(__materializeTemplateTried) return null;
-    __materializeTemplateTried = true;
-
-    // Prefer an already-attached global (browser/lab)
-    try{
-      if(typeof globalThis !== "undefined" && typeof globalThis.materializeTemplate === "function"){
-        __materializeTemplate = globalThis.materializeTemplate;
-        return __materializeTemplate;
-      }
-    }catch(_){}
-
-    // Node/serverless module paths
-    if(typeof require === "function"){
-      try{
-        const mod = require("../template-materializer.js");
-        if(mod && typeof mod.materializeTemplate === "function"){
-          __materializeTemplate = mod.materializeTemplate;
-          return __materializeTemplate;
-        }
-      }catch(_){}
-      try{
-        const mod = require("./template-materializer.js");
-        if(mod && typeof mod.materializeTemplate === "function"){
-          __materializeTemplate = mod.materializeTemplate;
-          return __materializeTemplate;
-        }
-      }catch(_){}
-    }
-  }catch(_){}
-  return null;
-}
-
-
-// ------------------------------
-// Design Preset Selector (Instagram / Visual DNA)
-// Optional, additive. Never breaks generation if missing.
-// ------------------------------
-let __selectDesignPreset = null;
-let __selectDesignPresetTried = false;
-function getSelectDesignPreset(){
-  try{
-    if (typeof __selectDesignPreset === "function") return __selectDesignPreset;
-    if (__selectDesignPresetTried) return null;
-    __selectDesignPresetTried = true;
-
-    try{
-      const mod = require("../design-preset-selector.js");
-      __selectDesignPreset = (mod && typeof mod.selectDesignPreset === "function") ? mod.selectDesignPreset : null;
-      if (typeof __selectDesignPreset === "function") return __selectDesignPreset;
-    }catch(_){}
-
-    try{
-      const mod = require("./design-preset-selector.js");
-      __selectDesignPreset = (mod && typeof mod.selectDesignPreset === "function") ? mod.selectDesignPreset : null;
-      if (typeof __selectDesignPreset === "function") return __selectDesignPreset;
-    }catch(_){}
-
-    return null;
-  }catch(_){
-    return null;
-  }
-}
 
 // Purpose: ALWAYS return REAL templates (canvas + elements) compatible with index.html preview.
 // Notes:
@@ -858,7 +856,7 @@ const brandInfo = brandFromPrompt(prompt);
   return out;
 }
 
-function legacyMaterializeTemplate({ prompt, category, style, i, seed, variantIndex, familyId, headline, subhead, cta }) {
+function materializeTemplate({ prompt, category, style, i, seed, variantIndex, familyId, headline, subhead, cta }) {
   const _i = (Number.isFinite(Number(i)) ? Number(i) : (Number.isFinite(Number(variantIndex)) ? Number(variantIndex) : 1));
 const baseSeed = Number.isFinite(Number(seed))
   ? (Number(seed) >>> 0)
@@ -886,39 +884,6 @@ const size = CATEGORIES[category] || CATEGORIES["Instagram Post"];
     _palette: pal,
     _seed: baseSeed
 };
-}
-
-function materializeTemplate(args){
-  // Keep existing deterministic visuals, but force-finalize through the authority materializer when available.
-  const fn = getMaterializeTemplate();
-  const det = legacyMaterializeTemplate(args || {});
-  if(typeof fn !== "function") return det;
-
-  try{
-    const out = fn({
-      template: det,
-      canvas: det && det.canvas ? det.canvas : (args && args.canvas ? args.canvas : null),
-      category: args && args.category,
-      style: args && args.style,
-      prompt: args && args.prompt,
-      seed: args && args.seed,
-      headline: args && args.headline,
-      subhead: args && args.subhead,
-      cta: args && args.cta,
-      notes: args && args.notes
-    });
-
-    // Preserve deterministic metadata that downstream callers rely on.
-    return Object.assign({}, det, out || {}, {
-      canvas: (out && out.canvas) ? out.canvas : det.canvas,
-      elements: (out && Array.isArray(out.elements) && out.elements.length) ? out.elements : det.elements,
-      _layout: det._layout,
-      _palette: det._palette,
-      _seed: det._seed
-    });
-  }catch(_){
-    return det;
-  }
 }
 
 
@@ -1021,14 +986,6 @@ async function generateTemplates(payload) {
   const templates = [];
   for (let i = 0; i < count; i++) {
     const seed = stableHash32(category + "|" + style + "|" + prompt + "|" + String(i + 1));
-    const presetSelector = getSelectDesignPreset();
-    let selectedPreset = null;
-    try{
-      if (typeof presetSelector === "function") {
-        selectedPreset = presetSelector({ category, prompt, style });
-      }
-    }catch(_){}
-
     const out = spine.createTemplateFromInput({
       category,
       style,
@@ -1057,49 +1014,63 @@ const brandInfo = brandFromPrompt(prompt);
     }
 
 
-    const contract = doc && doc.contract ? doc.contract : (tpl.contract || null);
+    let contract = doc && doc.contract ? doc.contract : (tpl.contract || null);
     const content = doc && doc.content ? doc.content : (tpl.content || null);
-    templates.push(Object.assign({}, tpl, {
-      i: i + 1,
-      doc,
-      contract,
-      content,
-      meta: Object.assign({}, (tpl && tpl.meta) || {}, selectedPreset ? { designPresetId: selectedPreset.id } : {})
-    }));
-  }
+    
+    // ---- Premium Design Preset (Visual DNA) ----
+    const selectPreset = getSelectDesignPreset();
+    const archetype = (tpl && (tpl.archetype || tpl.layoutFamilyCanonical || tpl.layoutFamily || tpl.layout_family)) || (doc && doc.layout && (doc.layout.familyId || doc.layout.id)) || "";
+    const preset = (typeof selectPreset === "function") ? selectPreset({
+      category,
+      archetype,
+      index: i,
+      seed,
+      prompt,
+      style
+    }) : null;
 
+    if (preset) {
+      // Attach for debugging + downstream engines
+      try {
+        tpl.meta = tpl.meta || {};
+        tpl.meta.designPreset = preset;
+      } catch (_) {}
 
-  // ---- UI FLATTENING (FINAL AUTHORITY) ----
-  // Guarantee UI always receives flat templates: { canvas, elements[] } at top-level.
-  const flat = [];
-  for (const t of templates) {
-    if (!t) continue;
-    // Lift from nested shapes if present
-    const elements =
-      Array.isArray(t.elements) && t.elements.length ? t.elements :
-      (t.template && Array.isArray(t.template.elements) ? t.template.elements : null);
-    const canvas =
-      t.canvas ||
-      (t.template && t.template.canvas) ||
-      (t.contract && t.contract.canvas) ||
-      null;
+      try { injectDesignPresetIntoContract(contract, preset); } catch (_) {}
 
-    if (elements && canvas) {
-      flat.push({ ...t, elements, canvas });
-    } else {
-      // Absolute safety: force minimal renderable
-      flat.push({
-        ...t,
-        canvas: canvas || { w: 1080, h: 1080 },
-        elements: elements || [
-          { type: "bg", x: 0, y: 0, w: 1080, h: 1080, fill: "#0b1020" }
-        ]
-      });
+      // Re-run P9 style pipeline with preset influence (safe + deterministic)
+      try {
+        const canvas = (contract && contract.canvas) || tpl.canvas || null;
+        if (canvas && contract) contract.canvas = canvas;
+
+        if (contract && __ElemNorm && typeof __ElemNorm.normalizeElements === "function") {
+          contract.elements = __ElemNorm.normalizeElements(contract.elements, {
+            category,
+            canvas: contract.canvas,
+            seed
+          });
+        }
+        if (contract && __VisHierarchy && typeof __VisHierarchy.applyVisualHierarchy === "function") {
+          contract = __VisHierarchy.applyVisualHierarchy(contract);
+        }
+        if (contract && __StyleEnforcer && typeof __StyleEnforcer.applyStyleEnforcement === "function") {
+          contract = __StyleEnforcer.applyStyleEnforcement(contract);
+        }
+
+        // Sync back to template (preview consumes top-level {canvas,elements})
+        if (contract && Array.isArray(contract.elements) && contract.canvas) {
+          tpl.elements = contract.elements;
+          tpl.canvas = contract.canvas;
+          tpl.contract = contract;
+        }
+      } catch (_) {}
     }
-  }
-  return flat;
-}
 
+templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
+  }
+
+  return templates;
+}
 
 module.exports = handler;
 module.exports.generateTemplates = generateTemplates;
