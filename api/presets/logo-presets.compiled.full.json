@@ -1,0 +1,577 @@
+[
+  {
+    "id": "wordmark-clean",
+    "name": "Wordmark Clean",
+    "category": "Logo",
+    "logo_type": "Wordmark (text-only)",
+    "brand_intent": "Timeless, professional, universal",
+    "design_logic": "Typography-driven, no symbols",
+    "font_philosophy": "Sans-serif, medium weight, high legibility",
+    "geometry": "Horizontal text flow",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Web headers",
+      "Print",
+      "Corporate identity"
+    ],
+    "rules": [
+      "No outlines",
+      "No gradients",
+      "Scales cleanly to 16px"
+    ],
+    "minimum_size": "16px",
+    "archetypes": [
+      "wordmark",
+      "clean"
+    ]
+  },
+  {
+    "id": "wordmark-bold",
+    "name": "Wordmark Bold",
+    "category": "Logo",
+    "logo_type": "Wordmark (bold typography)",
+    "brand_intent": "Strong, confident, high-presence",
+    "design_logic": "Heavy typography, compact spacing",
+    "font_philosophy": "Sans-serif, bold weight",
+    "geometry": "Horizontal, compact",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Challenger brands",
+      "Tech startups"
+    ],
+    "rules": [
+      "No effects",
+      "No shadows",
+      "High contrast only"
+    ],
+    "minimum_size": "18px",
+    "archetypes": [
+      "wordmark",
+      "bold"
+    ]
+  },
+  {
+    "id": "lettermark",
+    "name": "Lettermark",
+    "category": "Logo",
+    "logo_type": "Lettermark (initials)",
+    "brand_intent": "Compact, scalable, modern",
+    "design_logic": "Initial-based, icon-ready",
+    "font_philosophy": "Sans-serif, semi-bold",
+    "geometry": "Square-friendly, centered",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Apps",
+      "Avatars",
+      "Favicons"
+    ],
+    "rules": [
+      "Square geometry",
+      "Centered balance"
+    ],
+    "minimum_size": "16px",
+    "archetypes": [
+      "lettermark",
+      "compact"
+    ]
+  },
+  {
+    "id": "abstract-symbol",
+    "name": "Abstract Symbol",
+    "category": "Logo",
+    "logo_type": "Symbol-only (abstract)",
+    "brand_intent": "Modern, tech-forward, conceptual",
+    "design_logic": "Non-literal abstraction, negative space",
+    "font_philosophy": "N/A",
+    "geometry": "Grid-aligned freeform",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Tech brands",
+      "Startups",
+      "Apps"
+    ],
+    "rules": [
+      "No gradients",
+      "No fine details",
+      "Readable at 24px"
+    ],
+    "minimum_size": "24px",
+    "archetypes": [
+      "abstract",
+      "symbol"
+    ]
+  },
+  {
+    "id": "geometric-symbol",
+    "name": "Geometric Symbol",
+    "category": "Logo",
+    "logo_type": "Symbol-only (geometric)",
+    "brand_intent": "Modern, stable, structured",
+    "design_logic": "Pure geometry, symmetry-first",
+    "font_philosophy": "N/A",
+    "geometry": "Circle or square base, mathematical balance",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Corporate",
+      "SaaS",
+      "Fintech"
+    ],
+    "rules": [
+      "Perfect symmetry",
+      "Even stroke weight"
+    ],
+    "minimum_size": "20px",
+    "archetypes": [
+      "geometric",
+      "symbol"
+    ]
+  },
+  {
+    "id": "minimal-icon",
+    "name": "Minimal Icon",
+    "category": "Logo",
+    "logo_type": "Icon-first",
+    "brand_intent": "Product-first, app-ready",
+    "design_logic": "Extreme simplification, icon grid",
+    "font_philosophy": "N/A",
+    "geometry": "Square-safe, centered",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Apps",
+      "Dashboards",
+      "Favicons"
+    ],
+    "rules": [
+      "No outlines",
+      "Bold silhouette only"
+    ],
+    "minimum_size": "16px",
+    "archetypes": [
+      "icon",
+      "minimal"
+    ]
+  },
+  {
+    "id": "monogram-classic",
+    "name": "Monogram Classic",
+    "category": "Logo",
+    "logo_type": "Monogram",
+    "brand_intent": "Elegant, personal, timeless",
+    "design_logic": "Traditional balance",
+    "font_philosophy": "Serif or refined sans-serif",
+    "geometry": "Centered, balanced overlap",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Personal brands",
+      "Luxury services"
+    ],
+    "rules": [
+      "No effects",
+      "Strong letter contrast"
+    ],
+    "minimum_size": "18px",
+    "archetypes": [
+      "monogram",
+      "classic"
+    ]
+  },
+  {
+    "id": "monogram-modern",
+    "name": "Monogram Modern",
+    "category": "Logo",
+    "logo_type": "Monogram (modern)",
+    "brand_intent": "Clean, contemporary, creator-friendly",
+    "design_logic": "Geometric letterforms",
+    "font_philosophy": "Sans-serif, even strokes",
+    "geometry": "Grid-based, square-friendly",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Creators",
+      "Startups"
+    ],
+    "rules": [
+      "No decoration",
+      "Even stroke weight"
+    ],
+    "minimum_size": "16px",
+    "archetypes": [
+      "monogram",
+      "modern"
+    ]
+  },
+  {
+    "id": "signature-style",
+    "name": "Signature-Style",
+    "category": "Logo",
+    "logo_type": "Name-based signature",
+    "brand_intent": "Personal, expressive, identity-forward",
+    "design_logic": "Handwritten feel, readable strokes",
+    "font_philosophy": "Script-like, controlled",
+    "geometry": "Horizontal flow",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Personal brands",
+      "Artists"
+    ],
+    "rules": [
+      "Must remain legible",
+      "No thin strokes"
+    ],
+    "minimum_size": "24px",
+    "archetypes": [
+      "signature",
+      "personal"
+    ]
+  },
+  {
+    "id": "tech-logo",
+    "name": "Tech Logo",
+    "category": "Logo",
+    "logo_type": "Symbol + wordmark (optional)",
+    "brand_intent": "Innovation, precision, future-ready",
+    "design_logic": "Sharp geometry, forward motion",
+    "font_philosophy": "Sans-serif, modern",
+    "geometry": "Grid-based, angular or rounded-tech",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "SaaS",
+      "AI startups",
+      "Tech products"
+    ],
+    "rules": [
+      "Readable at small sizes",
+      "No gradient dependency"
+    ],
+    "minimum_size": "20px",
+    "archetypes": [
+      "tech",
+      "modern"
+    ]
+  },
+  {
+    "id": "finance-corporate",
+    "name": "Finance / Corporate",
+    "category": "Logo",
+    "logo_type": "Wordmark or symbol-wordmark",
+    "brand_intent": "Trust, stability, authority",
+    "design_logic": "Conservative typography",
+    "font_philosophy": "Sans-serif, balanced",
+    "geometry": "Horizontal, stable baseline",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Finance firms",
+      "Legal entities",
+      "Enterprises"
+    ],
+    "rules": [
+      "No playful shapes",
+      "No experimental forms"
+    ],
+    "minimum_size": "22px",
+    "archetypes": [
+      "corporate",
+      "finance"
+    ]
+  },
+  {
+    "id": "creative-studio",
+    "name": "Creative Studio",
+    "category": "Logo",
+    "logo_type": "Wordmark or symbol-led",
+    "brand_intent": "Creative, distinctive, controlled",
+    "design_logic": "Custom typography feel",
+    "font_philosophy": "Custom sans-serif",
+    "geometry": "Freeform but balanced",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Agencies",
+      "Studios",
+      "Creative teams"
+    ],
+    "rules": [
+      "Distinctive but simple",
+      "Must scale cleanly"
+    ],
+    "minimum_size": "20px",
+    "archetypes": [
+      "creative",
+      "studio"
+    ]
+  },
+  {
+    "id": "luxury-minimal-logo",
+    "name": "Luxury Minimal",
+    "category": "Logo",
+    "logo_type": "Wordmark or symbol-wordmark",
+    "brand_intent": "Premium, refined, timeless",
+    "design_logic": "Extreme restraint",
+    "font_philosophy": "High contrast typography",
+    "geometry": "Wide spacing, perfect alignment",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Luxury brands",
+      "Premium services"
+    ],
+    "rules": [
+      "No decorative elements",
+      "Whitespace mandatory"
+    ],
+    "minimum_size": "22px",
+    "archetypes": [
+      "luxury",
+      "minimal"
+    ]
+  },
+  {
+    "id": "bold-brand",
+    "name": "Bold Brand",
+    "category": "Logo",
+    "logo_type": "Wordmark or symbol",
+    "brand_intent": "High-impact, challenger",
+    "design_logic": "Heavy strokes, compressed spacing",
+    "font_philosophy": "Sans-serif, heavy weight",
+    "geometry": "Dense, strong baseline",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Challenger brands",
+      "Marketing products"
+    ],
+    "rules": [
+      "No subtlety",
+      "Immediate recognition"
+    ],
+    "minimum_size": "20px",
+    "archetypes": [
+      "bold",
+      "challenger"
+    ]
+  },
+  {
+    "id": "friendly-brand",
+    "name": "Friendly Brand",
+    "category": "Logo",
+    "logo_type": "Wordmark or symbol",
+    "brand_intent": "Approachable, warm, community-first",
+    "design_logic": "Rounded forms, soft geometry",
+    "font_philosophy": "Rounded sans-serif",
+    "geometry": "Balanced curves",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Apps",
+      "Community brands",
+      "Consumer products"
+    ],
+    "rules": [
+      "No sharp edges",
+      "Readable small"
+    ],
+    "minimum_size": "18px",
+    "archetypes": [
+      "friendly",
+      "approachable"
+    ]
+  },
+  {
+    "id": "badge-seal",
+    "name": "Badge / Seal",
+    "category": "Logo",
+    "logo_type": "Badge / Seal",
+    "brand_intent": "Authority, heritage, trust",
+    "design_logic": "Contained stamp-like shape",
+    "font_philosophy": "Classic sans-serif",
+    "geometry": "Circular or shield",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Certifications",
+      "Communities",
+      "Heritage brands"
+    ],
+    "rules": [
+      "Must work solid black",
+      "No fine details"
+    ],
+    "minimum_size": "24px",
+    "archetypes": [
+      "badge",
+      "seal"
+    ]
+  },
+  {
+    "id": "emblem",
+    "name": "Emblem",
+    "category": "Logo",
+    "logo_type": "Emblem",
+    "brand_intent": "Institutional, formal, established",
+    "design_logic": "Text and symbol inseparable",
+    "font_philosophy": "Formal sans-serif",
+    "geometry": "Shield or contained form",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Education",
+      "Clubs",
+      "Organizations"
+    ],
+    "rules": [
+      "Clear interior spacing",
+      "Readable small"
+    ],
+    "minimum_size": "24px",
+    "archetypes": [
+      "emblem",
+      "institutional"
+    ]
+  },
+  {
+    "id": "mascot-light",
+    "name": "Mascot-Light",
+    "category": "Logo",
+    "logo_type": "Mascot (simplified)",
+    "brand_intent": "Playful, friendly, youth-oriented",
+    "design_logic": "Character-inspired, icon-safe",
+    "font_philosophy": "N/A",
+    "geometry": "Rounded, silhouette-first",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Youth brands",
+      "Apps",
+      "Community platforms"
+    ],
+    "rules": [
+      "No micro-details",
+      "Solid icon safe"
+    ],
+    "minimum_size": "24px",
+    "archetypes": [
+      "mascot",
+      "friendly"
+    ]
+  },
+  {
+    "id": "universal-adaptive",
+    "name": "Universal Adaptive",
+    "category": "Logo",
+    "logo_type": "Modular system",
+    "brand_intent": "Flexible, scalable, cross-platform",
+    "design_logic": "Core symbol + optional wordmark",
+    "font_philosophy": "Sans-serif modular",
+    "geometry": "Grid-based, modular",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Multi-platform brands",
+      "Products"
+    ],
+    "rules": [
+      "Symbol must work standalone",
+      "Wordmark optional"
+    ],
+    "minimum_size": "16px",
+    "archetypes": [
+      "adaptive",
+      "universal"
+    ]
+  },
+  {
+    "id": "retro-vintage",
+    "name": "Retro / Vintage",
+    "category": "Logo",
+    "logo_type": "Wordmark or badge",
+    "brand_intent": "Nostalgic, authentic, character-rich",
+    "design_logic": "Vintage influence with modern legibility",
+    "font_philosophy": "Classic serif/sans mix",
+    "geometry": "Classic proportions",
+    "color_system": {
+      "primary": "#020617",
+      "background": "transparent",
+      "one_color_fallback": true
+    },
+    "usage": [
+      "Lifestyle brands",
+      "Food & beverage"
+    ],
+    "rules": [
+      "Avoid excessive ornament",
+      "Must scale cleanly"
+    ],
+    "minimum_size": "22px",
+    "archetypes": [
+      "retro",
+      "vintage"
+    ]
+  }
+]
