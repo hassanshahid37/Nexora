@@ -1,0 +1,960 @@
+[
+  {
+    "id": "corporate-service-flyer",
+    "name": "Corporate Service Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Professional, credible, calm authority.",
+      "feels_like": "This business is trustworthy."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "subhead": "Inter 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.6x base",
+      "subhead": "1.2x",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#FFFFFF",
+      "accent": "#2563EB",
+      "divider": "#E5E7EB"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "section_gap": "2.5x base",
+      "cta_margin_top": "2x base"
+    },
+    "cta": {
+      "style": "Rectangular button",
+      "radius": "10px",
+      "weight": "600",
+      "notes": "Text-first clarity"
+    },
+    "image_treatment": {
+      "notes": [
+        "Optional professional image",
+        "Rectangular crop",
+        "Low contrast overlay optional"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "corporate",
+        "service",
+        "professional"
+      ],
+      "blocked": [
+        "hype",
+        "entertainment"
+      ]
+    },
+    "scalability": "Service text + section swap"
+  },
+  {
+    "id": "small-business-promotion",
+    "name": "Small Business Promotion",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Friendly, local, approachable.",
+      "feels_like": "This is for people like me."
+    },
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.7x base",
+      "body": "1.0x",
+      "cta": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#F97316"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "9–11%",
+      "section_gap": "2x base"
+    },
+    "cta": {
+      "style": "Rounded rectangle",
+      "radius": "14px",
+      "notes": "Friendly tone"
+    },
+    "image_treatment": {
+      "notes": [
+        "Optional product or shop image",
+        "Rounded corners 16px"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "local-business",
+        "promotion"
+      ],
+      "blocked": [
+        "corporate-formal"
+      ]
+    },
+    "scalability": "Offer + image swap"
+  },
+  {
+    "id": "product-feature-flyer",
+    "name": "Product Feature Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Clear, informative, feature-led.",
+      "feels_like": "I understand this product."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "body": "Inter 400",
+      "labels": "Inter 500"
+    },
+    "typography_scale": {
+      "headline": "1.6x base",
+      "body": "1.0x",
+      "label": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10%",
+      "feature_gap": "2x base"
+    },
+    "cta": {
+      "style": "Simple action CTA",
+      "emphasis": "Low"
+    },
+    "image_treatment": {
+      "notes": [
+        "Product images in blocks",
+        "No dramatic effects"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "product-explain",
+        "feature-grid"
+      ],
+      "blocked": [
+        "emotional-hype"
+      ]
+    },
+    "scalability": "Feature list expansion"
+  },
+  {
+    "id": "pricing-package-flyer",
+    "name": "Pricing / Package Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Clear, structured, decision-friendly.",
+      "feels_like": "I can compare options easily."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "body": "Inter 400",
+      "price": "Inter 800"
+    },
+    "typography_scale": {
+      "headline": "1.6x base",
+      "price": "2.0x base",
+      "body": "1.0x",
+      "cta": "0.95x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E",
+      "divider": "#E5E7EB"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "package_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Outlined or filled button",
+      "notes": "Clear action text"
+    },
+    "image_treatment": {
+      "notes": [
+        "Icons or no images",
+        "Focus on text blocks"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "pricing",
+        "packages",
+        "plans"
+      ],
+      "blocked": [
+        "emotional-promo"
+      ]
+    },
+    "scalability": "Plan count variation"
+  },
+  {
+    "id": "event-announcement",
+    "name": "Event Announcement",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Informative, timely, attention-guided.",
+      "feels_like": "I know when and where."
+    },
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 400",
+      "date_time": "Inter 600"
+    },
+    "typography_scale": {
+      "headline": "1.8x base",
+      "date": "1.4x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#F8FAFC",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "9–11%",
+      "info_block_gap": "2x base"
+    },
+    "cta": {
+      "style": "Register / Attend CTA",
+      "emphasis": "Moderate"
+    },
+    "image_treatment": {
+      "notes": [
+        "Optional event image",
+        "Balanced with text"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "event",
+        "announcement"
+      ],
+      "blocked": [
+        "corporate-heavy"
+      ]
+    },
+    "scalability": "Date/location swap"
+  },
+  {
+    "id": "workshop-seminar",
+    "name": "Workshop / Seminar Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Educational, credible, structured.",
+      "feels_like": "This is worth attending."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "subhead": "Inter 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.7x base",
+      "subhead": "1.3x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "agenda_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Enroll / Join CTA",
+      "notes": "Clear but calm"
+    },
+    "image_treatment": {
+      "notes": [
+        "Speaker image optional",
+        "Rectangular crops"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "education-event",
+        "workshop"
+      ],
+      "blocked": [
+        "party-style"
+      ]
+    },
+    "scalability": "Agenda length variation"
+  },
+  {
+    "id": "festival-community-event",
+    "name": "Festival / Community Event",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Energetic but organized, welcoming.",
+      "feels_like": "This will be fun and well-run."
+    },
+    "font_system": {
+      "headline": "Poppins 800",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.9x base",
+      "body": "1.0x",
+      "cta": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#F59E0B",
+      "secondary_accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "9–11%",
+      "section_gap": "2x base"
+    },
+    "cta": {
+      "style": "Attend / Join CTA",
+      "notes": "Friendly emphasis"
+    },
+    "image_treatment": {
+      "notes": [
+        "Event imagery allowed",
+        "Rounded corners 16px"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "community-event",
+        "festival"
+      ],
+      "blocked": [
+        "corporate-formal"
+      ]
+    },
+    "scalability": "Theme color swap + imagery"
+  },
+  {
+    "id": "official-notice-public-info",
+    "name": "Official Notice / Public Info",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Formal, neutral, authoritative.",
+      "feels_like": "This is important information."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.5x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#475569"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "11–13%",
+      "section_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "None or informational link"
+    },
+    "image_treatment": {
+      "notes": [
+        "No imagery or official seal only"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "notice",
+        "public-info"
+      ],
+      "blocked": [
+        "promotion"
+      ]
+    },
+    "scalability": "Content length variation"
+  },
+  {
+    "id": "promotional-offer-flyer",
+    "name": "Promotional Offer Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Value-driven, clear urgency.",
+      "feels_like": "This is a good deal."
+    },
+    "font_system": {
+      "headline": "Poppins 800",
+      "body": "Inter 400",
+      "price": "Inter 800"
+    },
+    "typography_scale": {
+      "headline": "1.8x base",
+      "price": "2.1x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#DC2626"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "9–11%",
+      "offer_block_gap": "2x base"
+    },
+    "cta": {
+      "style": "Redeem / Claim CTA",
+      "notes": "High contrast"
+    },
+    "image_treatment": {
+      "notes": [
+        "Optional product image",
+        "No clutter"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "offer",
+        "promotion"
+      ],
+      "blocked": [
+        "formal-notice"
+      ]
+    },
+    "scalability": "Discount/offer swap"
+  },
+  {
+    "id": "brand-awareness-flyer",
+    "name": "Brand Awareness Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Identity-first, calm confidence, memorable.",
+      "feels_like": "I recognize this brand."
+    },
+    "font_system": {
+      "headline": "Poppins 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.6x base",
+      "body": "1.0x",
+      "cta": "0.9x"
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#FFFFFF",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "11–13%",
+      "section_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Soft CTA (Learn more)",
+      "notes": "Low pressure"
+    },
+    "image_treatment": {
+      "notes": [
+        "Brand visuals or abstract shapes",
+        "No product push"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "brand-intro",
+        "awareness"
+      ],
+      "blocked": [
+        "hard-sell"
+      ]
+    },
+    "scalability": "Brand asset swap"
+  },
+  {
+    "id": "lead-generation-flyer",
+    "name": "Lead Generation Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Helpful, trust-building, conversion-soft.",
+      "feels_like": "I’m comfortable sharing details."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.7x base",
+      "body": "1.0x",
+      "cta": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "form_gap": "2x base"
+    },
+    "cta": {
+      "style": "Signup / Contact CTA",
+      "notes": "Clear but friendly"
+    },
+    "image_treatment": {
+      "notes": [
+        "Optional human imagery",
+        "Soft tones"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "lead-soft",
+        "signup"
+      ],
+      "blocked": [
+        "urgency-promo"
+      ]
+    },
+    "scalability": "Offer/content swap"
+  },
+  {
+    "id": "comparison-why-us-flyer",
+    "name": "Comparison / Why Us Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Persuasive, logical, comparison-led.",
+      "feels_like": "This choice makes sense."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "body": "Inter 400",
+      "labels": "Inter 500"
+    },
+    "typography_scale": {
+      "headline": "1.6x base",
+      "body": "1.0x",
+      "label": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB",
+      "divider": "#E5E7EB"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "column_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Choose Us CTA",
+      "emphasis": "Moderate"
+    },
+    "image_treatment": {
+      "notes": [
+        "Icons or simple visuals",
+        "No faces required"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "comparison",
+        "why-us"
+      ],
+      "blocked": [
+        "emotional-story"
+      ]
+    },
+    "scalability": "Competitor swap"
+  },
+  {
+    "id": "informational-flyer",
+    "name": "Informational Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Neutral, instructional, clarity-first.",
+      "feels_like": "I understand what to do."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.5x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#475569"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "11–13%",
+      "step_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Optional informational link"
+    },
+    "image_treatment": {
+      "notes": [
+        "Icons or diagrams only",
+        "No emotional imagery"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "instructions",
+        "guidelines"
+      ],
+      "blocked": [
+        "promotion"
+      ]
+    },
+    "scalability": "Step count variation"
+  },
+  {
+    "id": "educational-program-flyer",
+    "name": "Educational Program Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Structured, outcome-focused, credible.",
+      "feels_like": "This program has value."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "subhead": "Inter 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.7x base",
+      "subhead": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#F8FAFC",
+      "accent": "#2563EB"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "module_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Apply / Enroll CTA",
+      "notes": "Clear hierarchy"
+    },
+    "image_treatment": {
+      "notes": [
+        "Campus or classroom imagery optional"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "education",
+        "training"
+      ],
+      "blocked": [
+        "casual-promo"
+      ]
+    },
+    "scalability": "Module expansion"
+  },
+  {
+    "id": "awareness-cause-flyer",
+    "name": "Awareness / Cause Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Respectful, emotional, message-first.",
+      "feels_like": "This matters."
+    },
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.6x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#DC2626"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "12–14%",
+      "message_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Support / Learn More",
+      "notes": "Low-pressure"
+    },
+    "image_treatment": {
+      "notes": [
+        "Human-centric imagery",
+        "Muted tones"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "awareness",
+        "cause"
+      ],
+      "blocked": [
+        "sales"
+      ]
+    },
+    "scalability": "Message swap"
+  },
+  {
+    "id": "hiring-recruitment-flyer",
+    "name": "Hiring / Recruitment Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Professional, opportunity-focused, clear.",
+      "feels_like": "This role is for me."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "subhead": "Inter 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.7x base",
+      "subhead": "1.3x",
+      "body": "1.0x",
+      "cta": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "requirement_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Apply Now CTA",
+      "notes": "Clear and direct"
+    },
+    "image_treatment": {
+      "notes": [
+        "Team or workplace image optional",
+        "Rectangular crop"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "hiring",
+        "recruitment"
+      ],
+      "blocked": [
+        "promotional-hype"
+      ]
+    },
+    "scalability": "Role and requirement swap"
+  },
+  {
+    "id": "real-estate-flyer",
+    "name": "Real Estate Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Trustworthy, factual, aspirational.",
+      "feels_like": "This property is worth considering."
+    },
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 400",
+      "labels": "Inter 500"
+    },
+    "typography_scale": {
+      "headline": "1.6x base",
+      "body": "1.0x",
+      "label": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "property_block_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Schedule Visit CTA",
+      "emphasis": "Moderate"
+    },
+    "image_treatment": {
+      "notes": [
+        "Property images dominate",
+        "Clean grid layout"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "real-estate",
+        "listing"
+      ],
+      "blocked": [
+        "cluttered-promo"
+      ]
+    },
+    "scalability": "Property image swap"
+  },
+  {
+    "id": "personal-service-flyer",
+    "name": "Personal Service Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Human, approachable, trust-led.",
+      "feels_like": "I feel comfortable contacting them."
+    },
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.7x base",
+      "body": "1.0x",
+      "cta": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "11–13%",
+      "content_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Contact / Book CTA",
+      "notes": "Friendly tone"
+    },
+    "image_treatment": {
+      "notes": [
+        "Portrait or service imagery",
+        "Rounded corners 16px"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "personal-service",
+        "coaching"
+      ],
+      "blocked": [
+        "corporate-heavy"
+      ]
+    },
+    "scalability": "Service description swap"
+  },
+  {
+    "id": "minimal-modern-flyer",
+    "name": "Minimal Modern Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Premium, minimal, design-forward.",
+      "feels_like": "This brand is high-end."
+    },
+    "font_system": {
+      "headline": "Inter 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.5x base",
+      "body": "1.0x",
+      "cta": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#A855F7"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "14–16%",
+      "section_gap": "3x base"
+    },
+    "cta": {
+      "style": "Subtle text CTA",
+      "notes": "No button required"
+    },
+    "image_treatment": {
+      "notes": [
+        "Abstract shapes or none",
+        "Extreme white space"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "premium",
+        "minimal"
+      ],
+      "blocked": [
+        "promotional-heavy"
+      ]
+    },
+    "scalability": "Content density variation"
+  },
+  {
+    "id": "creative-visual-flyer",
+    "name": "Creative Visual Flyer",
+    "category": "Flyer",
+    "visual_identity": {
+      "description": "Expressive, artistic, controlled creativity.",
+      "feels_like": "This is visually interesting."
+    },
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.7x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#F97316"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "visual_focus_gap": "2.5x base"
+    },
+    "cta": {
+      "style": "Optional",
+      "notes": "Secondary importance"
+    },
+    "image_treatment": {
+      "notes": [
+        "Large hero visual",
+        "Creative layouts allowed"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "creative",
+        "art",
+        "design-event"
+      ],
+      "blocked": [
+        "corporate-formal"
+      ]
+    },
+    "scalability": "Visual theme swap"
+  }
+]
