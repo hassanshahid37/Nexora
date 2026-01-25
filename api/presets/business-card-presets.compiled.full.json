@@ -1,0 +1,668 @@
+[
+  {
+    "id": "corporate-classic",
+    "name": "Corporate Classic",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Brand identity (logo + company name)",
+    "back_role": "Contact information",
+    "visual_identity": "Formal, timeless, trustworthy",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.2,
+      "details": 1.0,
+      "title": 0.95
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#475569"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "line_gap": "1.4x"
+    },
+    "print_notes": [
+      "CMYK safe",
+      "Monochrome fallback supported"
+    ],
+    "archetypes": [
+      "corporate",
+      "classic"
+    ]
+  },
+  {
+    "id": "modern-corporate",
+    "name": "Modern Corporate",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Logo emphasis",
+    "back_role": "Name + role + contact",
+    "visual_identity": "Clean, modern, confident",
+    "font_system": {
+      "primary": "Inter 700",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.3,
+      "details": 1.0
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#F8FAFC",
+      "accent": "#2563EB"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "section_gap": "1.6x"
+    },
+    "print_notes": [
+      "Digital + offset print safe"
+    ],
+    "archetypes": [
+      "corporate",
+      "modern"
+    ]
+  },
+  {
+    "id": "executive-minimal",
+    "name": "Executive Minimal",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Name-only or logo-only",
+    "back_role": "Minimal contact info",
+    "visual_identity": "Premium, restrained, authoritative",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.4,
+      "details": 0.95
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#A855F7"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "white_space": "extreme"
+    },
+    "print_notes": [
+      "Foil / emboss friendly"
+    ],
+    "archetypes": [
+      "executive",
+      "minimal"
+    ]
+  },
+  {
+    "id": "legal-finance",
+    "name": "Legal / Finance",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Firm name or logo",
+    "back_role": "Name, title, contact",
+    "visual_identity": "Conservative, trust-heavy, formal",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.2,
+      "details": 1.0,
+      "title": 0.95
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#1E293B"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "line_gap": "1.4x"
+    },
+    "print_notes": [
+      "High legibility",
+      "Monochrome friendly"
+    ],
+    "archetypes": [
+      "legal",
+      "finance"
+    ]
+  },
+  {
+    "id": "bold-creative",
+    "name": "Bold Creative",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Logo or bold name",
+    "back_role": "Minimal contact",
+    "visual_identity": "High-contrast, confident, memorable",
+    "font_system": {
+      "primary": "Poppins 700",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.4,
+      "details": 0.95
+    },
+    "color_system": {
+      "primary": "#FFFFFF",
+      "background": "#020617",
+      "accent": "#F97316"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "alignment": "strong"
+    },
+    "print_notes": [
+      "Dark background print tested"
+    ],
+    "archetypes": [
+      "creative",
+      "bold"
+    ]
+  },
+  {
+    "id": "typography-driven",
+    "name": "Typography-Driven",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Name as brand",
+    "back_role": "Minimal contact",
+    "visual_identity": "Intellectual, confident, text-first",
+    "font_system": {
+      "primary": "Playfair Display 700",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.5,
+      "details": 0.9
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#475569"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "text_breathing": "mandatory"
+    },
+    "print_notes": [
+      "Excellent mono print"
+    ],
+    "archetypes": [
+      "typography",
+      "consultant"
+    ]
+  },
+  {
+    "id": "monochrome-designer",
+    "name": "Monochrome Designer",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Logo or monogram",
+    "back_role": "Name + contact",
+    "visual_identity": "High-end, restrained, design-led",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.2,
+      "details": 1.0
+    },
+    "color_system": {
+      "primary": "#000000",
+      "background": "#FFFFFF",
+      "accent": "#000000"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "grid": "strict"
+    },
+    "print_notes": [
+      "Emboss / texture friendly"
+    ],
+    "archetypes": [
+      "designer",
+      "monochrome"
+    ]
+  },
+  {
+    "id": "personal-consultant",
+    "name": "Personal Consultant",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Name + role",
+    "back_role": "Contact details",
+    "visual_identity": "Friendly, professional, approachable",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.3,
+      "details": 1.0
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#22C55E"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "comfort": "high"
+    },
+    "print_notes": [
+      "Everyday print friendly"
+    ],
+    "archetypes": [
+      "consultant",
+      "personal"
+    ]
+  },
+  {
+    "id": "coach-mentor",
+    "name": "Coach / Mentor",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Name + guiding tagline",
+    "back_role": "Contact + booking info",
+    "visual_identity": "Warm, trustworthy, supportive",
+    "font_system": {
+      "primary": "Poppins 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.35,
+      "tagline": 1.0,
+      "details": 0.95
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#22C55E"
+    },
+    "spacing": {
+      "safe_margin": "9%",
+      "rhythm": "soft"
+    },
+    "print_notes": [
+      "Calm colors",
+      "Easy ink coverage"
+    ],
+    "archetypes": [
+      "coach",
+      "mentor"
+    ]
+  },
+  {
+    "id": "personal-brand",
+    "name": "Personal Brand",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Name dominates",
+    "back_role": "Social + contact",
+    "visual_identity": "Recognizable, confident, memorable",
+    "font_system": {
+      "primary": "Poppins 700",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.6,
+      "details": 0.9
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#6366F1"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "name_isolation": true
+    },
+    "print_notes": [
+      "Brand color consistency critical"
+    ],
+    "archetypes": [
+      "personal-brand",
+      "influencer"
+    ]
+  },
+  {
+    "id": "service-provider",
+    "name": "Service Provider",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Service name + icon",
+    "back_role": "Phone + address",
+    "visual_identity": "Clear, practical, local",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "service_name": 1.3,
+      "details": 1.0
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#F97316"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "clarity": "first"
+    },
+    "print_notes": [
+      "High readability priority"
+    ],
+    "archetypes": [
+      "service",
+      "local-business"
+    ]
+  },
+  {
+    "id": "tech-professional",
+    "name": "Tech Professional",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Name + role",
+    "back_role": "Contact + GitHub/LinkedIn",
+    "visual_identity": "Modern, structured, precise",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.3,
+      "details": 1.0
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#2563EB"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "grid": "strict"
+    },
+    "print_notes": [
+      "Mono safe"
+    ],
+    "archetypes": [
+      "tech",
+      "engineering"
+    ]
+  },
+  {
+    "id": "healthcare",
+    "name": "Healthcare",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Clinic or doctor name",
+    "back_role": "Contact + address",
+    "visual_identity": "Calm, clean, reassuring",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.2,
+      "details": 1.0
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "spacing": {
+      "safe_margin": "9%",
+      "separation": "clear"
+    },
+    "print_notes": [
+      "High readability"
+    ],
+    "archetypes": [
+      "healthcare",
+      "medical"
+    ]
+  },
+  {
+    "id": "real-estate",
+    "name": "Real Estate",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Agent name + brand",
+    "back_role": "Contact + listings",
+    "visual_identity": "Trustworthy, premium, aspirational",
+    "font_system": {
+      "primary": "Poppins 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.3,
+      "details": 1.0
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#6366F1"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "balance": "high"
+    },
+    "print_notes": [
+      "Glossy print friendly"
+    ],
+    "archetypes": [
+      "real-estate",
+      "property"
+    ]
+  },
+  {
+    "id": "education",
+    "name": "Education",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Institution or educator name",
+    "back_role": "Contact + role",
+    "visual_identity": "Structured, credible, formal-light",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.2,
+      "details": 1.0
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB"
+    },
+    "spacing": {
+      "safe_margin": "9%",
+      "balance": "medium"
+    },
+    "print_notes": [
+      "High legibility"
+    ],
+    "archetypes": [
+      "education",
+      "academic"
+    ]
+  },
+  {
+    "id": "dark-premium",
+    "name": "Dark Premium",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Name or logo",
+    "back_role": "Minimal contact",
+    "visual_identity": "Exclusive, confident, premium",
+    "font_system": {
+      "primary": "Poppins 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.3,
+      "details": 0.9
+    },
+    "color_system": {
+      "primary": "#FFFFFF",
+      "background": "#020617",
+      "accent": "#A855F7"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "alignment": "strong"
+    },
+    "print_notes": [
+      "Dark print tested"
+    ],
+    "archetypes": [
+      "premium",
+      "dark"
+    ]
+  },
+  {
+    "id": "vertical-statement",
+    "name": "Vertical Statement",
+    "category": "Business Card",
+    "orientation": "Vertical",
+    "front_role": "Name or symbol as statement",
+    "back_role": "Minimal contact info",
+    "visual_identity": "Memorable, bold, unconventional",
+    "font_system": {
+      "primary": "Poppins 700",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.6,
+      "details": 0.9
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#F97316"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "flow": "vertical"
+    },
+    "print_notes": [
+      "Vertical cut alignment tested"
+    ],
+    "archetypes": [
+      "statement",
+      "standout"
+    ]
+  },
+  {
+    "id": "iconic-personal",
+    "name": "Iconic Personal",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Name-only or monogram",
+    "back_role": "Essential contact only",
+    "visual_identity": "Timeless, personal, brand-defining",
+    "font_system": {
+      "primary": "Inter 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.5,
+      "details": 0.9
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#6366F1"
+    },
+    "spacing": {
+      "safe_margin": "12%",
+      "balance": "perfect"
+    },
+    "print_notes": [
+      "Long-term brand safe"
+    ],
+    "archetypes": [
+      "iconic",
+      "personal-brand"
+    ]
+  },
+  {
+    "id": "creative-professional",
+    "name": "Creative Professional",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Name + profession",
+    "back_role": "Contact + social",
+    "visual_identity": "Creative but controlled",
+    "font_system": {
+      "primary": "Poppins 600",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.3,
+      "details": 1.0
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#6366F1"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "section_gap": "1.6x"
+    },
+    "print_notes": [
+      "Color + mono safe"
+    ],
+    "archetypes": [
+      "creative",
+      "professional"
+    ]
+  },
+  {
+    "id": "luxury-minimal",
+    "name": "Luxury Minimal",
+    "category": "Business Card",
+    "orientation": "Horizontal",
+    "front_role": "Logo or monogram",
+    "back_role": "Minimal contact",
+    "visual_identity": "Ultra-premium, restrained, quiet luxury",
+    "font_system": {
+      "primary": "Inter 500",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "name": 1.1,
+      "details": 0.9
+    },
+    "color_system": {
+      "primary": "#000000",
+      "background": "#FFFFFF",
+      "accent": "#000000"
+    },
+    "spacing": {
+      "safe_margin": "12%",
+      "white_space": "extreme"
+    },
+    "print_notes": [
+      "Emboss, foil friendly"
+    ],
+    "archetypes": [
+      "luxury",
+      "minimal"
+    ]
+  }
+]
