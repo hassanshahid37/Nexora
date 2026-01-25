@@ -515,10 +515,27 @@
     };
 
     const place = (el, e) => {
-      const x = toNum(e.x, 0) * sx;
-      const y = toNum(e.y, 0) * sy;
-      const ww = toNum(e.w ?? e.width, 120) * sx;
-      const hh = toNum(e.h ?? e.height, 40) * sy;
+      // Support both pixel geometry and normalized (0..1) geometry.
+      // Heuristic: if all geometry values are small (<= ~2), treat as normalized.
+      const rawX = toNum(e.x, 0);
+      const rawY = toNum(e.y, 0);
+      const rawW = toNum((e.w ?? e.width), 120);
+      const rawH = toNum((e.h ?? e.height), 40);
+
+      const looksNormalized =
+        Number.isFinite(rawX) && Number.isFinite(rawY) && Number.isFinite(rawW) && Number.isFinite(rawH) &&
+        Math.abs(rawX) <= 2 && Math.abs(rawY) <= 2 && Math.abs(rawW) <= 2 && Math.abs(rawH) <= 2;
+
+      const pxX = looksNormalized ? (rawX * W0) : rawX;
+      const pxY = looksNormalized ? (rawY * H0) : rawY;
+      const pxW = looksNormalized ? (rawW * W0) : rawW;
+      const pxH = looksNormalized ? (rawH * H0) : rawH;
+
+      const x = pxX * sx;
+      const y = pxY * sy;
+      const ww = pxW * sx;
+      const hh = pxH * sy;
+
       el.style.position = "absolute";
       el.style.left = x + "px";
       el.style.top = y + "px";
@@ -535,7 +552,6 @@
         el.style.transformOrigin = "center";
       }
     };
-
     const mkRect = (e) => {
       const d = document.createElement("div");
       place(d, e);
