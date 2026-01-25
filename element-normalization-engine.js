@@ -94,7 +94,8 @@ function hasGeometry(el){
 }
 
 function normalizeElement(el, index, seed){
-  if (!el || !hasGeometry(el)) return null;
+  if (!el) return null;
+  const geomMissing = !hasGeometry(el);
   const type = resolveType(el);
   if (!type) return null;
   const c = normalizeContent(el, type);
@@ -109,11 +110,12 @@ function normalizeElement(el, index, seed){
     type,
     role: roleCanon || null,
     content: c.content,
-    geometry: { x: el.x, y: el.y, w: el.w, h: el.h },
+    geometry: { x: geomMissing ? 0 : el.x, y: geomMissing ? 0 : el.y, w: geomMissing ? 1 : el.w, h: geomMissing ? 1 : el.h },
+    needsGeometry: geomMissing ? true : undefined,
 
     // Legacy field retention (NON-BREAKING): keep the original preview/editor renderers working.
     // P9.1 is render-safety only; we mirror essential legacy fields without changing geometry.
-    x: el.x, y: el.y, w: el.w, h: el.h,
+    x: geomMissing ? 0 : el.x, y: geomMissing ? 0 : el.y, w: geomMissing ? 1 : el.w, h: geomMissing ? 1 : el.h,
 
     // Common text/image/style fields used by existing renderers (index.html drawThumb, TemplateOutputController, editor).
     text: (el && el.text != null) ? el.text : (type === "text" ? c.content : undefined),
@@ -253,3 +255,18 @@ const API = {
 
 try{ if(typeof module!=="undefined" && module.exports){ module.exports = API; } }catch(_){ }
 try{ if(typeof window!=="undefined"){ window.NexoraElementNormalizer = API; } }catch(_){ }
+
+
+
+// Instead, mark them so template-materializer can assign deterministic geometry.
+function markMissingGeometry(elements){
+  if(!Array.isArray(elements)) return elements;
+  return elements.map(el=>{
+    if(!el || typeof el!=="object") return el;
+    const hasBox = Number.isFinite(el.x)&&Number.isFinite(el.y)&&Number.isFinite(el.w)&&Number.isFinite(el.h);
+    if(!hasBox){
+      el.needsGeometry = true;
+    }
+    return el;
+  });
+}
