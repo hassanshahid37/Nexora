@@ -1,0 +1,661 @@
+[
+  {
+    "id": "presentation-cover",
+    "name": "Title / Cover Slide",
+    "category": "Presentation Slide",
+    "slide_role": "Opening / First Impression",
+    "brand_intent": "Confident, clean, professional",
+    "design_logic": "Large title dominance with generous whitespace",
+    "font_philosophy": "Bold display title + neutral body",
+    "layout_rules": "Centered or left aligned, single focal block",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#6366F1"
+    },
+    "archetypes": [
+      "opening",
+      "cover"
+    ],
+    "visual_identity": "Confident, clean, professional. Feels like: “This presentation is well prepared.”",
+    "font_system": {
+      "title": "Poppins 800",
+      "subtitle": "Inter 500"
+    },
+    "typography_scale": {
+      "title": "2.8x base",
+      "subtitle": "1.2x",
+      "footer": "0.8x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Vertical focus"
+    },
+    "image_treatment": "Optional subtle background image; low opacity overlay"
+  },
+  {
+    "id": "presentation-divider",
+    "name": "Section Divider",
+    "category": "Presentation Slide",
+    "slide_role": "Section break / transition",
+    "brand_intent": "Minimal, calm, intentional",
+    "design_logic": "Isolated headline with visual pause",
+    "font_philosophy": "Strong headline only",
+    "layout_rules": "Centered text, no supporting content",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#A855F7"
+    },
+    "archetypes": [
+      "divider",
+      "transition"
+    ],
+    "visual_identity": "Minimal, calm, intentional. Feels like: “We’re moving to the next idea.”",
+    "font_system": {
+      "headline": "Inter 700"
+    },
+    "typography_scale": {
+      "headline": "2.4x base"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "notes": "Isolation mandatory"
+    },
+    "image_treatment": "None"
+  },
+  {
+    "id": "presentation-agenda",
+    "name": "Agenda / Outline",
+    "category": "Presentation Slide",
+    "slide_role": "Structure preview",
+    "brand_intent": "Clear, structured, predictable",
+    "design_logic": "Vertical ordered list",
+    "font_philosophy": "Consistent readable sans-serif",
+    "layout_rules": "Max 5 items, even spacing",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB"
+    },
+    "archetypes": [
+      "agenda",
+      "outline"
+    ],
+    "visual_identity": "Clear, structured, calm. Feels like: “I know where this is going.”",
+    "font_system": {
+      "header": "Inter 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "2.0x base",
+      "items": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Consistent list rhythm"
+    },
+    "image_treatment": "Optional icons only"
+  },
+  {
+    "id": "presentation-key-point",
+    "name": "Key Point",
+    "category": "Presentation Slide",
+    "slide_role": "Core takeaway",
+    "brand_intent": "Focused, message-first",
+    "design_logic": "Single statement dominance",
+    "font_philosophy": "Bold headline + light support",
+    "layout_rules": "One idea only",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "archetypes": [
+      "key-point",
+      "emphasis"
+    ],
+    "visual_identity": "Focused, confident, message-first. Feels like: “This is the takeaway.”",
+    "font_system": {
+      "headline": "Poppins 700",
+      "support": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.6x base",
+      "support": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Text isolation mandatory"
+    },
+    "image_treatment": "Optional subtle icon"
+  },
+  {
+    "id": "presentation-bullets",
+    "name": "Bullet Explanation",
+    "category": "Presentation Slide",
+    "slide_role": "Explanation / breakdown",
+    "brand_intent": "Readable, structured",
+    "design_logic": "Short bullet hierarchy",
+    "font_philosophy": "Neutral body-first typography",
+    "layout_rules": "3–4 bullets max",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#2563EB"
+    },
+    "archetypes": [
+      "explanation",
+      "bullets"
+    ],
+    "visual_identity": "Clear, readable, structured. Feels like: “Easy to follow.”",
+    "font_system": {
+      "header": "Inter 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "2.0x base",
+      "bullets": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Line spacing 1.4x"
+    },
+    "image_treatment": "None or small icons"
+  },
+  {
+    "id": "presentation-quote",
+    "name": "Quote / Statement",
+    "category": "Presentation Slide",
+    "slide_role": "Reflection / emphasis",
+    "brand_intent": "Calm, impactful",
+    "design_logic": "Typography-driven statement",
+    "font_philosophy": "Serif quote + neutral attribution",
+    "layout_rules": "Centered, minimal",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#A855F7"
+    },
+    "archetypes": [
+      "quote",
+      "emphasis"
+    ],
+    "visual_identity": "Calm, impactful, reflective. Feels like: “Let that sink in.”",
+    "font_system": {
+      "quote": "Playfair Display 700",
+      "attribution": "Inter 400"
+    },
+    "typography_scale": {
+      "quote": "2.4x base",
+      "attribution": "0.9x"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "notes": "Generous breathing space"
+    },
+    "image_treatment": "None"
+  },
+  {
+    "id": "presentation-image-led",
+    "name": "Image-Led",
+    "category": "Presentation Slide",
+    "slide_role": "Emotional context",
+    "brand_intent": "Visual-first, supportive",
+    "design_logic": "Image dominance with text overlay",
+    "font_philosophy": "Medium headline + subtle body",
+    "layout_rules": "Image 60–70% dominance",
+    "color_system": {
+      "primary": "#020617",
+      "background": "image",
+      "accent": "#6366F1"
+    },
+    "archetypes": [
+      "image-led",
+      "emotion"
+    ],
+    "visual_identity": "Visual-first, calm, supportive. Feels like: “I get the feeling instantly.”",
+    "font_system": {
+      "headline": "Poppins 600",
+      "support": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "support": "0.9x"
+    },
+    "spacing": {
+      "safe_margin": "6–8%",
+      "notes": "Text overlay with contrast"
+    },
+    "image_treatment": "High-quality image; soft gradient overlay"
+  },
+  {
+    "id": "presentation-comparison",
+    "name": "Comparison",
+    "category": "Presentation Slide",
+    "slide_role": "Contrast / decision support",
+    "brand_intent": "Logical, balanced",
+    "design_logic": "Two-column contrast",
+    "font_philosophy": "Neutral comparison typography",
+    "layout_rules": "Clear column separation",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "archetypes": [
+      "comparison",
+      "contrast"
+    ],
+    "visual_identity": "Clear, balanced, logical. Feels like: “The difference is obvious.”",
+    "font_system": {
+      "header": "Inter 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "header": "1.8x base",
+      "items": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Column gap emphasized"
+    },
+    "image_treatment": "Icons optional"
+  },
+  {
+    "id": "presentation-timeline",
+    "name": "Timeline / Process",
+    "category": "Presentation Slide",
+    "slide_role": "Steps / flow",
+    "brand_intent": "Structured, directional",
+    "design_logic": "Sequential markers",
+    "font_philosophy": "Consistent step labeling",
+    "layout_rules": "Even spacing between steps",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#2563EB"
+    },
+    "archetypes": [
+      "process",
+      "timeline"
+    ],
+    "visual_identity": "Structured, directional, calm. Feels like: “I understand the process.”",
+    "font_system": {
+      "header": "Inter 700",
+      "steps": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "1.8x base",
+      "steps": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Even spacing between steps"
+    },
+    "image_treatment": "Icons or simple shapes"
+  },
+  {
+    "id": "presentation-metric",
+    "name": "Metric Highlight",
+    "category": "Presentation Slide",
+    "slide_role": "Impact metric",
+    "brand_intent": "Bold, numeric-first",
+    "design_logic": "Single metric isolation",
+    "font_philosophy": "Heavy numeric emphasis",
+    "layout_rules": "One number only",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#22C55E"
+    },
+    "archetypes": [
+      "metric",
+      "impact"
+    ],
+    "visual_identity": "Bold, confident, numeric-first. Feels like: “This number matters.”",
+    "font_system": {
+      "metric": "Poppins 800",
+      "label": "Inter 500"
+    },
+    "typography_scale": {
+      "metric": "3.2x base",
+      "label": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "notes": "Extreme isolation"
+    },
+    "image_treatment": "None"
+  },
+  {
+    "id": "presentation-chart",
+    "name": "Chart / Graph",
+    "category": "Presentation Slide",
+    "slide_role": "Data explanation",
+    "brand_intent": "Analytical, clear",
+    "design_logic": "One chart, one insight",
+    "font_philosophy": "Functional data typography",
+    "layout_rules": "No clutter",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB"
+    },
+    "archetypes": [
+      "data",
+      "chart"
+    ],
+    "visual_identity": "Clear, analytical, uncluttered. Feels like: “I understand the data.”",
+    "font_system": {
+      "header": "Inter 700",
+      "labels": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "1.8x base",
+      "labels": "0.9x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Chart breathing space"
+    },
+    "image_treatment": "Flat charts only"
+  },
+  {
+    "id": "presentation-framework",
+    "name": "Framework / Model",
+    "category": "Presentation Slide",
+    "slide_role": "Conceptual explanation",
+    "brand_intent": "Educational, calm",
+    "design_logic": "Simple shapes model",
+    "font_philosophy": "Label-driven typography",
+    "layout_rules": "Max 4 elements",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#A855F7"
+    },
+    "archetypes": [
+      "framework",
+      "model"
+    ],
+    "visual_identity": "Structured, educational, calm. Feels like: “I see the model clearly.”",
+    "font_system": {
+      "header": "Inter 700",
+      "labels": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "1.8x base",
+      "labels": "0.9x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Even spacing"
+    },
+    "image_treatment": "Shapes/icons only"
+  },
+  {
+    "id": "presentation-problem",
+    "name": "Problem",
+    "category": "Presentation Slide",
+    "slide_role": "Problem definition",
+    "brand_intent": "Serious, focused",
+    "design_logic": "Problem dominance",
+    "font_philosophy": "Strong headline emphasis",
+    "layout_rules": "Isolation enforced",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#DC2626"
+    },
+    "archetypes": [
+      "problem",
+      "tension"
+    ],
+    "visual_identity": "Serious, focused, restrained. Feels like: “This is a real problem.”",
+    "font_system": {
+      "headline": "Poppins 700",
+      "support": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.4x base",
+      "support": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Isolation enforced"
+    },
+    "image_treatment": "Optional subtle background texture"
+  },
+  {
+    "id": "presentation-solution",
+    "name": "Solution",
+    "category": "Presentation Slide",
+    "slide_role": "Resolution",
+    "brand_intent": "Optimistic, confident",
+    "design_logic": "Solution-first hierarchy",
+    "font_philosophy": "Balanced headline + support",
+    "layout_rules": "Clear hierarchy",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#22C55E"
+    },
+    "archetypes": [
+      "solution",
+      "resolution"
+    ],
+    "visual_identity": "Confident, optimistic, clear. Feels like: “Here’s how we fix it.”",
+    "font_system": {
+      "headline": "Poppins 700",
+      "support": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.4x base",
+      "support": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Clear hierarchy"
+    },
+    "image_treatment": "Optional icon or illustration"
+  },
+  {
+    "id": "presentation-benefits",
+    "name": "Benefits",
+    "category": "Presentation Slide",
+    "slide_role": "Value articulation",
+    "brand_intent": "Positive, scannable",
+    "design_logic": "Benefit list clarity",
+    "font_philosophy": "Readable body-first",
+    "layout_rules": "3–4 benefits",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB"
+    },
+    "archetypes": [
+      "benefits",
+      "value"
+    ],
+    "visual_identity": "Positive, scannable, reassuring. Feels like: “This is valuable.”",
+    "font_system": {
+      "header": "Inter 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "2.0x base",
+      "benefits": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Even spacing"
+    },
+    "image_treatment": "Simple icons only"
+  },
+  {
+    "id": "presentation-cta",
+    "name": "Call To Action",
+    "category": "Presentation Slide",
+    "slide_role": "Action prompt",
+    "brand_intent": "Direct, decisive",
+    "design_logic": "Single action focus",
+    "font_philosophy": "Bold headline emphasis",
+    "layout_rules": "One action only",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "archetypes": [
+      "cta",
+      "action"
+    ],
+    "visual_identity": "Direct, confident, decisive. Feels like: “I know what to do next.”",
+    "font_system": {
+      "headline": "Poppins 800",
+      "support": "Inter 500"
+    },
+    "typography_scale": {
+      "headline": "2.6x base",
+      "support": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "notes": "Button isolation"
+    },
+    "image_treatment": "Optional icon"
+  },
+  {
+    "id": "presentation-summary",
+    "name": "Summary / Recap",
+    "category": "Presentation Slide",
+    "slide_role": "Reinforcement",
+    "brand_intent": "Clear, reinforcing",
+    "design_logic": "Key point recap",
+    "font_philosophy": "Neutral clarity typography",
+    "layout_rules": "3–5 points max",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#2563EB"
+    },
+    "archetypes": [
+      "summary",
+      "recap"
+    ],
+    "visual_identity": "Clear, calm, reinforcing. Feels like: “I remember the key points.”",
+    "font_system": {
+      "header": "Inter 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "2.0x base",
+      "points": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Consistent rhythm"
+    },
+    "image_treatment": "Icons optional"
+  },
+  {
+    "id": "presentation-case-study",
+    "name": "Case Study",
+    "category": "Presentation Slide",
+    "slide_role": "Proof / credibility",
+    "brand_intent": "Factual, confident",
+    "design_logic": "Before/after storytelling",
+    "font_philosophy": "Structured content typography",
+    "layout_rules": "Clear section separation",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "archetypes": [
+      "case-study",
+      "proof"
+    ],
+    "visual_identity": "Structured, factual, confident. Feels like: “This works in the real world.”",
+    "font_system": {
+      "header": "Inter 700",
+      "body": "Inter 500"
+    },
+    "typography_scale": {
+      "header": "1.8x base",
+      "details": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "8%",
+      "notes": "Clear section separation"
+    },
+    "image_treatment": "Optional comparison images"
+  },
+  {
+    "id": "presentation-thank-you",
+    "name": "Thank You",
+    "category": "Presentation Slide",
+    "slide_role": "Closing",
+    "brand_intent": "Professional, respectful",
+    "design_logic": "Minimal close",
+    "font_philosophy": "Headline + subtle support",
+    "layout_rules": "Centered focus",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#A855F7"
+    },
+    "archetypes": [
+      "closing",
+      "gratitude"
+    ],
+    "visual_identity": "Calm, professional, respectful. Feels like: “That was well presented.”",
+    "font_system": {
+      "headline": "Poppins 700",
+      "support": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "support": "0.9x"
+    },
+    "spacing": {
+      "safe_margin": "12%",
+      "notes": "Generous breathing room"
+    },
+    "image_treatment": "None"
+  },
+  {
+    "id": "presentation-vision",
+    "name": "Brand / Vision",
+    "category": "Presentation Slide",
+    "slide_role": "Big-picture close",
+    "brand_intent": "Inspirational, future-facing",
+    "design_logic": "Statement-first",
+    "font_philosophy": "Bold headline emphasis",
+    "layout_rules": "Minimal elements",
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#6366F1"
+    },
+    "archetypes": [
+      "vision",
+      "brand"
+    ],
+    "visual_identity": "Inspirational, confident, future-facing. Feels like: “I believe in this.”",
+    "font_system": {
+      "headline": "Poppins 800",
+      "support": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.6x base",
+      "support": "1.0x"
+    },
+    "spacing": {
+      "safe_margin": "10%",
+      "notes": "Emotional breathing space"
+    },
+    "image_treatment": "Optional subtle background visual"
+  }
+]
