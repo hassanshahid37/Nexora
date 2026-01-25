@@ -20,6 +20,11 @@ const hierarchyProfiles = {
   PresentationSlide: ['headline', 'bullet', 'visual', 'meta'],
   Resume: ['sectionTitle', 'role', 'supportingtext', 'meta'],
   default: ['headline', 'image', 'cta', 'supportingtext', 'meta'],
+  Story: ['headline', 'image', 'subhead', 'cta', 'badge'],
+  Flyer: ['headline', 'image', 'subhead', 'cta', 'badge'],
+  BusinessCard: ['logo', 'headline', 'subhead'],
+  Logo: ['logo'],
+
 };
 // Normalize category labels/ids into registry-style keys.
 // Examples: "Instagram Post" -> "InstagramPost", "youtube_thumbnail" -> "YouTubeThumbnail"
@@ -164,3 +169,17 @@ api.applyVisualHierarchy = applyVisualHierarchy;
   }
   root.NexoraVisualHierarchyEngine = api;
 })(typeof globalThis!=="undefined"?globalThis:(typeof window!=="undefined"?window:this));
+
+
+
+const EXTRA_HIERARCHY_PROFILES = {
+  Story: ["headline","image","subhead","cta","badge"],
+  Flyer: ["headline","image","subhead","cta","badge"],
+  "Business Card": ["logo","headline","subhead"],
+  Logo: ["logo"]
+};
+
+function getCategoryHierarchy(category){
+  if(EXTRA_HIERARCHY_PROFILES[category]) return EXTRA_HIERARCHY_PROFILES[category];
+  return null;
+}
