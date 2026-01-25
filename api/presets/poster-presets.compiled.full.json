@@ -1,0 +1,909 @@
+[
+  {
+    "id": "event-hero-poster",
+    "name": "Event Hero Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Bold, atmospheric, headline-first.",
+      "feels_like": "This is the main event."
+    },
+    "font_system": {
+      "headline": "Poppins 800",
+      "subhead": "Inter 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.6x base",
+      "subhead": "1.4x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "Image-led or solid dark",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "8–10%",
+      "headline_dominance": "mandatory"
+    },
+    "cta": {
+      "type": "Date + Location only"
+    },
+    "image_treatment": {
+      "notes": [
+        "Large hero image",
+        "High contrast",
+        "Soft overlay gradient"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "event-hero",
+        "launch"
+      ],
+      "blocked": [
+        "information-heavy"
+      ]
+    },
+    "scalability": "Event name + imagery swap"
+  },
+  {
+    "id": "music-concert-poster",
+    "name": "Music / Concert Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Energetic, expressive, artist-first.",
+      "feels_like": "This will be loud and exciting."
+    },
+    "font_system": {
+      "headline": "Bebas Neue 400",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "artist_name": "2.8x base",
+      "details": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#000000",
+      "accent": "#F97316"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "8–10%",
+      "artist_name_dominates": "mandatory"
+    },
+    "cta": {
+      "type": "Date / Venue only"
+    },
+    "image_treatment": {
+      "notes": [
+        "Artist imagery or abstract textures",
+        "High contrast lighting"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "concert",
+        "music"
+      ],
+      "blocked": [
+        "corporate"
+      ]
+    },
+    "scalability": "Artist + color swap"
+  },
+  {
+    "id": "film-screening-poster",
+    "name": "Film / Screening Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Cinematic, moody, atmospheric.",
+      "feels_like": "This has a story."
+    },
+    "font_system": {
+      "headline": "Playfair Display 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "title": "2.4x base",
+      "credits": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "Dark gradient or image",
+      "accent": "#A855F7"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "9–11%",
+      "flow": "vertical"
+    },
+    "cta": {
+      "type": "Screening date only"
+    },
+    "image_treatment": {
+      "notes": [
+        "Film still or abstract scene",
+        "Grain allowed"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "cinematic",
+        "screening"
+      ],
+      "blocked": [
+        "loud-promo"
+      ]
+    },
+    "scalability": "Film still swap"
+  },
+  {
+    "id": "festival-poster",
+    "name": "Festival Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Energetic, large-scale, celebratory.",
+      "feels_like": "This is a big moment."
+    },
+    "font_system": {
+      "headline": "Poppins 800",
+      "subhead": "Inter 600"
+    },
+    "typography_scale": {
+      "headline": "2.7x base",
+      "subhead": "1.3x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "Image-led or gradient",
+      "accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "8–10%",
+      "layout": "vertical stacking"
+    },
+    "cta": {
+      "type": "Dates + Location only"
+    },
+    "image_treatment": {
+      "notes": [
+        "Crowd or abstract energy visuals",
+        "High saturation allowed"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "festival",
+        "multi-event"
+      ],
+      "blocked": [
+        "minimal"
+      ]
+    },
+    "scalability": "Festival name + theme swap"
+  },
+  {
+    "id": "bold-announcement-poster",
+    "name": "Bold Announcement Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Direct, confident, no-nonsense.",
+      "feels_like": "Pay attention."
+    },
+    "font_system": {
+      "headline": "Anton 400"
+    },
+    "typography_scale": {
+      "headline": "3.0x base",
+      "max_words": "2–3"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#DC2626"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "text_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "No imagery required",
+        "Typography-only focus"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "announcement",
+        "reveal"
+      ],
+      "blocked": [
+        "decorative"
+      ]
+    },
+    "scalability": "Statement swap"
+  },
+  {
+    "id": "awareness-message-poster",
+    "name": "Awareness Message Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Emotional, respectful, message-first.",
+      "feels_like": "This matters."
+    },
+    "font_system": {
+      "headline": "Playfair Display 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#A855F7"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "message_breathing_room": "yes"
+    },
+    "cta": {
+      "type": "Learn More / Support",
+      "emphasis": "secondary"
+    },
+    "image_treatment": {
+      "notes": [
+        "Human-centric imagery",
+        "Muted contrast"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "awareness",
+        "cause"
+      ],
+      "blocked": [
+        "commercial"
+      ]
+    },
+    "scalability": "Message swap"
+  },
+  {
+    "id": "call-to-action-poster",
+    "name": "Call to Action Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Directive, motivating, action-first.",
+      "feels_like": "I should do this now."
+    },
+    "font_system": {
+      "headline": "Poppins 800",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.8x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "9–11%",
+      "cta_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "Large CTA text",
+      "button": "optional"
+    },
+    "image_treatment": {
+      "notes": [
+        "Optional supporting image",
+        "Never dominant"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "CTA",
+        "mobilization"
+      ],
+      "blocked": [
+        "informational"
+      ]
+    },
+    "scalability": "CTA phrase swap"
+  },
+  {
+    "id": "warning-alert-poster",
+    "name": "Warning / Alert Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Urgent, cautionary, high-contrast.",
+      "feels_like": "This is serious."
+    },
+    "font_system": {
+      "headline": "Anton 400"
+    },
+    "typography_scale": {
+      "headline": "3.0x base",
+      "max_words": "1–2"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FACC15",
+      "danger_accent": "#DC2626"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "8–10%",
+      "text_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Icons only (⚠, !)",
+        "No imagery"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "alert",
+        "warning"
+      ],
+      "blocked": [
+        "decorative"
+      ]
+    },
+    "scalability": "Alert wording swap"
+  },
+  {
+    "id": "artistic-visual-poster",
+    "name": "Artistic Visual Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Expressive, gallery-like, visual-first.",
+      "feels_like": "This is art."
+    },
+    "font_system": {
+      "headline": "Playfair Display 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.0x base",
+      "body": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "Image-led or #FFFFFF",
+      "accent": "#F97316"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "12–14%",
+      "visual_dominance": "mandatory"
+    },
+    "cta": {
+      "type": "Optional",
+      "emphasis": "low"
+    },
+    "image_treatment": {
+      "notes": [
+        "Large artistic visual",
+        "Text minimal"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "art",
+        "exhibition"
+      ],
+      "blocked": [
+        "promotional"
+      ]
+    },
+    "scalability": "Visual theme swap"
+  },
+  {
+    "id": "typography-only-poster",
+    "name": "Typography-Only Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Bold, typographic, statement-led.",
+      "feels_like": "The words ARE the design."
+    },
+    "font_system": {
+      "headline": "Anton 400",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "3.2x base",
+      "secondary": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#DC2626"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "12–14%",
+      "letter_breathing": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "No imagery",
+        "Type-only composition"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "statement",
+        "quote"
+      ],
+      "blocked": [
+        "image-led"
+      ]
+    },
+    "scalability": "Quote swap"
+  },
+  {
+    "id": "minimal-concept-poster",
+    "name": "Minimal Concept Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Conceptual, premium, restrained.",
+      "feels_like": "This is intentional."
+    },
+    "font_system": {
+      "headline": "Inter 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "1.9x base",
+      "body": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#A855F7"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "15–18%",
+      "white_space": "extreme"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Single symbol or abstract form",
+        "Centered composition"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "minimal",
+        "concept"
+      ],
+      "blocked": [
+        "informational"
+      ]
+    },
+    "scalability": "Symbol swap"
+  },
+  {
+    "id": "experimental-creative-poster",
+    "name": "Experimental Creative Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Unconventional, bold, design-forward.",
+      "feels_like": "This breaks the rules."
+    },
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.4x base",
+      "body": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#F97316"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "8–10%",
+      "asymmetry": "allowed"
+    },
+    "cta": {
+      "type": "Optional"
+    },
+    "image_treatment": {
+      "notes": [
+        "Abstract visuals",
+        "Creative layouts encouraged"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "experimental",
+        "design"
+      ],
+      "blocked": [
+        "corporate"
+      ]
+    },
+    "scalability": "Layout variation"
+  },
+  {
+    "id": "brand-promotion-poster",
+    "name": "Brand Promotion Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Confident, recognizable, brand-led.",
+      "feels_like": "I know this brand."
+    },
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "body": "0.9x"
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#FFFFFF",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "logo_breathing_space": "mandatory"
+    },
+    "cta": {
+      "type": "Optional soft CTA",
+      "example": "Discover more"
+    },
+    "image_treatment": {
+      "notes": [
+        "Brand imagery or abstract brand shapes",
+        "No clutter"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "brand-promo",
+        "identity"
+      ],
+      "blocked": [
+        "informational-heavy"
+      ]
+    },
+    "scalability": "Brand assets swap"
+  },
+  {
+    "id": "product-highlight-poster",
+    "name": "Product Highlight Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Product-first, clean, impactful.",
+      "feels_like": "This product stands out."
+    },
+    "font_system": {
+      "headline": "Inter 800",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.4x base",
+      "body": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "9–11%",
+      "product_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "Optional",
+      "example": "Learn more"
+    },
+    "image_treatment": {
+      "notes": [
+        "Single product dominates",
+        "Studio lighting feel"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "product-highlight"
+      ],
+      "blocked": [
+        "emotional-story"
+      ]
+    },
+    "scalability": "Product swap"
+  },
+  {
+    "id": "speaker-guest-poster",
+    "name": "Speaker / Guest Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Credible, respectful, person-first.",
+      "feels_like": "This speaker matters."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "subhead": "Inter 600",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "name": "2.1x base",
+      "details": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#2563EB"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "portrait_focus_zone": "yes"
+    },
+    "cta": {
+      "type": "Date / Talk title"
+    },
+    "image_treatment": {
+      "notes": [
+        "Portrait photography",
+        "Clean crop"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "speaker",
+        "guest",
+        "talk"
+      ],
+      "blocked": [
+        "hype"
+      ]
+    },
+    "scalability": "Speaker swap"
+  },
+  {
+    "id": "community-event-poster",
+    "name": "Community Event Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Friendly, inclusive, welcoming.",
+      "feels_like": "This is for everyone."
+    },
+    "font_system": {
+      "headline": "Poppins 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "flow": "clear section flow"
+    },
+    "cta": {
+      "type": "Attend / Join"
+    },
+    "image_treatment": {
+      "notes": [
+        "Community imagery",
+        "Natural tones"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "community",
+        "local-event"
+      ],
+      "blocked": [
+        "corporate-heavy"
+      ]
+    },
+    "scalability": "Event details swap"
+  },
+  {
+    "id": "cultural-poster",
+    "name": "Cultural Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Symbolic, identity-driven, expressive.",
+      "feels_like": "This represents culture."
+    },
+    "font_system": {
+      "headline": "Playfair Display 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.1x base",
+      "body": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#F59E0B"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "12–14%",
+      "symbol_focus": "yes"
+    },
+    "cta": {
+      "type": "Optional"
+    },
+    "image_treatment": {
+      "notes": [
+        "Cultural symbols or patterns",
+        "Respectful visuals"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "cultural",
+        "heritage"
+      ],
+      "blocked": [
+        "commercial"
+      ]
+    },
+    "scalability": "Symbol swap"
+  },
+  {
+    "id": "directional-info-poster",
+    "name": "Directional / Info Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Functional, clear, utilitarian.",
+      "feels_like": "I know where to go."
+    },
+    "font_system": {
+      "headline": "Inter 700",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.0x base",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#475569"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "8–10%",
+      "directional_clarity": "mandatory"
+    },
+    "cta": {
+      "type": "Directional text only"
+    },
+    "image_treatment": {
+      "notes": [
+        "Icons/arrows only",
+        "No imagery"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "wayfinding",
+        "info"
+      ],
+      "blocked": [
+        "decorative"
+      ]
+    },
+    "scalability": "Direction text swap"
+  },
+  {
+    "id": "dramatic-statement-poster",
+    "name": "Dramatic Statement Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Bold, confrontational, unforgettable.",
+      "feels_like": "I can’t ignore this."
+    },
+    "font_system": {
+      "headline": "Anton 400",
+      "secondary": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "3.4x base",
+      "secondary": "1.0x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#000000",
+      "accent": "#EF4444"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10–12%",
+      "headline_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Optional abstract texture",
+        "Typography dominates"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "statement",
+        "manifesto"
+      ],
+      "blocked": [
+        "informational"
+      ]
+    },
+    "scalability": "Statement swap"
+  },
+  {
+    "id": "iconic-hero-poster",
+    "name": "Iconic Hero Poster",
+    "category": "Poster",
+    "visual_identity": {
+      "description": "Timeless, flagship, brand-defining.",
+      "feels_like": "This represents the whole campaign."
+    },
+    "font_system": {
+      "headline": "Poppins 800",
+      "body": "Inter 400"
+    },
+    "typography_scale": {
+      "headline": "2.8x base",
+      "body": "0.9x"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "Image-led or solid",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "8–10%",
+      "balance": "perfect balance required"
+    },
+    "cta": {
+      "type": "Optional minimal"
+    },
+    "image_treatment": {
+      "notes": [
+        "Hero subject dominates",
+        "Clean composition"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "hero",
+        "flagship"
+      ],
+      "blocked": [
+        "cluttered"
+      ]
+    },
+    "scalability": "Hero swap"
+  }
+]
