@@ -1029,42 +1029,64 @@ const brandInfo = brandFromPrompt(prompt);
       style
     }) : null;
 
-    if (preset) {
-      // Attach for debugging + downstream engines
-      try {
-        tpl.meta = tpl.meta || {};
-        tpl.meta.designPreset = preset;
-      } catch (_) {}
+    // Premium preset + P9 pipeline (always run; preset is optional)
+    // Goal: previews & editor always receive a visually-real template (not wireframe).
+    try{
+      // Ensure we have a contract-like object that the P9 engines understand.
+      // Prefer doc.contract (spine-first), then template.contract, else synthesize from template.
+      let contractLike = contract;
+      if(!contractLike && tpl){
+        contractLike = {
+          category,
+          canvas: tpl.canvas || null,
+          elements: Array.isArray(tpl.elements) ? tpl.elements : []
+        };
+      }
 
-      try { injectDesignPresetIntoContract(contract, preset); } catch (_) {}
+      // Sync canvas if missing
+      if(contractLike){
+        contractLike.category = contractLike.category || category;
+        contractLike.canvas = contractLike.canvas || tpl.canvas || null;
+        contractLike.elements = Array.isArray(contractLike.elements) ? contractLike.elements : (Array.isArray(tpl.elements) ? tpl.elements : []);
+      }
 
-      // Re-run P9 style pipeline with preset influence (safe + deterministic)
-      try {
-        const canvas = (contract && contract.canvas) || tpl.canvas || null;
-        if (canvas && contract) contract.canvas = canvas;
+      // Select preset (may be null if packs missing)
+      if(preset){
+        // Attach for debugging + downstream engines
+        try{
+          tpl.meta = tpl.meta || {};
+          tpl.meta.designPreset = preset;
+        }catch(_){}
+        try{ injectDesignPresetIntoContract(contractLike, preset); }catch(_){}
+      }
 
-        if (contract && __ElemNorm && typeof __ElemNorm.normalizeElements === "function") {
-          contract.elements = __ElemNorm.normalizeElements(contract.elements, {
-            category,
-            canvas: contract.canvas,
-            seed
-          });
-        }
-        if (contract && __VisHierarchy && typeof __VisHierarchy.applyVisualHierarchy === "function") {
-          contract = __VisHierarchy.applyVisualHierarchy(contract);
-        }
-        if (contract && __StyleEnforcer && typeof __StyleEnforcer.applyStyleEnforcement === "function") {
-          contract = __StyleEnforcer.applyStyleEnforcement(contract);
-        }
+      // Normalize + VisualHierarchy + StyleEnforcement (style-only; no geometry mutations)
+      if(contractLike && __ElemNorm && typeof __ElemNorm.normalizeElements === "function"){
+        contractLike.elements = __ElemNorm.normalizeElements(contractLike.elements, {
+          category,
+          canvas: contractLike.canvas,
+          seed
+        });
+      }
+      if(contractLike && __VisHierarchy && typeof __VisHierarchy.applyVisualHierarchy === "function"){
+        contractLike = __VisHierarchy.applyVisualHierarchy(contractLike) || contractLike;
+      }
+      if(contractLike && __StyleEnforcer && typeof __StyleEnforcer.applyStyleEnforcement === "function"){
+        contractLike = __StyleEnforcer.applyStyleEnforcement(contractLike) || contractLike;
+      }
 
-        // Sync back to template (preview consumes top-level {canvas,elements})
-        if (contract && Array.isArray(contract.elements) && contract.canvas) {
-          tpl.elements = contract.elements;
-          tpl.canvas = contract.canvas;
-          tpl.contract = contract;
-        }
-      } catch (_) {}
-    }
+      // Sync back to template (home previews consume top-level {canvas,elements})
+      if(contractLike && Array.isArray(contractLike.elements) && contractLike.elements.length){
+        tpl.elements = contractLike.elements;
+      }
+      if(contractLike && contractLike.canvas){
+        tpl.canvas = contractLike.canvas;
+      }
+      if(contractLike){
+        tpl.contract = contractLike;
+        contract = contractLike;
+      }
+    }catch(_) {}
 
 templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
   }
