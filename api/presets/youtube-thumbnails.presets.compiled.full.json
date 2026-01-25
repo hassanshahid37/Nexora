@@ -1,0 +1,921 @@
+[
+  {
+    "id": "shock-reaction-face",
+    "name": "Shock Reaction Face",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Explosive, high-energy, disbelief-driven.",
+      "feels_like": "WHAT just happened?"
+    },
+    "font_system": {
+      "headline": "Anton 400",
+      "fallback": "Bebas Neue"
+    },
+    "typography_scale": {
+      "headline": "2.4x base",
+      "rule": "65\u201370% attention",
+      "max_words": "1\u20132"
+    },
+    "color_system": {
+      "primary": "#000000",
+      "accent": "#FACC15",
+      "danger_accent": "#DC2626",
+      "text": "#FFFFFF"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "4\u20135%",
+      "text_stroke": "6\u201310px mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Face close-up 60\u201370%",
+        "High contrast",
+        "Sharpen",
+        "Background blur 20\u201330%",
+        "No gradients"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "face-emotion",
+        "shock",
+        "reveal"
+      ],
+      "blocked": [
+        "minimal",
+        "calm"
+      ]
+    },
+    "scalability": "Expression swap + word swap"
+  },
+  {
+    "id": "curiosity-confused-face",
+    "name": "Curiosity Confused Face",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Curious, questioning, intrigue-driven.",
+      "feels_like": "Wait\u2026 how?"
+    },
+    "font_system": {
+      "headline": "Montserrat 800"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "5\u20136%",
+      "text_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Thinking/confused face",
+        "Optional question mark or arrow",
+        "Clean or lightly blurred background"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "curiosity-hook",
+        "question-led"
+      ],
+      "blocked": [
+        "loud-shock"
+      ]
+    },
+    "scalability": "Question variation + face change"
+  },
+  {
+    "id": "authority-talking-head",
+    "name": "Authority Talking Head",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Calm authority, trust, expertise.",
+      "feels_like": "This person knows."
+    },
+    "font_system": {
+      "headline": "Inter 800"
+    },
+    "typography_scale": {
+      "headline": "2.0x base",
+      "max_words": "3\u20134"
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#F8FAFC",
+      "accent": "#0EA5E9"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "6\u20137%",
+      "balance": "balanced"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Neutral confident face",
+        "Chest-up crop",
+        "Studio or soft blur background"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "authority",
+        "education",
+        "podcast"
+      ],
+      "blocked": [
+        "meme",
+        "shock"
+      ]
+    },
+    "scalability": "Topic text swap"
+  },
+  {
+    "id": "extreme-emotion-close-up",
+    "name": "Extreme Emotion Close-Up",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Intense, visceral, emotion-first.",
+      "feels_like": "I HAVE to see this."
+    },
+    "font_system": {
+      "headline": "Anton 400",
+      "fallback": "Bebas Neue"
+    },
+    "typography_scale": {
+      "headline": "2.6x base",
+      "max_words": "1\u20132",
+      "rule": "80% dominance"
+    },
+    "color_system": {
+      "primary": "#000000",
+      "accent": "#DC2626",
+      "secondary_accent": "#FACC15",
+      "text": "#FFFFFF"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "3\u20134%",
+      "text_stroke": "8\u201312px mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Extreme face crop",
+        "High contrast",
+        "Sharpen",
+        "Background isolation"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "extreme-emotion",
+        "viral"
+      ],
+      "blocked": [
+        "calm",
+        "educational"
+      ]
+    },
+    "scalability": "Emotion + single-word swap"
+  },
+  {
+    "id": "split-emotion-before-after",
+    "name": "Split Emotion (Before vs After)",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Transformation-driven, contrast-heavy.",
+      "feels_like": "What changed?"
+    },
+    "font_system": {
+      "headline": "Montserrat 800"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E",
+      "divider": "#CBD5E1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "5\u20136%",
+      "divider": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Two faces side-by-side",
+        "Before desaturated",
+        "After bright/emotive"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "transformation",
+        "comparison-face"
+      ],
+      "blocked": [
+        "product-only"
+      ]
+    },
+    "scalability": "Face swap + label variation"
+  },
+  {
+    "id": "product-hero-clean",
+    "name": "Product Hero Clean",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Clean, confident, product-first.",
+      "feels_like": "This is about the product."
+    },
+    "font_system": {
+      "headline": "Inter 800"
+    },
+    "typography_scale": {
+      "headline": "2.0x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#2563EB"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "6\u20137%",
+      "product_margin": "2x"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Product dominates 60\u201370%",
+        "Sharp edges",
+        "No overlays"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "product-hero",
+        "review",
+        "launch"
+      ],
+      "blocked": [
+        "meme",
+        "emotion-face"
+      ]
+    },
+    "scalability": "Product swap + label tweak"
+  },
+  {
+    "id": "product-vs-product",
+    "name": "Product vs Product",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Competitive, decisive, comparison-driven.",
+      "feels_like": "Which one wins?"
+    },
+    "font_system": {
+      "headline": "Montserrat 800"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "left_accent": "#EF4444",
+      "right_accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "5\u20136%",
+      "center_divider": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Two products side-by-side",
+        "Clear separation",
+        "Winner brighter"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "product-compare",
+        "versus"
+      ],
+      "blocked": [
+        "lifestyle"
+      ]
+    },
+    "scalability": "Product swap + winner highlight"
+  },
+  {
+    "id": "hands-only-demonstration",
+    "name": "Hands-Only Demonstration",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Practical, tactile, instructional.",
+      "feels_like": "Show me how."
+    },
+    "font_system": {
+      "headline": "Inter 800"
+    },
+    "typography_scale": {
+      "headline": "2.0x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "6\u20137%"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Hands interacting",
+        "No face",
+        "Sharp focus"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "demo",
+        "tutorial",
+        "how-to"
+      ],
+      "blocked": [
+        "reaction-face"
+      ]
+    },
+    "scalability": "Object/action swap"
+  },
+  {
+    "id": "price-value-shock",
+    "name": "Price / Value Shock",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Surprising, value-driven, attention-grabbing.",
+      "feels_like": "That costs HOW MUCH?"
+    },
+    "font_system": {
+      "headline": "Anton 400"
+    },
+    "typography_scale": {
+      "headline": "2.6x base",
+      "max_words": "1\u20132",
+      "rule": "number dominates"
+    },
+    "color_system": {
+      "primary": "#000000",
+      "background": "#FFFFFF",
+      "accent": "#FACC15",
+      "danger_accent": "#DC2626"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "4\u20135%",
+      "text_stroke": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Number dominates",
+        "Product secondary",
+        "High contrast"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "price-shock",
+        "value-reveal"
+      ],
+      "blocked": [
+        "calm"
+      ]
+    },
+    "scalability": "Number + product swap"
+  },
+  {
+    "id": "bold-statement",
+    "name": "Bold Statement",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Opinionated, confident, declarative.",
+      "feels_like": "Strong take."
+    },
+    "font_system": {
+      "headline": "Anton 400"
+    },
+    "typography_scale": {
+      "headline": "2.5x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#DC2626"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "4\u20135%",
+      "text_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Text-first",
+        "Optional minimal face or icon"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "opinion",
+        "commentary"
+      ],
+      "blocked": [
+        "tutorial"
+      ]
+    },
+    "scalability": "Statement swap + color tweak"
+  },
+  {
+    "id": "question-hook",
+    "name": "Question Hook",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Curious, open-loop, inviting.",
+      "feels_like": "I want the answer."
+    },
+    "font_system": {
+      "headline": "Montserrat 800"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "max_words": "2\u20134"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#F8FAFC",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "5\u20136%",
+      "centered": "question centered"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Optional thinking face",
+        "Question mark icon allowed"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "curiosity",
+        "explainer"
+      ],
+      "blocked": [
+        "shock"
+      ]
+    },
+    "scalability": "Question phrasing variation"
+  },
+  {
+    "id": "numbered-promise",
+    "name": "Numbered Promise",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Structured, promise-driven, clear.",
+      "feels_like": "This will give me value."
+    },
+    "font_system": {
+      "headline": "Inter 900"
+    },
+    "typography_scale": {
+      "number": "3.0x base",
+      "text": "1.8x base",
+      "max_words": "3\u20134"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "5\u20136%",
+      "number_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Optional face or product",
+        "Number dominates"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "list",
+        "educational"
+      ],
+      "blocked": [
+        "mystery"
+      ]
+    },
+    "scalability": "Number + topic swap"
+  },
+  {
+    "id": "warning-mistake",
+    "name": "Warning / Mistake",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Urgent, cautionary, corrective.",
+      "feels_like": "Don\u2019t mess this up."
+    },
+    "font_system": {
+      "headline": "Anton 400"
+    },
+    "typography_scale": {
+      "headline": "2.5x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "warning_accent": "#DC2626",
+      "secondary_accent": "#FACC15"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "4\u20135%",
+      "text_stroke": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Warning icon optional",
+        "Concerned face optional"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "warning",
+        "mistake",
+        "advice"
+      ],
+      "blocked": [
+        "lifestyle"
+      ]
+    },
+    "scalability": "Mistake phrasing swap"
+  },
+  {
+    "id": "before-after-visual",
+    "name": "Before \u2192 After Visual",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Transformational, outcome-focused.",
+      "feels_like": "The difference is obvious."
+    },
+    "font_system": {
+      "headline": "Montserrat 800"
+    },
+    "typography_scale": {
+      "headline": "2.2x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "5\u20136%",
+      "divider": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Before desaturated",
+        "After bright",
+        "Arrow or divider"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "transformation",
+        "before-after"
+      ],
+      "blocked": [
+        "abstract"
+      ]
+    },
+    "scalability": "Visual swap + label tweak"
+  },
+  {
+    "id": "timeline-journey",
+    "name": "Timeline / Journey",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Progressive, story-driven.",
+      "feels_like": "How it started vs now."
+    },
+    "font_system": {
+      "headline": "Inter 800"
+    },
+    "typography_scale": {
+      "headline": "2.0x base",
+      "max_words": "3\u20134"
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#F8FAFC",
+      "accent": "#6366F1"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "6\u20137%",
+      "flow": "left to right"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Start to end visuals",
+        "Arrow/path indicator"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "journey",
+        "long-term-story"
+      ],
+      "blocked": [
+        "shock"
+      ]
+    },
+    "scalability": "Milestone swap"
+  },
+  {
+    "id": "secret-hidden-reveal",
+    "name": "Secret / Hidden Reveal",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Mysterious, curiosity-heavy, tease-driven.",
+      "feels_like": "I\u2019m not supposed to see this."
+    },
+    "font_system": {
+      "headline": "Montserrat 800"
+    },
+    "typography_scale": {
+      "headline": "2.3x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#A855F7"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "5\u20136%",
+      "hidden_margin": "2x"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Blurred/censored area",
+        "Arrow or circle highlight",
+        "Partial concealment"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "mystery",
+        "reveal"
+      ],
+      "blocked": [
+        "full-disclosure"
+      ]
+    },
+    "scalability": "Concealment swap"
+  },
+  {
+    "id": "trend-hijack",
+    "name": "Trend Hijack",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Timely, meme-aware, culturally relevant.",
+      "feels_like": "This is everywhere right now."
+    },
+    "font_system": {
+      "headline": "Anton 400"
+    },
+    "typography_scale": {
+      "headline": "2.4x base",
+      "max_words": "1\u20132"
+    },
+    "color_system": {
+      "primary": "#000000",
+      "background": "#FFFFFF",
+      "accent": "#F97316"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "4\u20135%",
+      "text_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Trend visual/meme framing",
+        "High contrast"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "trend-react",
+        "viral"
+      ],
+      "blocked": [
+        "evergreen-educational"
+      ]
+    },
+    "scalability": "Trend swap"
+  },
+  {
+    "id": "platform-update",
+    "name": "Platform Update",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Official, urgent, informative.",
+      "feels_like": "This affects me."
+    },
+    "font_system": {
+      "headline": "Inter 900"
+    },
+    "typography_scale": {
+      "headline": "2.1x base",
+      "max_words": "3\u20134"
+    },
+    "color_system": {
+      "primary": "#0F172A",
+      "background": "#F8FAFC",
+      "accent": "#0EA5E9"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "6\u20137%",
+      "structured": "yes"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Platform logo or UI hint",
+        "Clean"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "update",
+        "news"
+      ],
+      "blocked": [
+        "meme"
+      ]
+    },
+    "scalability": "Text + icon swap"
+  },
+  {
+    "id": "comparison-outcome",
+    "name": "Comparison Outcome (Winner vs Loser)",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Decisive, competitive, result-focused.",
+      "feels_like": "Which one wins?"
+    },
+    "font_system": {
+      "headline": "Montserrat 900"
+    },
+    "typography_scale": {
+      "winner": "2.3x base",
+      "secondary": "1.4x base",
+      "max_words": "2\u20133"
+    },
+    "color_system": {
+      "winner_color": "#22C55E",
+      "loser_color": "#EF4444",
+      "primary_text": "#020617",
+      "background": "#FFFFFF"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "5\u20136%",
+      "winner_isolation": "mandatory"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Two subjects",
+        "Winner brighter",
+        "Loser muted"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "comparison-outcome",
+        "decision"
+      ],
+      "blocked": [
+        "abstract",
+        "mystery"
+      ]
+    },
+    "scalability": "Subject swap + outcome highlight"
+  },
+  {
+    "id": "minimal-mystery",
+    "name": "Minimal Mystery",
+    "category": "YouTube Thumbnail",
+    "visual_identity": {
+      "description": "Sparse, intriguing, curiosity-pure.",
+      "feels_like": "What is this about?"
+    },
+    "font_system": {
+      "headline": "Poppins 700"
+    },
+    "typography_scale": {
+      "headline": "1.8x base",
+      "max_words": "1\u20132"
+    },
+    "color_system": {
+      "primary": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#A855F7"
+    },
+    "spacing_rhythm": {
+      "outer_padding": "10\u201312%",
+      "negative_space": "extreme"
+    },
+    "cta": {
+      "type": "None"
+    },
+    "image_treatment": {
+      "notes": [
+        "Single symbol or blurred object",
+        "No faces"
+      ]
+    },
+    "archetypes": {
+      "allowed": [
+        "mystery",
+        "minimal"
+      ],
+      "blocked": [
+        "explanatory",
+        "loud"
+      ]
+    },
+    "scalability": "Symbol swap"
+  }
+]
