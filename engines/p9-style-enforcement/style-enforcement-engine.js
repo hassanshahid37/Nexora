@@ -473,6 +473,76 @@ function applyComponentStyles(contract){
 // Pure styling: modifies ONLY element.style and contract-level style fields (if present).
 
 
+
+// ---- Visual DNA (Design Preset) application ----
+// NOTE: Must only touch element.style (P9.3 rule). No contract mutations.
+function parseFontSpec(spec){
+  const s = String(spec || "").trim();
+  if(!s) return { family: null, weight: null };
+  // Accept formats like "Poppins (800)" or "Poppins 800" or "Poppins"
+  const m = s.match(/^(.*?)(?:\s*\(?\s*(\d{3})\s*\)?)?\s*$/);
+  const family = (m && m[1]) ? m[1].trim() : s;
+  const weight = (m && m[2]) ? Number(m[2]) : null;
+  return { family: family || null, weight: Number.isFinite(weight) ? weight : null };
+}
+
+function applyDesignPresetStyles(contract){
+  const preset = contract && contract.brand && contract.brand.__designPreset;
+  if(!preset) return contract;
+
+  const fs = preset.font_system || preset.fontSystem || {};
+  const cs = preset.color_system || preset.colorSystem || {};
+  const sp = preset.spacing_rhythm || preset.spacingRhythm || {};
+
+  const h = parseFontSpec(fs.headline || fs.headlineFont || fs.headline_font);
+  const b = parseFontSpec(fs.body || fs.bodyFont || fs.body_font);
+
+  const elements = Array.isArray(contract.elements) ? contract.elements : [];
+  const nextElements = elements.map((el) => {
+    if(!el) return el;
+    const role = String(el.role || el.type || "").toLowerCase();
+    const type = String(el.type || "").toLowerCase();
+    const style = { ...(el.style || {}) };
+
+    // Background
+    if(role === "background" || type === "bg"){
+      if(cs.background) style.backgroundColor = cs.background;
+      if(cs.bg) style.backgroundColor = cs.bg;
+      // Optional gradient support (if preset provides)
+      if(cs.gradient) style.background = cs.gradient;
+      return { ...el, style };
+    }
+
+    // Text color + fonts
+    if(type === "text" || role.includes("headline") || role.includes("subhead") || role.includes("body") || role.includes("cta")){
+      if(cs.text) style.color = style.color || cs.text;
+      if(cs.textColor) style.color = style.color || cs.textColor;
+
+      if(role.includes("headline") && h.family){
+        style.fontFamily = h.family;
+        if(h.weight) style.fontWeight = style.fontWeight || h.weight;
+      }else if(b.family){
+        style.fontFamily = style.fontFamily || b.family;
+        if(b.weight) style.fontWeight = style.fontWeight || b.weight;
+      }
+    }
+
+    // CTA button treatment (style only)
+    if(role === "cta" || type === "pill" || type === "button"){
+      if(cs.ctaBg) style.backgroundColor = cs.ctaBg;
+      if(cs.ctaText) style.color = cs.ctaText;
+      if(cs.accent) style.borderColor = style.borderColor || cs.accent;
+      // spacing hints
+      if(sp.paddingX != null) style.paddingX = style.paddingX ?? sp.paddingX;
+      if(sp.paddingY != null) style.paddingY = style.paddingY ?? sp.paddingY;
+      if(sp.radius != null) style.borderRadius = style.borderRadius ?? sp.radius;
+    }
+
+    return { ...el, style };
+  });
+
+  return { ...contract, elements: nextElements };
+}
 function applyStyleEnforcement(contract){
   assertStyleGuards(contract);
 
@@ -484,6 +554,9 @@ function applyStyleEnforcement(contract){
     ...contract,
     elements: contract.elements.map(e => ({ ...e, style: { ...(e.style || {}) } })),
   };
+
+  // Apply Visual DNA preset styles (fonts/colors/cta) before enforcement rules.
+  next = applyDesignPresetStyles(next);
 
   // Order matters: typography sets readable rhythm; color enforces contrast; components standardize UI primitives.
   next = applyTypographyRules(next);
@@ -503,3 +576,4 @@ api.applyStyleEnforcement = applyStyleEnforcement;
   }
   root.NexoraStyleEnforcementEngine = api;
 })(typeof globalThis!=="undefined"?globalThis:(typeof window!=="undefined"?window:this));
+
