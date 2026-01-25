@@ -1,0 +1,838 @@
+[
+  {
+    "id": "entry-level-graduate",
+    "name": "Entry-Level / Graduate",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "Fresh graduates, early careers",
+    "visual_identity": {
+      "description": "Clean, optimistic, potential-focused.",
+      "feels_like": "Strong foundation and promise."
+    },
+    "structure": [
+      "Header",
+      "Profile Summary",
+      "Education (dominant)",
+      "Projects",
+      "Skills",
+      "Experience (if any)"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "2.0x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB (headers only)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Education-first hierarchy",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "internship-resume",
+    "name": "Internship Resume",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "Students, interns",
+    "visual_identity": {
+      "description": "Simple, clear, growth-focused.",
+      "feels_like": "Strong potential candidate."
+    },
+    "structure": [
+      "Header",
+      "Profile Summary",
+      "Education",
+      "Relevant Coursework",
+      "Projects",
+      "Skills"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "2.0x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#6366F1 (headers only)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Potential-first",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "career-switcher",
+    "name": "Career Switcher",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "Professionals changing roles/industries",
+    "visual_identity": {
+      "description": "Clear, explanatory, confidence-building.",
+      "feels_like": "Skills translate well."
+    },
+    "structure": [
+      "Header",
+      "Summary (transferable skills)",
+      "Core Skills",
+      "Relevant Experience",
+      "Previous Experience",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.9x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E (highlights only)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Transferable skills emphasized",
+      "ATS friendly"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "senior-professional",
+    "name": "Senior Professional",
+    "category": "Resume",
+    "ats_compatibility": "High (One-column, structured)",
+    "career_use": "10+ years experience roles",
+    "visual_identity": {
+      "description": "Authoritative, composed, experienced.",
+      "feels_like": "This person has depth."
+    },
+    "structure": [
+      "Header",
+      "Professional Summary",
+      "Experience (dominant)",
+      "Key Achievements",
+      "Education",
+      "Skills"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.9x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#111827 (headers only)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Experience-first hierarchy",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "software-engineer",
+    "name": "Software Engineer",
+    "category": "Resume",
+    "ats_compatibility": "Very High (ATS-optimized keywords)",
+    "career_use": "Software engineers, developers",
+    "visual_identity": {
+      "description": "Structured, technical, precise.",
+      "feels_like": "This person ships code."
+    },
+    "structure": [
+      "Header",
+      "Summary",
+      "Technical Skills",
+      "Experience",
+      "Projects",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.9x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB (section headers)"
+    },
+    "spacing": {
+      "margins": "0.9 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Keyword-friendly",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "data-analyst",
+    "name": "Data / Analyst",
+    "category": "Resume",
+    "ats_compatibility": "Very High",
+    "career_use": "Data analysts, BI roles",
+    "visual_identity": {
+      "description": "Analytical, clean, insight-driven.",
+      "feels_like": "This person understands data."
+    },
+    "structure": [
+      "Header",
+      "Summary",
+      "Core Skills",
+      "Experience",
+      "Key Results",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.85x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E (data highlights)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Metrics-friendly",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "technical-specialist",
+    "name": "Technical Specialist",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "IT, infrastructure, network engineers",
+    "visual_identity": {
+      "description": "Reliable, technical, methodical.",
+      "feels_like": "This person maintains systems."
+    },
+    "structure": [
+      "Header",
+      "Summary",
+      "Technical Competencies",
+      "Experience",
+      "Certifications",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.9x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#111827 (section separators)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Certifications emphasized",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "consultant-strategist",
+    "name": "Consultant / Strategist",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "Consultants, advisors, strategists",
+    "visual_identity": {
+      "description": "Clear, analytical, outcome-focused.",
+      "feels_like": "This person solves problems."
+    },
+    "structure": [
+      "Header",
+      "Profile Summary",
+      "Engagements / Experience",
+      "Impact Highlights",
+      "Skills",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.9x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E (highlights only)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Outcome-oriented bullets",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "management-leadership",
+    "name": "Management / Leadership",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "Managers, team leads, directors",
+    "visual_identity": {
+      "description": "Confident, strategic, results-driven.",
+      "feels_like": "This person leads teams."
+    },
+    "structure": [
+      "Header",
+      "Executive Summary",
+      "Leadership Experience",
+      "Key Metrics / Achievements",
+      "Skills",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "2.0x base",
+      "headers": "1.35x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB (section dividers)"
+    },
+    "spacing": {
+      "margins": "0.95 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Metrics-friendly",
+      "ATS compliant"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "executive-resume",
+    "name": "Executive Resume",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "C-level, VPs, senior executives",
+    "visual_identity": {
+      "description": "Strategic, authoritative, premium.",
+      "feels_like": "This person leads organizations."
+    },
+    "structure": [
+      "Header",
+      "Executive Summary",
+      "Key Achievements (metrics-driven)",
+      "Leadership Experience",
+      "Board / Advisory Roles",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "2.1x base",
+      "headers": "1.35x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#111827 (section separators)"
+    },
+    "spacing": {
+      "margins": "1.1 inch",
+      "line_height": "1.5"
+    },
+    "notes": [
+      "Impact-first",
+      "Board-level tone",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "healthcare-resume",
+    "name": "Healthcare Resume",
+    "category": "Resume",
+    "ats_compatibility": "Very High",
+    "career_use": "Doctors, nurses, healthcare professionals",
+    "visual_identity": {
+      "description": "Trustworthy, calm, precise.",
+      "feels_like": "This person is reliable and qualified."
+    },
+    "structure": [
+      "Header",
+      "Professional Summary",
+      "Licenses & Certifications",
+      "Experience",
+      "Skills",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.9x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E (headers only)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Certifications clearly surfaced",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "education-resume",
+    "name": "Education Resume",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "Teachers, lecturers, educators",
+    "visual_identity": {
+      "description": "Structured, academic, clear.",
+      "feels_like": "Credible educator."
+    },
+    "structure": [
+      "Header",
+      "Profile Summary",
+      "Education & Credentials",
+      "Teaching Experience",
+      "Skills",
+      "Certifications"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.9x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB (headers only)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Education-first hierarchy",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "academic-research-resume",
+    "name": "Academic / Research Resume",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "Researchers, PhD candidates, academics",
+    "visual_identity": {
+      "description": "Scholarly, structured, formal.",
+      "feels_like": "Serious academic profile."
+    },
+    "structure": [
+      "Header",
+      "Research Interests",
+      "Education",
+      "Publications",
+      "Teaching Experience",
+      "Grants & Awards"
+    ],
+    "font_system": {
+      "primary": "Inter (500)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.8x base",
+      "headers": "1.25x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "None"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.6"
+    },
+    "notes": [
+      "Publication-friendly",
+      "Multi-page safe",
+      "ATS readable"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "finance-legal-resume",
+    "name": "Finance / Legal Resume",
+    "category": "Resume",
+    "ats_compatibility": "Very High",
+    "career_use": "Finance, accounting, legal roles",
+    "visual_identity": {
+      "description": "Conservative, formal, precise.",
+      "feels_like": "Low risk, high trust."
+    },
+    "structure": [
+      "Header",
+      "Professional Summary",
+      "Experience",
+      "Key Achievements",
+      "Education",
+      "Certifications"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.8x base",
+      "headers": "1.25x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "None"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "No decorative elements",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "minimal-clean",
+    "name": "Minimal Clean",
+    "category": "Resume",
+    "ats_compatibility": "High (Minimal styling)",
+    "career_use": "Universal, design-aware roles",
+    "visual_identity": {
+      "description": "Calm, elegant, minimal.",
+      "feels_like": "Clear and thoughtful."
+    },
+    "structure": [
+      "Header",
+      "Experience",
+      "Education",
+      "Skills"
+    ],
+    "font_system": {
+      "primary": "Inter (500)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "2.0x base",
+      "headers": "1.2x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "None"
+    },
+    "spacing": {
+      "margins": "1.1 inch",
+      "line_height": "1.5"
+    },
+    "notes": [
+      "Whitespace focused",
+      "ATS safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "classic-professional",
+    "name": "Classic Professional",
+    "category": "Resume",
+    "ats_compatibility": "Maximum (One-column, no visual breaks)",
+    "career_use": "Universal, all industries",
+    "visual_identity": {
+      "description": "Formal, trusted, conservative.",
+      "feels_like": "Safe, reliable hire."
+    },
+    "structure": [
+      "Header (Name + Contact)",
+      "Summary",
+      "Experience",
+      "Education",
+      "Skills"
+    ],
+    "font_system": {
+      "primary": "Inter (500)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.8x base",
+      "section_headers": "1.2x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "None"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.4"
+    },
+    "notes": [
+      "Fully ATS safe",
+      "Print-safe"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "modern-professional",
+    "name": "Modern Professional",
+    "category": "Resume",
+    "ats_compatibility": "High (Simple hierarchy)",
+    "career_use": "Corporate, tech, startups",
+    "visual_identity": {
+      "description": "Modern, clean, confident.",
+      "feels_like": "Up-to-date professional."
+    },
+    "structure": [
+      "Header",
+      "Summary",
+      "Experience",
+      "Skills",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.9x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB (headers only)"
+    },
+    "spacing": {
+      "margins": "0.9 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "ATS-friendly",
+      "Subtle modern accent"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "creative-professional",
+    "name": "Creative Professional",
+    "category": "Resume",
+    "ats_compatibility": "Medium–High (controlled visuals)",
+    "career_use": "Designers, writers, creatives",
+    "visual_identity": {
+      "description": "Creative but restrained.",
+      "feels_like": "Creative with discipline."
+    },
+    "structure": [
+      "Header",
+      "Summary",
+      "Experience",
+      "Selected Work",
+      "Skills",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "2.0x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#6366F1 (headers only)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "No columns",
+      "ATS-aware"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "portfolio-resume",
+    "name": "Portfolio Resume",
+    "category": "Resume",
+    "ats_compatibility": "Medium (still readable)",
+    "career_use": "Design, creative fields",
+    "visual_identity": {
+      "description": "Work-first, visual-light.",
+      "feels_like": "Show me the work."
+    },
+    "structure": [
+      "Header",
+      "Portfolio Highlights",
+      "Experience",
+      "Skills",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "1.9x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#2563EB (links only)"
+    },
+    "spacing": {
+      "margins": "0.95 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Links emphasized",
+      "ATS cautious"
+    ],
+    "scalability": "Content swap only"
+  },
+  {
+    "id": "brand-light-resume",
+    "name": "Brand-Light Resume",
+    "category": "Resume",
+    "ats_compatibility": "High",
+    "career_use": "Personal brands, consultants",
+    "visual_identity": {
+      "description": "Subtle branding, professional.",
+      "feels_like": "Recognizable, not flashy."
+    },
+    "structure": [
+      "Header",
+      "Summary",
+      "Experience",
+      "Skills",
+      "Education"
+    ],
+    "font_system": {
+      "primary": "Inter (600)",
+      "secondary": "Inter (400)"
+    },
+    "typography_scale": {
+      "name": "2.0x base",
+      "headers": "1.3x",
+      "body": "1.0x"
+    },
+    "color_system": {
+      "text": "#020617",
+      "background": "#FFFFFF",
+      "accent": "#22C55E (single accent only)"
+    },
+    "spacing": {
+      "margins": "1 inch",
+      "line_height": "1.45"
+    },
+    "notes": [
+      "Brand-safe",
+      "ATS friendly"
+    ],
+    "scalability": "Content swap only"
+  }
+]
