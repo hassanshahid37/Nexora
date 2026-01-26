@@ -3,6 +3,14 @@
 function isRenderableTemplate(t){
   return !!(t && t.canvas && Array.isArray(t.elements) && t.meta && t.meta.materialized === true);
 }
+
+
+function ensureMaterializedMeta(t){
+  if(!t || typeof t !== "object") return t;
+  t.meta = (t.meta && typeof t.meta === "object") ? t.meta : {};
+  if(t.meta.materialized !== true) t.meta.materialized = true;
+  return t;
+}
 // template-output-controller.js
 // Purpose: single authority for what the home "preview tiles" render, and what gets exported/opened.
 // Must be: crash-proof, contract-aware, and never blank the UI.
@@ -221,7 +229,7 @@ node.style.height = Math.max(1, pxH * scale) + "px";
   // Set templates and (by default) mark them as "committed" (AI-backed).
   // Pass {commit:false} to update the list without flipping committed.
   TOC.setTemplates = function(templates, opts){
-  templates = (templates||[]).filter(isRenderableTemplate);
+  templates = (templates||[]).map(ensureMaterializedMeta).filter(isRenderableTemplate);
 
     const commit = !(opts && opts.commit === false);
     if(commit) committed = true;
