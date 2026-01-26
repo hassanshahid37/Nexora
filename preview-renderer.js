@@ -32,8 +32,11 @@
       const w = Number(contract?.canvas?.width ?? contract?.canvas?.w);
       const h = Number(contract?.canvas?.height ?? contract?.canvas?.h);
       if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return false;
-      if (!Array.isArray(contract.layers)) return false;
-      return true;
+      if (!Array.isArray(contract.layers) || contract.layers.length === 0) {
+      if (Array.isArray(contract.elements) && contract.elements.length) return true;
+      return false;
+    }
+    return true;
     } catch {
       return false;
     }
@@ -260,60 +263,57 @@
       // ---- ADAPTER: accept flat templates (elements[]) ----
       // Nexora UI tiles sometimes pass a full template object: { canvas, elements[], content?, meta? }.
       // This renderer is contract/layer-based, so we deterministically adapt elements -> minimal contract + content.
-      if (payload && Array.isArray(payload.elements) && payload.elements.length) {
-        const els = payload.elements;
+      if (payload && (
+        (Array.isArray(payload.elements) && payload.elements.length) ||
+        (Array.isArray(payload?.contract?.elements) && payload.contract.elements.length) ||
+        (Array.isArray(payload?.content?.elements) && payload.content.elements.length)
+      )) {
+        // Accept elements in multiple shapes:
+        // - flat template: { canvas, elements[] }
+        // - contract-first: { contract: { canvas, elements[] }, content: {...} }
+        // - content-first: { contract: {...}, content: { elements[] } }
+        const els = (Array.isArray(payload.elements) && payload.elements.length) ? payload.elements
+                  : (Array.isArray(payload?.contract?.elements) && payload.contract.elements.length) ? payload.contract.elements
+                  : payload.content.elements;
 
         const cvIn = payload.canvas || payload.contract?.canvas || null;
-        const canvas = cvIn ? cvIn : { w: 1080, h: 1080 };
-
-        // Derive content from elements when not provided (best-effort, deterministic).
-        const textEls = els.filter(e => e && String(e.type || "").toLowerCase() === "text");
-        const firstText = textEls[0] && (textEls[0].text || textEls[0].content || "");
-        const secondText = textEls[1] && (textEls[1].text || textEls[1].content || "");
-        const pill = els.find(e => e && (String(e.type || "").toLowerCase() === "pill" || String(e.type || "").toLowerCase() === "button"));
-        const badge = els.find(e => e && (String(e.type || "").toLowerCase() === "badge" || String(e.type || "").toLowerCase() === "chip"));
-        const photo = els.find(e => e && (String(e.type || "").toLowerCase() === "photo" || String(e.type || "").toLowerCase() === "image"));
-
-        const derivedContent = Object.assign({}, (payload.content && typeof payload.content === "object") ? payload.content : {});
-        if (!derivedContent.headline && firstText) derivedContent.headline = String(firstText);
-        if (!derivedContent.subhead && secondText) derivedContent.subhead = String(secondText);
-        if (!derivedContent.cta && pill && (pill.text || pill.label)) derivedContent.cta = String(pill.text || pill.label);
-        if (!derivedContent.badge && badge && (badge.text || badge.label)) derivedContent.badge = String(badge.text || badge.label);
-        if (!derivedContent.imageUrl && photo && (photo.src || photo.url)) derivedContent.imageUrl = String(photo.src || photo.url);
-
-        // Map element types -> roles so existing renderer can paint something immediately.
-        const roles = new Set();
-        for (const e of els) {
-          const t = String(e && (e.role || e.type) || "").toLowerCase();
-          if (t === "bg" || t === "background") roles.add("background");
-          else if (t === "photo" || t === "image") roles.add("image");
-          else if (t === "pill" || t === "button" || t === "cta") roles.add("cta");
-          else if (t === "badge" || t === "chip") roles.add("badge");
-          else if (t === "text") {
-            // We'll decide which text maps to headline/subhead/body via presence of derived keys.
-            // Add both headline/subhead to ensure something shows.
-            roles.add("headline");
-            roles.add("subhead");
-          }
-        }
-        // If nothing mapped, at least show a headline to avoid blanks.
-        if (!roles.size) roles.add("headline");
-
-        // Always include background role so preview is never empty.
-        roles.add("background");
-
-        const contract = {
-          version: "v1",
-          templateId: payload.id || payload.templateId || ("tpl_" + Math.random().toString(36).slice(2)),
-          category: payload.category || payload.meta?.category || "Instagram Post",
-          canvas,
-          layers: Array.from(roles).map((role, i) => ({ id: "auto_" + role + "_" + i, role })),
-          layoutFamily: payload.layoutFamily || payload.layoutFamilyCanonical || null,
-          palette: (payload.meta && payload.meta.palette) ? payload.meta.palette : (payload.palette || null)
+        const width = Number(cvIn?.width ?? cvIn?.w ?? 1080);
+        const height = Number(cvIn?.height ?? cvIn?.h ?? 1080);
+        const canvas = {
+          width: (Number.isFinite(width) && width > 0) ? width : 1080,
+          height: (Number.isFinite(height) && height > 0) ? height : 1080
         };
 
-        payload = Object.assign({}, payload, { contract, content: derivedContent });
+        // Best-effort role inference to build minimal layer list
+        const roleSet = new Set();
+        els.forEach(e => {
+          const r = (e && (e.role || e.type)) ? String(e.role || e.type) : "";
+          if (r) roleSet.add(r);
+        });
+
+        const category = String(payload.category || payload.contract?.category || payload.content?.category || "Instagram Post");
+        const templateId = String(payload.templateId || payload.contract?.templateId || ("legacy_" + Math.random().toString(36).slice(2)));
+
+        // Minimal contract (preview-only) for NexoraPreview renderer
+        const contract = {
+          version: "v1",
+          templateId,
+          category,
+          canvas,
+          layers: Array.from(roleSet).length ? Array.from(roleSet).map((r, idx) => ({ id: String(idx+1), role: r, locked: false })) : [
+            { id:"1", role:"headline", locked:false },
+            { id:"2", role:"subhead", locked:false },
+            { id:"3", role:"cta", locked:false }
+          ],
+          elements: els
+        };
+
+        const content = Object.assign({}, (payload.content && typeof payload.content === "object") ? payload.content : {});
+        content.elements = els;
+
+        payload = { contract, content, meta: payload.meta || payload.contract?.meta || payload.content?.meta };
       }
+
 
       const contract = payload?.contract;
       const metaIn = payload?.meta || {};
