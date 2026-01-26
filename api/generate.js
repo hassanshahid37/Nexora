@@ -138,6 +138,16 @@ function stableHash32(s){
   return (h >>> 0);
 }
 
+
+function markMaterialized(t){
+  try{
+    if(!t || typeof t !== "object") return t;
+    t.meta = (t.meta && typeof t.meta === "object") ? t.meta : {};
+    if(t.meta.materialized !== true) t.meta.materialized = true;
+    return t;
+  }catch(_){ return t; }
+}
+
 function getSpine(){
   // Node/serverless only. In browser preview, window.NexoraSpine is used directly.
   try{
@@ -220,7 +230,9 @@ async function handler(req, res) {
     if (req.method !== "POST") {
   // Safe default response for non-POST: return at least 1 deterministic template.
   let templates = buildDeterministicTemplates({ prompt, category, style, count: 1, notes: "" });
-return res.end(JSON.stringify({ success: true, templates }));
+templates = Array.isArray(templates) ? templates.map(markMaterialized) : templates;
+
+    return res.end(JSON.stringify({ success: true, templates }));
 }
 
     // Parse body safely (Vercel/Node may not populate req.body)
@@ -285,6 +297,8 @@ try {
         notes: String(body?.notes || "")
       });
     }
+
+    templates = Array.isArray(templates) ? templates.map(markMaterialized) : templates;
 
     return res.end(JSON.stringify({ success: true, templates }));
 
@@ -1009,7 +1023,7 @@ const brandInfo = brandFromPrompt(prompt);
         brand: brandInfo.brand || ""
       };
 
-      templates.push(Object.assign({}, det, { i: i + 1, doc: null, contract: null, content }));
+      templates.push(markMaterialized(Object.assign({}, det, { i: i + 1, doc: null, contract: null, content })));
       continue;
     }
 
@@ -1066,7 +1080,7 @@ const brandInfo = brandFromPrompt(prompt);
       } catch (_) {}
     }
 
-templates.push(Object.assign({}, tpl, { i: i + 1, doc, contract, content }));
+templates.push(markMaterialized(Object.assign({}, tpl, { i: i + 1, doc, contract, content })));
   }
 
   return templates;
