@@ -5,6 +5,11 @@
  * - Role→Type resolution
  * - Content normalization for layer/content-driven renderers (preview/editor)
  * - Placeholder image support (data URL)
+ *
+ * FIX (visual-only): Deterministic numeric font size
+ * - Converts typography.fontSize: "auto" (or invalid) -> numeric pixel size
+ * - Mirrors into legacy `size` / `fontSize` fields so existing renderers never draw tiny text
+ * - Uses canvas width + role-based scaling (no geometry/structure/preset changes)
  */
 
 const ROLE_TYPE_MAP = {
@@ -29,7 +34,6 @@ const TYPE_SYNONYMS = {
   picture: "image",
   img: "image"
 };
-
 
 const DEFAULTS = {
   typography: { fontFamily: "Inter", fontWeight: 400, fontSize: "auto", lineHeight: 1.2 },
@@ -93,9 +97,55 @@ function hasGeometry(el){
   return typeof el?.x==="number" && typeof el?.y==="number" && typeof el?.w==="number" && typeof el?.h==="number";
 }
 
-function normalizeElement(el, index, seed){
-  if (!el) return null;
-  const geomMissing = !hasGeometry(el);
+function _canvasWidthFromOpts(opts){
+  try{
+    const o = (opts && typeof opts === "object") ? opts : {};
+    const c = (o && typeof o.canvas === "object") ? o.canvas : null;
+    const w = Number(c?.w ?? c?.width ?? 1080);
+    return (Number.isFinite(w) && w > 0) ? w : 1080;
+  }catch(_){
+    return 1080;
+  }
+}
+
+function _roleKey(role){
+  return String(role || "").trim().toLowerCase().replace(/[_\s-]+/g,"");
+}
+
+function _computeAutoFontSize(role, canvasW){
+  const r = _roleKey(role);
+  const W = (Number.isFinite(canvasW) && canvasW > 0) ? canvasW : 1080;
+  const scale = W / 1080;
+
+  let px;
+  if (r.includes("headline")) px = 86;
+  else if (r.includes("subhead") || r.includes("subtitle")) px = 54;
+  else if (r.includes("cta") || r.includes("button")) px = 40;
+  else if (r.includes("badge") || r.includes("kicker") || r.includes("tag")) px = 34;
+  else if (r.includes("body") || r.includes("desc") || r.includes("support")) px = 30;
+  else px = 32;
+
+  px = Math.round(px * scale);
+
+  if (r.includes("headline")) return Math.max(28, Math.min(140, px));
+  if (r.includes("subhead") || r.includes("subtitle")) return Math.max(18, Math.min(90, px));
+  if (r.includes("cta") || r.includes("button")) return Math.max(16, Math.min(72, px));
+  if (r.includes("badge") || r.includes("kicker") || r.includes("tag")) return Math.max(14, Math.min(60, px));
+  if (r.includes("body") || r.includes("desc") || r.includes("support")) return Math.max(12, Math.min(54, px));
+  return Math.max(12, Math.min(60, px));
+}
+
+function _pickExistingTextSize(el){
+  const candidates = [el?.size, el?.fontSize, el?.typography?.fontSize, el?.style?.fontSize];
+  for (const v of candidates){
+    const n = Number(v);
+    if (Number.isFinite(n) && n > 0) return n;
+  }
+  return null;
+}
+
+function normalizeElement(el, index, seed, opts){
+  if (!el || !hasGeometry(el)) return null;
   const type = resolveType(el);
   if (!type) return null;
   const c = normalizeContent(el, type);
@@ -105,17 +155,45 @@ function normalizeElement(el, index, seed){
   const roleRaw = (el && el.role != null) ? String(el.role) : null;
   const roleCanon = roleRaw && roleRaw.toLowerCase() === "hero" ? "image" : roleRaw;
 
+  const typography = Object.assign({}, DEFAULTS.typography, el.typography || {});
+  const alignment = Object.assign({}, DEFAULTS.alignment, el.alignment || {});
+  const spacing = Object.assign({}, DEFAULTS.spacing, el.spacing || {});
+  const background = Object.assign({}, DEFAULTS.background, el.background || {});
+  const visibility = Object.assign({}, DEFAULTS.visibility, el.visibility || {});
+
+  // Legacy fields (kept non-breaking)
+  let size = (el && el.size != null) ? el.size : (el && el.fontSize != null ? el.fontSize : undefined);
+  let fontSize = (el && el.fontSize != null) ? el.fontSize : undefined;
+
+  // Visual-only fix for text sizing
+  if (type === "text") {
+    const canvasW = _canvasWidthFromOpts(opts);
+    const existing = _pickExistingTextSize(el);
+    const resolved = (existing != null) ? existing : _computeAutoFontSize(roleCanon || "text", canvasW);
+
+    const tfs = Number(typography.fontSize);
+    typography.fontSize = (Number.isFinite(tfs) && tfs > 0) ? tfs : resolved;
+
+    const s = Number(size);
+    size = (Number.isFinite(s) && s > 0) ? s : resolved;
+
+    const fs = Number(fontSize);
+    fontSize = (Number.isFinite(fs) && fs > 0) ? fs : size;
+  }
+
+  // Role canonicalization (render-safety). Keeps old generators compatible.
+  const roleRaw2 = (el && el.role != null) ? String(el.role) : null;
+  const roleCanon2 = roleRaw2 && roleRaw2.toLowerCase() === "hero" ? "image" : roleRaw2;
+
   return {
     id: String(el.id || stableElementId({ ...el, type }, index, seed)),
     type,
-    role: roleCanon || null,
+    role: roleCanon2 || null,
     content: c.content,
-    geometry: { x: geomMissing ? 0 : el.x, y: geomMissing ? 0 : el.y, w: geomMissing ? 1 : el.w, h: geomMissing ? 1 : el.h },
-    needsGeometry: geomMissing ? true : undefined,
+    geometry: { x: el.x, y: el.y, w: el.w, h: el.h },
 
     // Legacy field retention (NON-BREAKING): keep the original preview/editor renderers working.
-    // P9.1 is render-safety only; we mirror essential legacy fields without changing geometry.
-    x: geomMissing ? 0 : el.x, y: geomMissing ? 0 : el.y, w: geomMissing ? 1 : el.w, h: geomMissing ? 1 : el.h,
+    x: el.x, y: el.y, w: el.w, h: el.h,
 
     // Common text/image/style fields used by existing renderers (index.html drawThumb, TemplateOutputController, editor).
     text: (el && el.text != null) ? el.text : (type === "text" ? c.content : undefined),
@@ -133,7 +211,8 @@ function normalizeElement(el, index, seed){
     radius: el && el.radius != null ? el.radius : (el && el.r != null ? el.r : undefined),
     r: el && el.r != null ? el.r : undefined,
 
-    size: (el && el.size != null) ? el.size : (el && el.fontSize != null ? el.fontSize : undefined),
+    size,
+    fontSize,
     weight: (el && el.weight != null) ? el.weight : (el && el.fontWeight != null ? el.fontWeight : undefined),
     font: (el && el.font != null) ? el.font : (el && el.fontFamily != null ? el.fontFamily : undefined),
     fontFamily: el && el.fontFamily != null ? el.fontFamily : undefined,
@@ -148,11 +227,11 @@ function normalizeElement(el, index, seed){
     fit: el && el.fit != null ? el.fit : undefined,
     objectFit: el && el.objectFit != null ? el.objectFit : undefined,
 
-    typography: Object.assign({}, DEFAULTS.typography, el.typography || {}),
-    alignment: Object.assign({}, DEFAULTS.alignment, el.alignment || {}),
-    spacing: Object.assign({}, DEFAULTS.spacing, el.spacing || {}),
-    background: Object.assign({}, DEFAULTS.background, el.background || {}),
-    visibility: Object.assign({}, DEFAULTS.visibility, el.visibility || {})
+    typography,
+    alignment,
+    spacing,
+    background,
+    visibility
   };
 }
 
@@ -162,7 +241,7 @@ function normalizeElements(elements, opts){
   const out = [];
   let i = 0;
   for (const el of (elements||[])){
-    const n = normalizeElement(el, i, seed);
+    const n = normalizeElement(el, i, seed, o);
     if (n) out.push(n);
     else console.warn("[P9.1] Dropped invalid element:", el);
     i++;
@@ -255,18 +334,3 @@ const API = {
 
 try{ if(typeof module!=="undefined" && module.exports){ module.exports = API; } }catch(_){ }
 try{ if(typeof window!=="undefined"){ window.NexoraElementNormalizer = API; } }catch(_){ }
-
-
-
-// Instead, mark them so template-materializer can assign deterministic geometry.
-function markMissingGeometry(elements){
-  if(!Array.isArray(elements)) return elements;
-  return elements.map(el=>{
-    if(!el || typeof el!=="object") return el;
-    const hasBox = Number.isFinite(el.x)&&Number.isFinite(el.y)&&Number.isFinite(el.w)&&Number.isFinite(el.h);
-    if(!hasBox){
-      el.needsGeometry = true;
-    }
-    return el;
-  });
-}
