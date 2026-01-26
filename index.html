@@ -853,15 +853,31 @@ function renderThumb(thumb, tplOrElements, bg){
       ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
       : (tplOrElements || {});
 
-    if(tpl && tpl.contract && window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
+    // API output may be:
+    // - Spine-shaped: { contract, content }
+    // - Flat: { canvas, elements }
+    // Always prefer NexoraPreview when available, and let it auto-adapt.
+    if(window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
       const content = tpl.content || tpl.doc?.content || __synthContentFromElements(tpl);
-      if(content && typeof content === "object"){
+
+      thumb.innerHTML = "";
+
+      // If we have a contract+content, pass in spine payload.
+      if(tpl && tpl.contract && content && typeof content === "object"){
+        window.NexoraPreview.renderTo(thumb, { contract: tpl.contract, content, meta: tpl.meta || tpl.doc?.meta });
+        if(thumb.childNodes && thumb.childNodes.length > 0) return;
+        // fall through on empty render
         thumb.innerHTML = "";
-        window.NexoraPreview.renderTo(thumb, { contract: tpl.contract, content });
-        return;
       }
+
+      // Otherwise, pass the template as-is (flat mode). Preview renderer will normalize.
+      window.NexoraPreview.renderTo(thumb, Object.assign({ content }, tpl));
+      if(thumb.childNodes && thumb.childNodes.length > 0) return;
+
+      // If renderer produced nothing, fall through to legacy draw.
+      thumb.innerHTML = "";
     }
-  } catch (e) {}
+  }catch(e){}
   drawThumb(thumb, tplOrElements, bg);
 }
 
@@ -1004,9 +1020,14 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
   // Keep latest generated templates (for tile click -> editor)
   let __lastTemplates = [];
 
-  // HARD GATE: homepage renders ONLY real templates (canvas + elements[])
+  // HARD GATE: homepage renders ONLY real templates (canvas + elements[]).
+  // This prevents contract-only / mock / legacy objects from rendering as blank boxes.
   function isRenderableTemplate(t){
-    return !!(t && t.canvas && Array.isArray(t.elements) && t.elements.length);
+    const canvas = t && (t.canvas || t.contract?.canvas);
+    const els = (Array.isArray(t?.elements) ? t.elements : null)
+      || (Array.isArray(t?.contract?.elements) ? t.contract.elements : null)
+      || (Array.isArray(t?.content?.elements) ? t.content.elements : null);
+    return !!(canvas && Array.isArray(els) && els.length);
   }
 
 
@@ -1133,23 +1154,34 @@ function renderTemplatesFromList(list){
         // Normalize payload shape for preview-renderer.
         const hasContract = !!(t && t.contract);
         const contentObj = (t && (t.content || t.doc?.content)) || __synthContentFromElements(t) || {};
-        // Ensure elements are available to the preview layer if we have them.
-        if(Array.isArray(t?.elements) && t.elements.length && typeof contentObj === "object"){
-          if(!Array.isArray(contentObj.elements)) contentObj.elements = t.elements;
+        // Ensure elements are available to the preview layer if we have them (top-level or contract-level).
+        if(typeof contentObj === "object"){
+          if(Array.isArray(t?.elements) && t.elements.length){
+            if(!Array.isArray(contentObj.elements)) contentObj.elements = t.elements;
+          }else if(Array.isArray(t?.contract?.elements) && t.contract.elements.length){
+            if(!Array.isArray(contentObj.elements)) contentObj.elements = t.contract.elements;
+          }
         }
         const payload = hasContract ? { contract: t.contract, content: contentObj } : {
           contract: t?.contract || t?.meta?.contract || {
             v: 1,
             category: t?.category || document.getElementById("cat")?.value || "instagram_post",
-            canvas: t?.canvas || t?.contract?.canvas || { w: 1080, h: 1080 }
+            canvas: t?.canvas || t?.contract?.canvas || { w: 1080, h: 1080 },
+            // Include elements for preview validation when contract is synthetic.
+            elements: (Array.isArray(contentObj?.elements) ? contentObj.elements : undefined)
           },
           content: contentObj
         };
 
-        if(window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
-          window.NexoraPreview.renderTo(target, payload);
+        // Prefer TemplateOutputController.renderThumb whenever available (crash-proof + legacy fallback).
+        if(TOC && typeof TOC.renderThumb === "function"){
+          TOC.renderThumb(t, target);
+        }else if(window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
+          window.NexoraPreview.renderTo(target, Object.assign({ content: contentObj }, t));
+        }else if(typeof window.renderThumb === "function"){
+          window.renderThumb(target, payload);
         }else{
-          // Ultra-safe fallback: keep the box, don't crash.
+          // Keep the box, don't crash.
           target.innerHTML = "";
         }
       });
@@ -1193,9 +1225,9 @@ function renderTemplatesFromList(list){
         window.__NEXORA_AI_COMMITTED__ = Array.isArray(st.templates) && st.templates.some(t => t && (t.contract || t.doc || t.content));
       }catch(_){ window.__NEXORA_AI_COMMITTED__ = window.__NEXORA_AI_COMMITTED__ || false; }
 
-      const restoredList = Array.isArray(st.templates) ? st.templates.filter(isRenderableTemplate) : [];
-      if(!restoredList.length){ clearHomeState(); return false; }
-      renderTemplatesFromList(restoredList);
+      const restored = Array.isArray(st.templates) ? st.templates.filter(isRenderableTemplate) : [];
+      if(!restored.length){ clearHomeState(); return false; }
+      renderTemplatesFromList(restored);
 
       requestAnimationFrame(()=>{ try{ window.scrollTo(0, st.scrollY||0); }catch(_){} });
 
@@ -1301,8 +1333,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       window.__NEXORA_AI_COMMITTED__ = true;
       __lastTemplates = Array.isArray(data.templates) ? data.templates.filter(isRenderableTemplate) : [];
-      if(!__lastTemplates.length){ if(statusEl) statusEl.textContent = "API returned no renderable templates"; return; }
       window.__lastTemplates = __lastTemplates;
+      if(!__lastTemplates.length){ if(statusEl) statusEl.textContent = "API returned no renderable templates"; return; }
 
       if (window.renderTemplatesFromList) window.renderTemplatesFromList(__lastTemplates);
       try{ saveHomeState(); } catch (e) {}
