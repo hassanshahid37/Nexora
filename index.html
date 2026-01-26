@@ -390,6 +390,8 @@
   </div>
 
   <!-- Runtime renderers (required for real thumbnails on homepage) -->
+  <script src="./preview-template-contract.js"></script>
+  <script src="./preview-normalization-engine.js"></script>
   <script src="./preview-renderer.js"></script>
   <script src="./template-output-controller.js"></script>
 
@@ -808,7 +810,10 @@ function renderTemplatesFromList(list){
 
         // Render real preview (no fake fallback).
         if(window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
-          window.NexoraPreview.renderTo(target, payload);
+          const __previewNormalized = (window.NexoraPreviewNormalization && typeof window.NexoraPreviewNormalization.normalize === "function")
+            ? window.NexoraPreviewNormalization.normalize(payload)
+            : payload;
+          window.NexoraPreview.renderTo(target, __previewNormalized);
         }else if(TOC && typeof TOC.renderThumb === "function"){
           // Legacy path if preview renderer is missing
           TOC.renderThumb(t, target);
