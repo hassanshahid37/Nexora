@@ -1,16 +1,3 @@
-
-// === HARD GATE: ONLY MATERIALIZED TEMPLATES MAY PASS ===
-function isRenderableTemplate(t){
-  return !!(t && t.canvas && Array.isArray(t.elements) && t.meta && t.meta.materialized === true);
-}
-
-
-function ensureMaterializedMeta(t){
-  if(!t || typeof t !== "object") return t;
-  t.meta = (t.meta && typeof t.meta === "object") ? t.meta : {};
-  if(t.meta.materialized !== true) t.meta.materialized = true;
-  return t;
-}
 // template-output-controller.js
 // Purpose: single authority for what the home "preview tiles" render, and what gets exported/opened.
 // Must be: crash-proof, contract-aware, and never blank the UI.
@@ -42,11 +29,14 @@ function renderLegacyThumb(template, mount){
     wrap.style.border = "1px solid rgba(255,255,255,0.10)";
 
     // Scale factor based on available width
-    const boxW = Math.max(1, mount.clientWidth || mount.getBoundingClientRect().width || 1);
+    const boxW = Math.max(1, mount.clientWidth || mount.getBoundingClientRect().width || 260);
     const scale = boxW / baseW;
 
     // Helper: normalize element fields (legacy + spine-to-template)
+// Elements may live in multiple places depending on pipeline stage.
+// Prefer top-level, then contract.elements, then content.elements.
     const els = Array.isArray(template?.elements) ? template.elements
+              : Array.isArray(template?.contract?.elements) ? template.contract.elements
               : Array.isArray(template?.content?.elements) ? template.content.elements
               : [];
 
@@ -229,8 +219,6 @@ node.style.height = Math.max(1, pxH * scale) + "px";
   // Set templates and (by default) mark them as "committed" (AI-backed).
   // Pass {commit:false} to update the list without flipping committed.
   TOC.setTemplates = function(templates, opts){
-  templates = (templates||[]).map(ensureMaterializedMeta).filter(isRenderableTemplate);
-
     const commit = !(opts && opts.commit === false);
     if(commit) committed = true;
     TOC.templates = Array.isArray(templates) ? templates : [];
@@ -253,10 +241,17 @@ node.style.height = Math.max(1, pxH * scale) + "px";
 // IMPORTANT: renderTo(target, payload) expects a spine-shaped payload: { contract, content, meta? }.
 if(root.NexoraPreview && typeof root.NexoraPreview.renderTo === "function"){
   const payload = (template && typeof template === "object") ? {
+    // Provide flat fields too so preview-renderer can auto-adapt when contract is missing/partial.
+    canvas: (template.canvas || template.contract?.canvas || null),
+    elements: Array.isArray(template.elements) ? template.elements
+            : Array.isArray(template.contract?.elements) ? template.contract.elements
+            : undefined,
+
     contract: (template.contract && typeof template.contract === "object") ? template.contract : (template.Contract || null),
     content:  (template.content && typeof template.content === "object") ? template.content : {
-      // Legacy templates: lift elements/headline into content so the preview renderer can still render if it supports it.
-      elements: Array.isArray(template.elements) ? template.elements : undefined,
+      elements: Array.isArray(template.elements) ? template.elements
+              : Array.isArray(template.contract?.elements) ? template.contract.elements
+              : undefined,
       headline: template.headline ?? template.title ?? undefined,
       subhead: template.subhead ?? template.subtitle ?? undefined
     },
