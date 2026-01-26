@@ -18,19 +18,22 @@ function renderLegacyThumb(template, mount){
     // Clear mount
     mount.innerHTML = "";
 
+    try{ mount.style.overflow = "hidden"; }catch(_){ }
+
     // Root wrapper keeps aspect ratio stable inside tiles
     const wrap = document.createElement("div");
     wrap.style.position = "relative";
     wrap.style.width = "100%";
-    wrap.style.aspectRatio = baseW + " / " + baseH;
+    wrap.style.height = "100%";
     wrap.style.borderRadius = "16px";
     wrap.style.overflow = "hidden";
     wrap.style.background = "rgba(255,255,255,0.06)";
     wrap.style.border = "1px solid rgba(255,255,255,0.10)";
 
-    // Scale factor based on available width
+    // Scale factor based on available size (fit inside thumb box)
     const boxW = Math.max(1, mount.clientWidth || mount.getBoundingClientRect().width || 260);
-    const scale = boxW / baseW;
+    const boxH = Math.max(1, mount.clientHeight || mount.getBoundingClientRect().height || 84);
+    const scale = Math.min(boxW / baseW, boxH / baseH);
 
     // Helper: normalize element fields (legacy + spine-to-template)
 // Elements may live in multiple places depending on pipeline stage.
