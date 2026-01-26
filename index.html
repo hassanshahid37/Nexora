@@ -1396,21 +1396,7 @@ document.getElementById("newStyleBtn")?.addEventListener("click", () => {
 
 
 <script>
-function renderPreview(canvas, t){
-  if(!canvas) return;
-  canvas.innerHTML="";
-  if(t.bg) canvas.style.background=t.bg;
-  const texts=(t.elements||[]).filter(e=>e.type==="heading"||e.type==="text").slice(0,2);
-  texts.forEach((e,i)=>{
-    const d=document.createElement("div");
-    d.className="pv-text";
-    d.textContent=e.title||"";
-    d.style.top=(14+i*32)+"px";
-    d.style.fontSize=(i===0?16:12)+"px";
-    d.style.color=e.color||"#fff";
-    canvas.appendChild(d);
-  });
-}
+
 </script>
 
 
