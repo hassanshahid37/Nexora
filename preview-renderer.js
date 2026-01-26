@@ -42,7 +42,17 @@
     }
   }
 
-  function normalizeCanvas(contract, meta) {
+  
+function _pickElements(contract, content){
+  // Prefer content.elements (runtime), but fall back to contract.elements (common output shape).
+  const a = (content && Array.isArray(content.elements)) ? content.elements : null;
+  if(a && a.length) return a;
+  const b = (contract && Array.isArray(contract.elements)) ? contract.elements : null;
+  if(b && b.length) return b;
+  return [];
+}
+
+function normalizeCanvas(contract, meta) {
     // 1) Prefer Spine's normalizer if present
     try {
       if (window.NexoraSpine && typeof window.NexoraSpine.normalizeCanvas === "function") {
@@ -319,6 +329,13 @@
       const metaIn = payload?.meta || {};
       let content = normalizeContent(payload?.content);
 
+      // Ensure validation doesn't fail when elements live in content (common for contract-less API output).
+      try{
+        if(contract && (!Array.isArray(contract.elements) || contract.elements.length===0) && Array.isArray(content?.elements) && content.elements.length){
+          contract.elements = content.elements;
+        }
+      }catch(_){ }
+
       if (!root) return false;
       if (!validate(contract)) return false;
 
@@ -340,7 +357,22 @@
         palette: metaIn.palette || contract.palette || {}
       };
 
-      const baseLayers = Array.isArray(contract.layers) ? contract.layers : [];
+      let baseLayers = Array.isArray(contract.layers) ? contract.layers : [];
+
+// If the contract has no explicit layers (common for legacy / materialized templates),
+// infer layers from elements. Prefer content.elements but fall back to contract.elements.
+if (!Array.isArray(baseLayers) || baseLayers.length === 0) {
+  const els = _pickElements(contract, content);
+  if (Array.isArray(els) && els.length) {
+    baseLayers = _inferLayersFromElements(els);
+  }
+}
+
+// Final fallback: wrap contract.elements into one layer.
+if ((!Array.isArray(baseLayers) || baseLayers.length === 0) && Array.isArray(contract.elements) && contract.elements.length) {
+  baseLayers = [{ kind: "elements", elements: contract.elements }];
+}
+
 
       // P7: render order is spine-authoritative.
       // If a layout family exists and a registry is present, honor its hierarchy to avoid preview drift.
