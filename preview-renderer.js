@@ -1,10 +1,11 @@
 
 /**
- * preview-renderer.js (FIXED)
- * Intentionally dumb renderer:
+ * preview-renderer.js (FIXED v2)
+ * Dumb renderer, but correct thumbnail behavior:
  * - Accepts PreviewTemplateContract ONLY
- * - Enforces preview tile size
- * - Scales internal canvas to fit
+ * - Enforces tile size
+ * - Scales AND CENTERS canvas
+ * - Background always fills tile
  */
 (function(){
   const root = typeof window !== "undefined" ? window : globalThis;
@@ -14,37 +15,36 @@
       return;
     }
 
-    // Clear target
     target.innerHTML = "";
 
-    // --- Preview tile sizing (authoritative) ---
     const TILE_W = target.clientWidth || 240;
     const TILE_H = target.clientHeight || 240;
 
-    // Root wrapper (clips everything)
+    // Wrapper = authoritative preview tile
     const wrapper = document.createElement("div");
     wrapper.style.position = "relative";
     wrapper.style.width = TILE_W + "px";
     wrapper.style.height = TILE_H + "px";
     wrapper.style.overflow = "hidden";
+    wrapper.style.background = "#0b1020";
 
-    // Internal canvas (full logical size)
+    const canvasW = previewContract.canvas.w;
+    const canvasH = previewContract.canvas.h;
+
+    const scale = Math.min(TILE_W / canvasW, TILE_H / canvasH);
+    const scaledW = canvasW * scale;
+    const scaledH = canvasH * scale;
+
+    // Centered canvas
     const canvas = document.createElement("div");
     canvas.style.position = "absolute";
-    canvas.style.left = "0";
-    canvas.style.top = "0";
-    canvas.style.width = previewContract.canvas.w + "px";
-    canvas.style.height = previewContract.canvas.h + "px";
+    canvas.style.width = canvasW + "px";
+    canvas.style.height = canvasH + "px";
+    canvas.style.left = (TILE_W - scaledW) / 2 + "px";
+    canvas.style.top = (TILE_H - scaledH) / 2 + "px";
     canvas.style.transformOrigin = "top left";
-
-    // Scale to fit
-    const scale = Math.min(
-      TILE_W / previewContract.canvas.w,
-      TILE_H / previewContract.canvas.h
-    );
     canvas.style.transform = "scale(" + scale + ")";
 
-    // Render elements (dumb draw)
     for(const el of previewContract.elements){
       const node = document.createElement("div");
       node.style.position = "absolute";
@@ -56,13 +56,13 @@
       if(el.role === "background"){
         node.style.left = "0";
         node.style.top = "0";
-        node.style.width = previewContract.canvas.w + "px";
-        node.style.height = previewContract.canvas.h + "px";
+        node.style.width = canvasW + "px";
+        node.style.height = canvasH + "px";
         node.style.background = el.style?.background || "#0b1020";
       } else if(el.text){
         node.textContent = el.text;
         node.style.color = el.style?.color || "#ffffff";
-        node.style.fontWeight = el.style?.fontWeight || 500;
+        node.style.fontWeight = el.style?.fontWeight || 600;
         node.style.fontSize = el.style?.fontSize || "32px";
         node.style.display = "flex";
         node.style.alignItems = "center";
