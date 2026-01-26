@@ -1,13 +1,15 @@
 /**
  * preview-renderer.js
- * Renderer authority for Nexora homepage tiles.
  *
- * Fixes in this version:
- * - Adds window.NexoraPreview.renderTo(targetNode, payload) (required by index.html)
- * - Supports Nexora element schemas from generator/editor:
- *     type: bg/photo/image/shape/text/heading/headline/subhead/pill/badge/chip/button/cta
- * - Works even when elements have no x/y/w/h (derives a simple stacked layout)
- * - Browser-safe AND Node-safe (no document access unless available)
+ * FIX (v2):
+ * - Prevent stretched homepage cards by NEVER sizing/scaling the outer container.
+ * - Render into an inner wrapper that is scaled to fit the container's existing size.
+ * - Keep schema-aware rendering (bg/photo/image/shape/text/pill/badge/chip/button/cta).
+ * - Work even when x/y/w/h are missing (auto-stacked fallback layout).
+ *
+ * Public APIs (backward compatible):
+ * - window.NexoraPreviewRenderer.renderPreview(container, contract)
+ * - window.NexoraPreview.renderTo(targetNode, payload)
  */
 
 (function () {
@@ -18,6 +20,7 @@
   function inferRole(el) {
     const r = norm(el.role);
     if (r) return r;
+
     const t = norm(el.type);
     if (t === "bg" || t === "background") return "background";
     if (t === "photo" || t === "image") return "image";
@@ -53,7 +56,6 @@
   }
 
   function ensureGeom(el, canvasW, canvasH, slotIndex, role) {
-    // If any geom exists, trust it.
     const hasAny = ["x","y","w","h"].some(k => el[k] !== undefined && el[k] !== null);
     if (hasAny) {
       return {
@@ -64,7 +66,7 @@
       };
     }
 
-    // Otherwise derive a simple stacked layout (Canva-ish preview)
+    // Simple stacked fallback (thumbnail-only)
     const pad = Math.round(canvasW * 0.08);
     if (role === "background") return { x: 0, y: 0, w: canvasW, h: canvasH };
     if (role === "badge") return { x: pad, y: pad, w: Math.round(canvasW * 0.35), h: Math.round(canvasH * 0.08) };
@@ -74,7 +76,6 @@
     if (role === "image") return { x: Math.round(canvasW * 0.58), y: Math.round(canvasH * 0.18), w: Math.round(canvasW * 0.34), h: Math.round(canvasH * 0.42) };
     if (role === "shape") return { x: pad, y: Math.round(canvasH * 0.64), w: Math.round(canvasW * 0.18), h: Math.round(canvasH * 0.12) };
 
-    // fallback slot boxes
     const y = pad + slotIndex * Math.round(canvasH * 0.12);
     return { x: pad, y, w: canvasW - pad*2, h: Math.round(canvasH * 0.10) };
   }
@@ -100,7 +101,6 @@
     }
 
     if (role === "image") {
-      // Lightweight image placeholder (no external fetch)
       div.style.borderRadius = "14px";
       div.style.background =
         "radial-gradient(160px 80px at 20% 20%, rgba(11,95,255,.24), transparent 60%)," +
@@ -175,6 +175,7 @@
   function renderContract(container, contract) {
     if (!isBrowser || !container || !contract) return;
 
+    // Do not touch outer sizing: it is controlled by index.html/CSS.
     container.innerHTML = "";
     container.style.position = "relative";
     container.style.overflow = "hidden";
@@ -182,15 +183,23 @@
     const cw = safeNum(contract.canvas?.w || contract.canvas?.width, 1080);
     const ch = safeNum(contract.canvas?.h || contract.canvas?.height, 1080);
 
-    container.style.width = cw + "px";
-    container.style.height = ch + "px";
-    // Tile scale (keeps nice thumbnail footprint)
-    container.style.transform = "scale(0.22)";
-    container.style.transformOrigin = "top left";
+    // Create inner wrapper sized to the design canvas and scale it to fit container box.
+    const wrap = document.createElement("div");
+    wrap.style.position = "absolute";
+    wrap.style.left = "0";
+    wrap.style.top = "0";
+    wrap.style.width = cw + "px";
+    wrap.style.height = ch + "px";
+
+    // Determine thumbnail box size from the real DOM box.
+    const thumbW = container.clientWidth || 300;
+    const thumbH = container.clientHeight || 220;
+
+    const scale = Math.min(thumbW / cw, thumbH / ch);
+    wrap.style.transform = "scale(" + scale + ")";
+    wrap.style.transformOrigin = "top left";
 
     const elements = Array.isArray(contract.elements) ? contract.elements : [];
-
-    // Ensure background first for visual sanity.
     const sorted = [...elements].sort((a,b)=>{
       const ra = inferRole(a);
       const rb = inferRole(b);
@@ -200,17 +209,16 @@
     });
 
     sorted.forEach((el, idx)=>{
-      const node = createNode(el, cw, ch, idx);
-      container.appendChild(node);
+      wrap.appendChild(createNode(el, cw, ch, idx));
     });
+
+    container.appendChild(wrap);
   }
 
-  // Backward compat API
   function renderPreview(container, contract) {
     renderContract(container, contract);
   }
 
-  // Missing API expected by index.html + TemplateOutputController
   function renderTo(targetNode, payload) {
     if (!isBrowser || !targetNode || !payload) return;
 
@@ -228,7 +236,7 @@
       [];
 
     const contract = {
-      canvas: canvas.canvas || canvas, // tolerate {canvas:{w,h}} and {w,h}
+      canvas: canvas.canvas || canvas,
       elements: Array.isArray(elements) ? elements : []
     };
 
