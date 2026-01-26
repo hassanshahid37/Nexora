@@ -867,141 +867,40 @@ function renderThumb(thumb, tplOrElements, bg){
 
 
   function seedTemplates(n){
-  // Seed previews are a UX safety net. They must NEVER blank the UI.
+  // PLACEHOLDER-ONLY: keep template boxes visible, but DO NOT generate mock/demo previews.
+  // Real previews must come ONLY from /api/generate output.
   if (window.__NEXORA_AI_COMMITTED__) return;
 
-  const category = $("#cat").value;
-  const style = $("#style").value;
-  const prompt = ($("#prompt").value || "").trim();
+  const gridEl = document.getElementById("previewGrid");
+  if(!gridEl) return;
 
-  const TOC = window.TemplateOutputController || null;
+  const count = Math.max(1, Math.min(parseInt(n || 6, 10) || 6, 24));
 
-  // Build off-DOM first; only swap into the grid if we successfully built at least 1 tile.
-  const nextTemplates = [];
+  // If we already have real templates rendered, do nothing.
+  if (Array.isArray(window.__lastTemplates) && window.__lastTemplates.length) return;
+
+  // If grid already has tiles, keep them (never blank).
+  const existingTiles = gridEl.querySelectorAll(".tile");
+  if (existingTiles && existingTiles.length) return;
+
+  const category = document.getElementById("cat")?.value || "Template";
+
   const frag = document.createDocumentFragment();
-
-  function addTile(template, index){
+  for(let i=0;i<count;i++){
     const div = document.createElement("div");
     div.className = "tile";
-    div.tabIndex = 0;
-
+    div.tabIndex = -1; // placeholders are not clickable
     div.innerHTML = `
-      <div class="thumb"></div>
-      <div class="title">${category} #${index+1}</div>
-      <div class="meta">• Canva-style</div>
+      <div class="preview-canvas" aria-hidden="true"></div>
+      <b>${category} #${i+1}</b>
+      <span>Generate to see real AI previews</span>
     `;
-
-    const thumb = div.querySelector(".thumb");
-
-    
-    // Defer thumb rendering until AFTER the tile is attached to the DOM.
-    // Rendering into a detached node makes getBoundingClientRect()/clientWidth return 0 => blank thumbs.
-    div.__tpl = template;
-
-
-    nextTemplates.push(template);
-
-    div.addEventListener("click", ()=>openEditorWith(template));
-    div.addEventListener("keydown",(e)=>{ if(e.key==="Enter") openEditorWith(template); });
-
     frag.appendChild(div);
   }
 
-  // Phase I: client-side generator (design.js) as the primary safe fallback.
-  try{
-    if(window.NexoraDesign && typeof window.NexoraDesign.generateTemplates === "function"){
-      const templates = window.NexoraDesign.generateTemplates({
-        category,
-        style,
-        prompt,
-        count: n
-      }) || [];
-
-      templates.forEach((t, i)=> addTile(t, i));
-    }
-  }catch(_){
-    // fall through to legacy seeds below
-  }
-
-  // Legacy seeds (always available)
-  if(nextTemplates.length === 0){
-    const patterns = [
-      { headlineSize: 88, headlineY: 0.40, bg:"#0f172a", accent:"#3b82f6" },
-      { headlineSize: 72, headlineY: 0.34, bg:"#111827", accent:"#22c55e" },
-      { headlineSize: 66, headlineY: 0.46, bg:"#0b1220", accent:"#f59e0b" },
-      { headlineSize: 74, headlineY: 0.38, bg:"#101827", accent:"#a855f7" },
-      { headlineSize: 64, headlineY: 0.42, bg:"#0a1020", accent:"#ef4444" }
-    ];
-
-    for(let i=0;i<n;i++){
-      const p = patterns[i % patterns.length];
-      const headline = (prompt || "life is good").split(/\s+/).slice(0, 3).join(" ");
-      const elements = [
-        { type:"rect", x:0.08, y:0.12, w:0.84, h:0.76, fill:p.bg, radius:18 },
-        { type:"rect", x:0.10, y:0.14, w:0.80, h:0.06, fill:p.accent, radius:14 },
-        { type:"text", x:0.12, y:p.headlineY, w:0.76, h:0.30, text:headline, size:p.headlineSize, weight:900, color:"#e5e7eb", align:"left" }
-      ];
-
-      // Keep spine-shaped payload (contract + content) so preview-renderer can do its job.
-      const template = {
-        contract: {
-          v: 1,
-          category,
-          canvas: { w: 1080, h: 1080 },
-          roles: ["headline"],
-        },
-        content: { headline },
-        meta: { style, seed: true, idx: i }
-      };
-
-      // Also attach legacy 'bg/elements' for older renderers.
-      template.bg = p.bg;
-      template.elements = elements;
-
-      addTile(template, i);
-    }
-  }
-
-  // Commit ONLY if we actually built something.
-  if(nextTemplates.length > 0){
-    // Update shared home state (but do not flip "AI committed").
-    __lastTemplates = nextTemplates;
-    if (TOC && typeof TOC.setPreviewTemplates === "function") {
-      TOC.setPreviewTemplates(nextTemplates);
-    }
-
-    // Swap DOM in one shot (prevents vanish-on-error).
-    grid.innerHTML = "";
-    grid.appendChild(frag);
-
-    
-    // Now that tiles are attached, render thumbs deterministically.
-    requestAnimationFrame(()=>{
-      try{
-        const tiles = grid.querySelectorAll(".tile");
-        tiles.forEach(tile=>{
-          const t = tile.__tpl;
-          const thumb = tile.querySelector(".thumb");
-          if(!thumb) return;
-          if (TOC && typeof TOC.renderThumb === "function") {
-            TOC.renderThumb(t, thumb);
-          } else {
-            try {
-              const isYT = (String(category).toLowerCase().includes("youtube"));
-              if (!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function") {
-                window.NexoraDesign.renderPreview(t, thumb);
-              } else {
-                renderThumb(thumb, t, (t && t.bg) || null);
-              }
-            } catch (_) {}
-          }
-        });
-      }catch(_){ }
-    });
-
-try{ saveHomeState(); } catch (e) {}
-  }
+  gridEl.appendChild(frag);
 }
+
   // Expose for cross-script access
   window.seedTemplates = seedTemplates;
 
@@ -1105,6 +1004,12 @@ let tpl = payload?.elements ? toEditorTemplate(payload) : null;
   // Keep latest generated templates (for tile click -> editor)
   let __lastTemplates = [];
 
+  // HARD GATE: homepage renders ONLY real templates (canvas + elements[])
+  function isRenderableTemplate(t){
+    return !!(t && t.canvas && Array.isArray(t.elements) && t.elements.length);
+  }
+
+
   // --- Homepage state persistence (restore after returning from editor) ---
   const HOME_STATE_KEY = "nexora_home_state_v1";
 
@@ -1167,9 +1072,10 @@ function renderTemplatesFromList(list){
   const gridEl = document.getElementById("previewGrid");
   if(!gridEl) return;
 
-  const arr = Array.isArray(list) ? list.filter(Boolean) : [];
+  const arr = Array.isArray(list) ? list.filter(isRenderableTemplate) : [];
   if(arr.length === 0){
-    // Never blank the UI because of an empty/invalid payload.
+    // Keep placeholders, but do not render non-template objects.
+    if(statusEl) statusEl.textContent = "No renderable templates to preview";
     return;
   }
 
@@ -1183,18 +1089,15 @@ function renderTemplatesFromList(list){
     div.className = "tile";
     div.tabIndex = 0;
 
+    const catLabel = (t?.contract?.category || document.getElementById("cat")?.value || "Template");
     div.innerHTML = `
-      <div class="thumb"></div>
-      <div class="title">${t?.contract?.category || document.getElementById("cat")?.value || "Template"} #${i+1}</div>
-      <div class="meta">• Canva-style</div>
+      <div class="preview-canvas" aria-label="Template preview"></div>
+      <b>${catLabel} #${i+1}</b>
+      <span>AI output</span>
     `;
 
-    const thumb = div.querySelector(".thumb");
-
-    
-    // Defer thumb rendering until AFTER the tile is attached to the DOM.
+    // Attach template for deferred render.
     div.__tpl = t;
-
 
     nextTemplates.push(t);
     __lastTemplates = nextTemplates;
@@ -1208,7 +1111,6 @@ function renderTemplatesFromList(list){
   // Update controller state for Export/OpenEditor determinism.
   if(TOC){
     if(typeof TOC.setTemplates === "function"){
-      // This is used for "real" templates, so mark committed.
       TOC.setTemplates(nextTemplates);
     }else{
       TOC.templates = nextTemplates;
@@ -1219,37 +1121,45 @@ function renderTemplatesFromList(list){
   gridEl.innerHTML = "";
   gridEl.appendChild(frag);
 
-  
-  // Now that tiles are attached, render thumbs deterministically.
+  // Now that tiles are attached, render previews deterministically (API output only).
   requestAnimationFrame(()=>{
     try{
       const tiles = gridEl.querySelectorAll(".tile");
       tiles.forEach(tile=>{
         const t = tile.__tpl;
-        const thumb = tile.querySelector(".thumb");
-        if(!thumb) return;
-        if(TOC && typeof TOC.renderThumb === "function"){
-          TOC.renderThumb(t, thumb);
+        const target = tile.querySelector(".preview-canvas");
+        if(!target) return;
+
+        // Normalize payload shape for preview-renderer.
+        const hasContract = !!(t && t.contract);
+        const contentObj = (t && (t.content || t.doc?.content)) || __synthContentFromElements(t) || {};
+        // Ensure elements are available to the preview layer if we have them.
+        if(Array.isArray(t?.elements) && t.elements.length && typeof contentObj === "object"){
+          if(!Array.isArray(contentObj.elements)) contentObj.elements = t.elements;
+        }
+        const payload = hasContract ? { contract: t.contract, content: contentObj } : {
+          contract: t?.contract || t?.meta?.contract || {
+            v: 1,
+            category: t?.category || document.getElementById("cat")?.value || "instagram_post",
+            canvas: t?.canvas || t?.contract?.canvas || { w: 1080, h: 1080 }
+          },
+          content: contentObj
+        };
+
+        if(window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
+          window.NexoraPreview.renderTo(target, payload);
         }else{
-          try{
-            const isYT = (String(t?.contract?.category || "").toLowerCase().includes("youtube"));
-            if(!isYT && window.NexoraDesign && typeof window.NexoraDesign.renderPreview === "function"){
-              window.NexoraDesign.renderPreview(t, thumb);
-            }else{
-              renderThumb(thumb, t, (t && t.bg) || null);
-            }
-          }catch(_){ }
+          // Ultra-safe fallback: keep the box, don't crash.
+          target.innerHTML = "";
         }
       });
     }catch(_){ }
   });
 
-// expose for debugging
-  window.NEXORA = window.NEXORA || {};
-  window.NEXORA.lastTemplates = __lastTemplates;
-
-  try{ saveHomeState(); } catch (e) {}
+  // expose for debugging
+  window.__lastTemplates = nextTemplates;
 }
+
   // Expose for cross-script access
   window.renderTemplatesFromList = renderTemplatesFromList;
 
@@ -1283,7 +1193,9 @@ function renderTemplatesFromList(list){
         window.__NEXORA_AI_COMMITTED__ = Array.isArray(st.templates) && st.templates.some(t => t && (t.contract || t.doc || t.content));
       }catch(_){ window.__NEXORA_AI_COMMITTED__ = window.__NEXORA_AI_COMMITTED__ || false; }
 
-      renderTemplatesFromList(st.templates);
+      const restoredList = Array.isArray(st.templates) ? st.templates.filter(isRenderableTemplate) : [];
+      if(!restoredList.length){ clearHomeState(); return false; }
+      renderTemplatesFromList(restoredList);
 
       requestAnimationFrame(()=>{ try{ window.scrollTo(0, st.scrollY||0); }catch(_){} });
 
@@ -1311,21 +1223,23 @@ function renderTemplatesFromList(list){
   $("#openEditor").addEventListener("click", (ev)=>{
     ev.preventDefault();
     // If user didn't click a preview tile, open the latest generated template #1 (fallback to seeded)
-    const first = (Array.isArray(__lastTemplates) && __lastTemplates.length ? __lastTemplates[0] : null)
-      || (Array.isArray(seedTemplates) ? seedTemplates[0] : null);
-    openEditorWith(first || {cat:$("#cat").value, style:$("#style").value, i:1});
+    const first = (Array.isArray(__lastTemplates) && __lastTemplates.length ? __lastTemplates[0] : null);
+    if(first){
+      openEditorWith(first);
+    }else{
+      // No generated template yet; open editor with settings only (no mock template).
+      openEditorWith({ cat: $("#cat").value, style: $("#style").value, i: 1 });
+    }
   });
   $("#themeBtn").addEventListener("click", toggleTheme);
 
   $("#exportBtn").addEventListener("click", ()=>{
-    const items = [...grid.children].map((el, idx)=>({
-      title: el.querySelector("b")?.textContent || `Template #${idx+1}`,
-      desc: el.querySelector("span")?.textContent || ""
-    }));
-    const blob = new Blob([JSON.stringify({items}, null, 2)], { type: "application/json;charset=utf-8" });
+    const templates = Array.isArray(__lastTemplates) ? __lastTemplates : [];
+    const payload = { templates, count: templates.length, exportedAt: Date.now() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "templify_templates.json";
+    a.download = "nexora_templates.json";
     a.click();
     URL.revokeObjectURL(a.href);
   });
@@ -1350,10 +1264,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   btn.addEventListener("click", async (event) => {
-  // New generation cycle: allow seed before AI, then lock after AI commit
-  window.__NEXORA_AI_COMMITTED__ = false;
-currentLayout = "Modern";
-currentStyle = "Dark Premium";
+    // New generation cycle: allow placeholders before AI, then lock after AI commit
+    window.__NEXORA_AI_COMMITTED__ = false;
 
     const payload = {
       category: document.getElementById("cat")?.value || "Instagram Post",
@@ -1363,39 +1275,43 @@ currentStyle = "Dark Premium";
       notes: document.getElementById("notes")?.value || ""
     };
 
-    try {
-      // Instant client-side templates (design.js) — never blocks UI.
-      // Use the requested count for ALL categories (YouTube included)
-      if (!window.__NEXORA_AI_COMMITTED__) (window.seedTemplates ? window.seedTemplates(payload.count) : null);
-      try{ saveHomeState(); } catch (e) {}
-      statusEl.textContent = `Generated ${payload.count}`;
-
-      // Optional backend copy enrichment (fire-and-forget). Never blocks and never throws.
-      fetch("/api/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...payload, count: payload.count, mode: "templates" })
-      }).then(res => {
-        if(!res || !res.ok) return null;
-        return res.json().catch(() => null);
-      }).then(data => {
-    if(!data || !Array.isArray(data.templates) || !data.templates.length) return;
-
-    // Replace seeded templates with REAL backend templates (archetypes + style-engine).
-    window.__NEXORA_AI_COMMITTED__ = true;
-    __lastTemplates = data.templates;
-
-    // Re-render the grid using the same UI (template boxes remain identical).
-    (window.renderTemplatesFromList ? window.renderTemplatesFromList(__lastTemplates) : null);
+    // Keep template boxes visible immediately, but do NOT generate mock previews.
+    try { if (window.seedTemplates) window.seedTemplates(payload.count); } catch (e) {}
 
     try{ saveHomeState(); } catch (e) {}
+    if(statusEl) statusEl.textContent = "Generating…";
 
-    statusEl.textContent = `Generated ${__lastTemplates.length} (AI templates)`;
-  }).catch(() => {});
+    try{
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, mode: "templates" })
+      });
 
-} catch (e) {
-      // ✅ Fallback: never leave user with "nothing happened"
-      if (!window.__NEXORA_AI_COMMITTED__) (window.seedTemplates ? window.seedTemplates(payload.count) : null);
+      if(!res || !res.ok){
+        if(statusEl) statusEl.textContent = "Generation failed (API error)";
+        return;
+      }
+
+      const data = await res.json().catch(()=>null);
+      if(!data || !Array.isArray(data.templates) || !data.templates.length){
+        if(statusEl) statusEl.textContent = "No templates returned (API)";
+        return;
+      }
+
+      window.__NEXORA_AI_COMMITTED__ = true;
+      __lastTemplates = Array.isArray(data.templates) ? data.templates.filter(isRenderableTemplate) : [];
+      if(!__lastTemplates.length){ if(statusEl) statusEl.textContent = "API returned no renderable templates"; return; }
+      window.__lastTemplates = __lastTemplates;
+
+      if (window.renderTemplatesFromList) window.renderTemplatesFromList(__lastTemplates);
+      try{ saveHomeState(); } catch (e) {}
+
+      if(statusEl) statusEl.textContent = `Generated ${__lastTemplates.length} (AI templates)`;
+    }catch(e){
+      if(statusEl) statusEl.textContent = "Generation failed (network)";
+      // Keep placeholders, never blank.
+      return;
     }
   });
 });
@@ -1423,17 +1339,10 @@ const statusEl2 = document.getElementById("status");
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 function setStatus(msg){ if(statusEl2) statusEl2.textContent = msg; }
 
-function updateTilesText({layout=null, style=null}={}){
-  if(!gridEl) return;
-  const tiles = Array.from(gridEl.querySelectorAll(".tile"));
-  tiles.forEach((tile) => {
-    const span = tile.querySelector("span");
-    if(!span) return;
-    const curStyle = style || (document.getElementById("style")?.value) || "Dark Premium";
-    const curLayout = layout || span.textContent.match(/\b(Bold|Clean|Modern|Minimal|Vibrant)\b/)?.[0] || "Modern";
-    span.textContent = `${curStyle} • ${curLayout} layout • Click to edit`;
-  });
+function updateTilesText(){
+  // No-op: homepage previews are rendered ONLY from API output.
 }
+
 
 document.getElementById("newLayoutBtn")?.addEventListener("click", () => {
   updateTilesText({ layout: pick(layouts) });
