@@ -331,6 +331,20 @@
   height: 100%;
 }
 /* ================================= */
+
+
+/* === Nexora FINAL UI PREVIEW OVERRIDE (vFinal) ===
+   Authoritative, last-wins rule: square + readable size.
+*/
+.tile .preview-canvas{
+  width: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  height: auto !important;          /* kills any fixed height */
+  min-height: 220px !important;     /* avoids render-before-layout tiny boxes */
+  display: block !important;
+}
+/* ================================================= */
+
 </style>
 
 
