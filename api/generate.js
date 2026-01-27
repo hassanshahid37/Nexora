@@ -844,6 +844,30 @@ function buildElements(layout, spec) {
 // - Produces real templates (canvas + elements[]) for the UI every time.
 // - No external AI required; uses the deterministic layout/palette engine below.
 // ---------------------------------------------------------------------------
+// -----------------------------
+// Preset seed loader (Instagram Post)
+// -----------------------------
+let __IG_SEED_PRESETS = null;
+function __loadInstagramPostSeedPresets(){
+  if(__IG_SEED_PRESETS) return __IG_SEED_PRESETS;
+  try{
+    // Prefer /presets folder, but allow root-level file as well
+    const fs = require("fs");
+    const path = require("path");
+    const p1 = path.join(__dirname, "presets", "instagram-post-pattern-presets.json");
+    const p2 = path.join(__dirname, "instagram-post-pattern-presets.json");
+    const file = fs.existsSync(p1) ? p1 : (fs.existsSync(p2) ? p2 : null);
+    if(!file) return (__IG_SEED_PRESETS = []);
+    const raw = fs.readFileSync(file, "utf8");
+    const data = JSON.parse(raw);
+    __IG_SEED_PRESETS = Array.isArray(data) ? data : [];
+    return __IG_SEED_PRESETS;
+  }catch(_){
+    __IG_SEED_PRESETS = [];
+    return __IG_SEED_PRESETS;
+  }
+}
+
 function buildDeterministicTemplates(input){
   const prompt = typeof input?.prompt === "string" ? input.prompt : "";
   const category = typeof input?.category === "string" ? input.category : "Instagram Post";
@@ -1023,6 +1047,23 @@ const brandInfo = brandFromPrompt(prompt);
         brand: brandInfo.brand || ""
       };
 
+      // Preset-first bootstrap (Instagram Post only)
+      try{
+        const catKey = String(category || rawCategory || "").toLowerCase().replace(/\s+/g,"_");
+        const usePresets = (body && body.disablePresets) ? false : true;
+        if(usePresets && (catKey === "instagram_post" || catKey === "instagram" || catKey === "instagram_post_template")){
+          const presets = __loadInstagramPostSeedPresets();
+          if(Array.isArray(presets) && presets.length){
+            const preset = presets[(i % presets.length)];
+            tpl.preset = preset;
+            tpl._preset = preset;
+            tpl.elements = null;
+            tpl.canvas = null;
+          }
+        }
+      }catch(_){
+      }
+
       templates.push(markMaterialized(Object.assign({}, det, { i: i + 1, doc: null, contract: null, content })));
       continue;
     }
@@ -1119,24 +1160,6 @@ function enforceFinalTemplate(template, ctx){
       seed: ctx.seed
     });
   }
-
-// P8.5 Layout Composition (structure-level designer rules)
-try{
-  let comp = null;
-  // Browser global
-  if(typeof window !== "undefined"){
-    comp = window.LayoutCompositionEngine?.applyLayoutComposition
-      || window.NexoraLayoutCompositionEngine?.applyLayoutComposition
-      || null;
-  }
-  // Node require (server-side generate)
-  if(!comp && typeof require === "function"){
-    try{ comp = require("./layout-composition-engine.js")?.applyLayoutComposition || null; }catch(_){}
-  }
-  if(typeof comp === "function"){
-    template = comp(template, { category: ctx.category, layoutFamily: template.layoutFamily || template.layoutFamilyCanonical || null }) || template;
-  }
-}catch(_){}
 
   // P9 Visual Hierarchy
   if(window.NexoraVisualHierarchyEngine?.applyVisualHierarchy){
