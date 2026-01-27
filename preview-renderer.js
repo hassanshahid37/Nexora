@@ -6,6 +6,13 @@
 (function(){
   const root = typeof window !== "undefined" ? window : globalThis;
 
+function geomToPx(el, canvasW, canvasH){
+  const x = Number(el.x||0), y = Number(el.y||0), w = Number(el.w||0), h = Number(el.h||0);
+  const looksNorm = Number.isFinite(x)&&Number.isFinite(y)&&Number.isFinite(w)&&Number.isFinite(h) &&
+    Math.abs(x)<=2 && Math.abs(y)<=2 && Math.abs(w)<=2 && Math.abs(h)<=2;
+  return looksNorm ? { x:x*canvasW, y:y*canvasH, w:w*canvasW, h:h*canvasH } : { x, y, w, h };
+}
+
   function renderTo(target, previewContract){
     if(!target || !previewContract || !previewContract.canvas || !Array.isArray(previewContract.elements)){
       return;
@@ -32,9 +39,8 @@
       const canvasW = Number(previewContract.canvas.w) || 1080;
       const canvasH = Number(previewContract.canvas.h) || 1080;
 
-      // THUMBNAIL MODE: use "cover" scaling so tiles are readable (center-crop)
-      const scale = Math.max(TILE_W / canvasW, TILE_H / canvasH);
-const scaledW = canvasW * scale;
+      const scale = Math.min(TILE_W / canvasW, TILE_H / canvasH);
+      const scaledW = canvasW * scale;
       const scaledH = canvasH * scale;
 
       const canvas = document.createElement("div");
@@ -51,10 +57,11 @@ const scaledW = canvasW * scale;
 
         const node = document.createElement("div");
         node.style.position = "absolute";
-        node.style.left = (Number(el.x) || 0) + "px";
-        node.style.top  = (Number(el.y) || 0) + "px";
-        node.style.width  = (Number(el.w) || 0) + "px";
-        node.style.height = (Number(el.h) || 0) + "px";
+        const g = geomToPx(el, canvasW, canvasH);
+        node.style.left = (g.x || 0) + "px";
+        node.style.top  = (g.y || 0) + "px";
+        node.style.width  = (g.w || 0) + "px";
+        node.style.height = (g.h || 0) + "px";
 
         if(el.role === "background"){
           node.style.left = "0px";
