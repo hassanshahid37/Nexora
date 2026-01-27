@@ -165,6 +165,10 @@ function normalizeElement(el, index, seed, opts){
   let size = (el && el.size != null) ? el.size : (el && el.fontSize != null ? el.fontSize : undefined);
   let fontSize = (el && el.fontSize != null) ? el.fontSize : undefined;
 
+  // Legacy lineHeight fields (renderer expects pixels in some paths)
+  let lineHeight = undefined;
+  let lineHeightPx = undefined;
+
   // Visual-only fix for text sizing
   if (type === "text") {
     const canvasW = _canvasWidthFromOpts(opts);
@@ -180,6 +184,19 @@ function normalizeElement(el, index, seed, opts){
     const fs = Number(fontSize);
     fontSize = (Number.isFinite(fs) && fs > 0) ? fs : size;
   }
+
+// Line-height normalization for legacy canvas renderers (visual-only):
+// Some render paths treat `el.lineHeight` as pixels (not a multiplier). If we pass 1.1–1.4 here,
+// lines overlap in previews. Compute a safe pixel lineHeight and expose it via legacy `lineHeight`.
+const lhRaw = (el && el.lineHeight != null) ? el.lineHeight : (typography && typography.lineHeight != null ? typography.lineHeight : undefined);
+const lhNum = Number(lhRaw);
+if (Number.isFinite(lhNum) && lhNum > 0) {
+  lineHeightPx = (lhNum <= 4) ? Math.round(typography.fontSize * lhNum) : Math.round(lhNum);
+} else {
+  lineHeightPx = Math.round(typography.fontSize * 1.2);
+}
+typography.lineHeightPx = lineHeightPx;
+lineHeight = lineHeightPx;
 
   // Role canonicalization (render-safety). Keeps old generators compatible.
   const roleRaw2 = (el && el.role != null) ? String(el.role) : null;
@@ -219,7 +236,7 @@ function normalizeElement(el, index, seed, opts){
     align: el && el.align != null ? el.align : undefined,
     textAlign: el && el.textAlign != null ? el.textAlign : undefined,
     letterSpacing: el && el.letterSpacing != null ? el.letterSpacing : undefined,
-    lineHeight: el && el.lineHeight != null ? el.lineHeight : undefined,
+    lineHeight: (typeof lineHeight === "number" ? lineHeight : (el && el.lineHeight != null ? el.lineHeight : undefined)),
     uppercase: el && el.uppercase === true ? true : undefined,
 
     src: el && el.src != null ? el.src : undefined,
