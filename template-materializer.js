@@ -578,3 +578,64 @@
 
   root.NexoraMaterializer = Materializer;
 })();
+
+
+
+/* =========================
+ * NEXORA MATERIALIZER BRIDGE v6
+ * - Defines NexoraMaterializer.materialize as the canonical choke point.
+ * - Delegates to materializeTemplate() for incomplete templates.
+ * - Exports { materialize, materializeTemplate } for Node/Vercel.
+ * ========================= */
+(function(){
+  const root = (typeof window!=="undefined") ? window : globalThis;
+  function isObj(x){ return x && typeof x === "object"; }
+  function hasCanvas(t){ return isObj(t) && isObj(t.canvas) && Number(t.canvas.w||t.canvas.width) > 0 && Number(t.canvas.h||t.canvas.height) > 0; }
+  function hasEls(t){ return isObj(t) && Array.isArray(t.elements) && t.elements.length > 0; }
+
+  // Canonical materialize(template, ctx?)
+  function materialize(template, ctx){
+    try{
+      const t = template;
+      // If template already looks materialized, keep it (the hardlock wrapper may still post-process geometry).
+      const needs = !(hasCanvas(t) && hasEls(t));
+      if(needs && typeof root.materializeTemplate === "function"){
+        const opts = Object.assign({}, (ctx||{}), { template: t });
+        return root.materializeTemplate(opts);
+      }
+      return t;
+    }catch(_){
+      // Last resort: try deterministic materializeTemplate
+      try{
+        if(typeof root.materializeTemplate === "function"){
+          return root.materializeTemplate({ template });
+        }
+      }catch(__){}
+      return template;
+    }
+  }
+
+  const M = root.NexoraMaterializer || {};
+  const prev = M.materialize;
+  M.materialize = function(template, ctx){
+    // 1) ensure base materialization
+    let out = materialize(template, ctx);
+    // 2) allow downstream hardlock (if installed) to post-process by calling previous implementation
+    try{
+      if(typeof prev === "function" && prev !== M.materialize){
+        // If prev was a wrapper, let it run on the output
+        out = prev(out, ctx) || out;
+      }
+    }catch(_){}
+    return out;
+  };
+  root.NexoraMaterializer = M;
+
+  // Node export
+  try{
+    if(typeof module !== "undefined" && module.exports){
+      module.exports.materialize = M.materialize;
+      if(typeof root.materializeTemplate === "function") module.exports.materializeTemplate = root.materializeTemplate;
+    }
+  }catch(_){}
+})();
