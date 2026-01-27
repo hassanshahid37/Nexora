@@ -453,6 +453,18 @@
   // This runs AFTER layout/zone binding and only touches visual fields.
   function applyP9VisualEngines(tpl){
     try{
+
+// P8.5 Layout Composition (structure-level, designer rules)
+try{
+  let comp = null;
+  try{ comp = root?.LayoutCompositionEngine?.applyLayoutComposition || root?.NexoraLayoutCompositionEngine?.applyLayoutComposition || null; }catch(_){}
+  if(!comp){
+    try{ comp = require("./layout-composition-engine.js")?.applyLayoutComposition || null; }catch(_){}
+  }
+  if(typeof comp === "function"){
+    tpl = comp(tpl, { category: tpl?.category, layoutFamily: tpl?.layoutFamily || tpl?.layoutFamilyCanonical || null }) || tpl;
+  }
+}catch(_){}
 function normalizeCategoryKeyP9(raw){
   const s = String(raw || '').trim();
   if(!s) return 'Unknown';
