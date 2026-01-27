@@ -260,35 +260,22 @@
 }
 
 
-/* === Nexora FINAL UI PREVIEW FIX === */
-.template-card,
-.template-tile,
-.preview-card {
-  aspect-ratio: 1 / 1;
-}
-.template-preview,
-.preview-canvas {
-  width: 100%;
-  height: 100%;
-}
-/* ================================= */
 
-
-/* === Nexora FINAL UI PREVIEW FIX v2 (square tiles) ===
-   Real preview container is `.tile .preview-canvas`.
-   We force it to 1:1 so 1080x1080 canvases render legibly.
+/* === Nexora Preview Authority Override (v7) ===
+   This must be AFTER any other .tile .preview-canvas rule.
+   Goal: square, readable previews (no 120px banner).
 */
 .tile .preview-canvas{
-  aspect-ratio: 1 / 1;
-  height: auto !important;          /* override previous fixed heights */
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
   width: 100% !important;
+  min-height: 280px !important; /* makes preview actually visible */
+  max-height: none !important;
+  display:block !important;
 }
-/* Optional: keep tiles from collapsing */
-.tile{ min-height: unset; }
-/* ================================================ */
+/* ============================================ */
 
 </style>
-
     
 
 <!-- YT Preview Shell Fix (16:9 full-bleed) -->
@@ -318,35 +305,7 @@
     max-width: 100%;
     overflow: hidden;
   }
-
-/* === Nexora FINAL UI PREVIEW FIX === */
-.template-card,
-.template-tile,
-.preview-card {
-  aspect-ratio: 1 / 1;
-}
-.template-preview,
-.preview-canvas {
-  width: 100%;
-  height: 100%;
-}
-/* ================================= */
-
-
-/* === Nexora FINAL UI PREVIEW OVERRIDE (vFinal) ===
-   Authoritative, last-wins rule: square + readable size.
-*/
-.tile .preview-canvas{
-  width: 100% !important;
-  aspect-ratio: 1 / 1 !important;
-  height: auto !important;          /* kills any fixed height */
-  min-height: 220px !important;     /* avoids render-before-layout tiny boxes */
-  display: block !important;
-}
-/* ================================================= */
-
 </style>
-
 
 </head>
 
