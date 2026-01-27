@@ -388,7 +388,7 @@
         fontSize: num(headSrc?.style?.fontSize ?? headSrc?.size, headlineSize),
         fontWeight: num(headSrc?.style?.fontWeight ?? headSrc?.weight, 900),
         color: headSrc?.style?.color || palette.ink,
-        lineHeight: 1.08
+        lineHeight: Math.round((num(headSrc?.style?.fontSize ?? headSrc?.size, headlineSize)) * 1.08)
       }
     });
 
@@ -405,10 +405,10 @@
         ...rects.subhead,
         style: {
           fontFamily: subSrc?.style?.fontFamily || "Inter, sans-serif",
-          fontSize: num(subSrc?.style?.fontSize ?? subSrc?.size, subSize),
-          fontWeight: num(subSrc?.style?.fontWeight ?? subSrc?.weight, 650),
-          color: subSrc?.style?.color || "rgba(255,255,255,0.86)",
-          lineHeight: 1.15
+        fontSize: num(subSrc?.style?.fontSize ?? subSrc?.size, subSize),
+        fontWeight: num(subSrc?.style?.fontWeight ?? subSrc?.weight, 650),
+        color: subSrc?.style?.color || "rgba(255,255,255,0.86)",
+        lineHeight: Math.round((num(subSrc?.style?.fontSize ?? subSrc?.size, subSize)) * 1.15)
         }
       });
     }
