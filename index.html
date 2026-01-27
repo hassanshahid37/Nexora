@@ -210,26 +210,6 @@
     
     [data-theme="dark"] select option{color:#ffffff;background:#0b1020;}
     
-/* === Nexora Canva-style previews === */
-.tile .preview-canvas{
-  position: relative;
-  height: 120px;
-  border-radius: 14px;
-  overflow: hidden;
-  background: rgba(255,255,255,.06);
-  border: 1px solid var(--stroke);
-  margin-bottom: 10px;
-}
-.tile .preview-canvas .pv-text{
-  position:absolute;
-  left:12px;
-  right:12px;
-  font-weight:700;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
 
 /* === Header: match editor branding (icon + stacked text) === */
 .brand{display:flex;align-items:center;gap:12px}
@@ -259,161 +239,50 @@
   .brandText h1{font-size:14px}
 }
 
-
-
-/* === Nexora Preview Authority Override (v7) ===
-   This must be AFTER any other .tile .preview-canvas rule.
-   Goal: square, readable previews (no 120px banner).
+/* === Nexora Preview Authority (Consolidated v10) ===
+   Single source of truth for preview box sizing + fit.
+   JS sets --pv-ar per tile from canvas w/h.
 */
-.tile .preview-canvas{
-  height: auto !important;
-  aspect-ratio: 1 / 1 !important;
-  width: 100% !important;
-  min-height: 280px !important; /* makes preview actually visible */
-  max-height: none !important;
-  display:block !important;
+.grid#previewGrid{
+  grid-auto-rows:auto !important;
+  align-items:stretch !important;
 }
-/* ============================================ */
-
-</style>
-    
-
-<!-- YT Preview Shell Fix (16:9 full-bleed) -->
-<style>
-  /* Generic preview card selectors (defensive) */
-  .preview-card, .template-card, .card {
-    box-sizing: border-box;
-  }
-
-  /* When YT mode is active, remove card chrome and force 16:9 */
-  .yt-preview .preview-card,
-  .yt-preview .template-card,
-  .yt-preview .card {
-    padding: 0 !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-  }
-
-  /* Force a 16:9 viewport for thumbnails */
-  .yt-preview .preview-viewport,
-  .yt-preview .canvas,
-  .yt-preview .thumb,
-  .yt-preview .preview {
-    aspect-ratio: 16 / 9;
-    width: 100% !important;
-    height: auto !important;
-    max-width: 100%;
-    overflow: hidden;
-  }
-</style>
-
-<!-- === Nexora Preview Grid & Fit Fix (FINAL) === -->
-<style>
-/* Allow grid items to grow naturally */
-.template-grid {
-  grid-auto-rows: auto !important;
-  align-items: stretch !important;
+.grid#previewGrid .tile{
+  height:auto !important;
+  min-height:unset !important;
+  align-self:stretch !important;
+  overflow:hidden !important;
 }
+.grid#previewGrid .tile .preview-canvas{
+  width:100% !important;
+  aspect-ratio: var(--pv-ar, 1 / 1) !important;
+  height:auto !important;
+  min-height:180px !important;
+  border-radius:14px !important;
+  overflow:hidden !important;
+  background: rgba(255,255,255,.06) !important;
+  border: 1px solid var(--stroke) !important;
+  margin-bottom:10px !important;
 
-/* Card containers must not clamp height */
-.tile {
-  height: auto !important;
-  align-self: stretch !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
 }
-
-.tile-inner {
-  height: auto !important;
-  min-height: unset !important;
-  max-height: none !important;
-  overflow: visible !important;
+.grid#previewGrid .tile .preview-canvas > *{
+  max-width:100% !important;
+  max-height:100% !important;
+  width:auto !important;
+  height:auto !important;
+  object-fit:contain !important;
 }
-
-/* Preview canvas defines visible area */
-.preview-canvas {
-  width: 100% !important;
-  aspect-ratio: 1 / 1 !important;
-  height: auto !important;
-  min-height: 260px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  overflow: hidden !important;
+.grid#previewGrid .tile .preview-canvas svg{
+  width:100% !important;
+  height:100% !important;
 }
+/* === End Nexora Preview Authority (Consolidated v10) === */
 
-/* Ensure rendered preview always FITS inside the box */
-.preview-canvas > * {
-  max-width: 100% !important;
-  max-height: 100% !important;
-  width: auto !important;
-  height: auto !important;
-  object-fit: contain !important;
-}
-
-/* Kill any legacy height locks */
-.tile .preview-canvas {
-  height: auto !important;
-}
-</style>
-<!-- === END Nexora Preview Grid & Fit Fix === -->
-
-<!-- === Nexora Preview Grid & Fit Fix (v8: correct selectors + specificity) === -->
-<style>
-/* Homepage uses .grid (NOT .template-grid). Allow items to size naturally. */
-.grid{
-  grid-auto-rows: auto !important;
-  align-items: stretch !important;
-}
-
-/* Cards should grow with preview height */
-.tile{
-  height: auto !important;
-  align-self: stretch !important;
-  overflow: hidden !important;
-}
-
-/* Override MUST match .tile .preview-canvas specificity */
-.tile .preview-canvas{
-  width: 100% !important;
-  height: auto !important;
-  aspect-ratio: 1 / 1 !important;
-  min-height: 280px !important;
-  max-height: none !important;
-
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-
-  overflow: hidden !important;
-}
-
-/* Ensure renderer output always fits (contain) */
-.tile .preview-canvas > *{
-  max-width: 100% !important;
-  max-height: 100% !important;
-  width: auto !important;
-  height: auto !important;
-}
-
-/* If renderer uses SVG, ensure it scales properly */
-.tile .preview-canvas svg{
-  width: 100% !important;
-  height: 100% !important;
-}
 </style>
 <!-- === END Nexora Preview Grid & Fit Fix (v8) === -->
-
-<!-- === Nexora Preview Aspect Ratio Fix (v9) === -->
-<style>
-/* Let each preview use its real canvas ratio via CSS var; default square for placeholders */
-.tile .preview-canvas{
-  aspect-ratio: var(--pv-ar, 1 / 1) !important;
-}
-
-/* If a category needs a minimum readable height, keep it but allow ratio to drive it */
-.tile .preview-canvas{
-  min-height: 180px !important;
-}
-</style>
 <!-- === END Nexora Preview Aspect Ratio Fix (v9) === -->
 
 </head>
