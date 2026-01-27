@@ -1,9 +1,7 @@
 // template-output-controller.js
 // Purpose: single authority for what the home "preview tiles" render, and what gets exported/opened.
 // Must be: crash-proof, contract-aware, and never blank the UI.
-//
-// WIRED FOR PREVIEW AUTHORITY:
-//   FULL TEMPLATE -> NexoraPreviewNormalization.normalize(...) -> PreviewTemplateContract -> preview renderer (dumb)
+
 
 function renderLegacyThumb(template, mount){
   // DOM-based miniature renderer (editor-like) so previews are never "blank boxes".
@@ -38,8 +36,8 @@ function renderLegacyThumb(template, mount){
     const scale = Math.min(boxW / baseW, boxH / baseH);
 
     // Helper: normalize element fields (legacy + spine-to-template)
-    // Elements may live in multiple places depending on pipeline stage.
-    // Prefer top-level, then contract.elements, then content.elements.
+// Elements may live in multiple places depending on pipeline stage.
+// Prefer top-level, then contract.elements, then content.elements.
     const els = Array.isArray(template?.elements) ? template.elements
               : Array.isArray(template?.contract?.elements) ? template.contract.elements
               : Array.isArray(template?.content?.elements) ? template.content.elements
@@ -80,23 +78,23 @@ function renderLegacyThumb(template, mount){
       const isImg = (type === "image") || (role === "image") || (e?.src || e?.url);
       const x = Number(e?.x ?? 0), y = Number(e?.y ?? 0), w = Number(e?.w ?? 0), h = Number(e?.h ?? 0);
 
-      // Support both pixel coordinates and 0..1 normalized coordinates (common in deterministic/seed templates).
-      // Heuristic: if all geometry looks <= ~2, treat as normalized.
-      const looksNormalized = (
-        Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h) &&
-        Math.abs(x) <= 2 && Math.abs(y) <= 2 && Math.abs(w) <= 2 && Math.abs(h) <= 2
-      );
-      const pxX = looksNormalized ? (x * baseW) : x;
-      const pxY = looksNormalized ? (y * baseH) : y;
-      const pxW = looksNormalized ? (w * baseW) : w;
-      const pxH = looksNormalized ? (h * baseH) : h;
+// Support both pixel coordinates and 0..1 normalized coordinates (common in deterministic/seed templates).
+// Heuristic: if all geometry looks <= ~2, treat as normalized.
+const looksNormalized = (
+  Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(w) && Number.isFinite(h) &&
+  Math.abs(x) <= 2 && Math.abs(y) <= 2 && Math.abs(w) <= 2 && Math.abs(h) <= 2
+);
+const pxX = looksNormalized ? (x * baseW) : x;
+const pxY = looksNormalized ? (y * baseH) : y;
+const pxW = looksNormalized ? (w * baseW) : w;
+const pxH = looksNormalized ? (h * baseH) : h;
 
-      const node = document.createElement("div");
-      node.style.position = "absolute";
-      node.style.left = (pxX * scale) + "px";
-      node.style.top  = (pxY * scale) + "px";
-      node.style.width  = Math.max(1, pxW * scale) + "px";
-      node.style.height = Math.max(1, pxH * scale) + "px";
+const node = document.createElement("div");
+node.style.position = "absolute";
+node.style.left = (pxX * scale) + "px";
+node.style.top  = (pxY * scale) + "px";
+node.style.width  = Math.max(1, pxW * scale) + "px";
+node.style.height = Math.max(1, pxH * scale) + "px";
 
       node.style.borderRadius = (Number(e?.radius ?? 16) * scale) + "px";
       node.style.opacity = String(e?.opacity ?? 1);
@@ -237,26 +235,51 @@ function renderLegacyThumb(template, mount){
   TOC.isCommitted = function(){ return committed; };
 
   // Render a template into a tile thumb mount.
-  // Preview Authority: normalize to PreviewTemplateContract first.
+  // NOTE: NexoraPreview.renderTo signature is renderTo(targetNode, payload).
+  
   TOC.renderThumb = function(template, mount){
+    try{
+      const mat = (window.NexoraMaterializer && window.NexoraMaterializer.materialize);
+      if(mat) template = mat(template) || template;
+    }catch(_){}
+
     try{
       if(!mount) return;
 
-      // NEW: Preview Authority path (preview proxy, deterministic, safe)
-      if(root.NexoraPreviewNormalization && typeof root.NexoraPreviewNormalization.normalize === "function"
-         && root.NexoraPreview && typeof root.NexoraPreview.renderTo === "function"){
-        try{
-          const previewContract = root.NexoraPreviewNormalization.normalize(template, {});
-          if(previewContract){
-            mount.innerHTML = "";
-            root.NexoraPreview.renderTo(mount, previewContract); // renderer accepts PreviewTemplateContract only
-            return;
-          }
-        }catch(_){
-          try{ mount.innerHTML = ""; }catch(__){}
-          // fall through to legacy
-        }
-      }
+      // Prefer the spine-correct preview renderer when available.
+// IMPORTANT: renderTo(target, payload) expects a spine-shaped payload: { contract, content, meta? }.
+if(root.NexoraPreview && typeof root.NexoraPreview.renderTo === "function"){
+  const payload = (template && typeof template === "object") ? {
+    // Provide flat fields too so preview-renderer can auto-adapt when contract is missing/partial.
+    canvas: (template.canvas || template.contract?.canvas || null),
+    elements: Array.isArray(template.elements) ? template.elements
+            : Array.isArray(template.contract?.elements) ? template.contract.elements
+            : undefined,
+
+    contract: (template.contract && typeof template.contract === "object") ? template.contract : (template.Contract || null),
+    content:  (template.content && typeof template.content === "object") ? template.content : {
+      elements: Array.isArray(template.elements) ? template.elements
+              : Array.isArray(template.contract?.elements) ? template.contract.elements
+              : undefined,
+      headline: template.headline ?? template.title ?? undefined,
+      subhead: template.subhead ?? template.subtitle ?? undefined
+    },
+    meta: (template.meta && typeof template.meta === "object") ? template.meta : undefined
+  } : template;
+
+  // Try spine renderer first. If it renders nothing, fall through to legacy renderer.
+  try{
+    mount.innerHTML = "";
+    const r = root.NexoraPreview.renderTo(mount, payload);
+    const rendered = (r === true) || (mount.childNodes && mount.childNodes.length > 0);
+    if(rendered) return;
+    // else fall through
+    mount.innerHTML = "";
+  }catch(_){
+    try{ mount.innerHTML = ""; }catch(__){}
+    // fall through
+  }
+}
 
       // Fallback: legacy DOM renderer (editor-like). Never blank.
       if(renderLegacyThumb(template, mount)) return;
