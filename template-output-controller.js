@@ -33,7 +33,14 @@ function renderLegacyThumb(template, mount){
     // Scale factor based on available size (fit inside thumb box)
     const boxW = Math.max(1, mount.clientWidth || mount.getBoundingClientRect().width || 260);
     const boxH = Math.max(1, mount.clientHeight || mount.getBoundingClientRect().height || 84);
-    const scale = Math.min(boxW / baseW, boxH / baseH);
+    // THUMBNAIL MODE: use cover scaling so elements are readable (center-crop)
+    const scale = Math.max(boxW / baseW, boxH / baseH);
+
+    // Center-crop offsets
+    const scaledW = baseW * scale;
+    const scaledH = baseH * scale;
+    const offsetX = (boxW - scaledW) / 2;
+    const offsetY = (boxH - scaledH) / 2;
 
     // Helper: normalize element fields (legacy + spine-to-template)
 // Elements may live in multiple places depending on pipeline stage.
@@ -91,8 +98,8 @@ const pxH = looksNormalized ? (h * baseH) : h;
 
 const node = document.createElement("div");
 node.style.position = "absolute";
-node.style.left = (pxX * scale) + "px";
-node.style.top  = (pxY * scale) + "px";
+node.style.left = (offsetX + (pxX * scale)) + "px";
+node.style.top  = (offsetY + (pxY * scale)) + "px";
 node.style.width  = Math.max(1, pxW * scale) + "px";
 node.style.height = Math.max(1, pxH * scale) + "px";
 
