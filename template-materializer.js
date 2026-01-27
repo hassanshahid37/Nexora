@@ -475,3 +475,106 @@
   }catch(_){}
 
 })(typeof globalThis !== "undefined" ? globalThis : (typeof window !== "undefined" ? window : this));
+
+
+
+/* =========================
+ * NEXORA HARD MATERIALIZATION LOCK (P9.3 FINAL)
+ * Guarantees geometry before UI / export
+ * ========================= */
+(function(){
+  const root = (typeof globalThis!=="undefined"?globalThis:window);
+  const GUARD = "__NEXORA_MAT_LOCK__";
+
+  function num(v, d){ v = Number(v); return Number.isFinite(v) ? v : d; }
+  function canvasWH(cv){
+    const W = Math.round(num(cv && (cv.w ?? cv.width), 1080));
+    const H = Math.round(num(cv && (cv.h ?? cv.height), 1080));
+    return { w: Math.max(1,W), h: Math.max(1,H), width: Math.max(1,W), height: Math.max(1,H) };
+  }
+
+  function hasGeometry(el){
+    return !!(el && Number.isFinite(el.x) && Number.isFinite(el.y) &&
+      Number.isFinite(el.w) && Number.isFinite(el.h) && el.w > 0 && el.h > 0);
+  }
+
+  function roleOf(el){
+    const r = (el && el.role) ? String(el.role).toLowerCase() : "";
+    if(r) return r;
+    const t = (el && el.type) ? String(el.type).toLowerCase() : "";
+    if(t === "bg" || t === "background") return "background";
+    if(t === "photo" || t === "image") return "image";
+    if(t === "cta" || t === "button") return "cta";
+    if(t === "badge" || t === "pill" || t === "chip") return "badge";
+    if(t === "headline" || t === "title") return "headline";
+    if(t === "subhead" || t === "subtitle") return "subhead";
+    if(t === "shape" || t === "card") return "shape";
+    if(t === "text") return "text";
+    return "center";
+  }
+
+  function defaultRects(cv){
+    const W = cv.w, H = cv.h;
+    return {
+      background: { x:0, y:0, w:W, h:H },
+      headline:   { x:Math.round(W*0.08), y:Math.round(H*0.12), w:Math.round(W*0.84), h:Math.round(H*0.26) },
+      subhead:    { x:Math.round(W*0.08), y:Math.round(H*0.40), w:Math.round(W*0.84), h:Math.round(H*0.16) },
+      image:      { x:Math.round(W*0.58), y:Math.round(H*0.18), w:Math.round(W*0.34), h:Math.round(H*0.56) },
+      badge:      { x:Math.round(W*0.72), y:Math.round(H*0.08), w:Math.round(W*0.20), h:Math.round(H*0.10) },
+      cta:        { x:Math.round(W*0.08), y:Math.round(H*0.78), w:Math.round(W*0.42), h:Math.round(H*0.10) },
+      center:     { x:Math.round(W*0.20), y:Math.round(H*0.30), w:Math.round(W*0.60), h:Math.round(H*0.40) }
+    };
+  }
+
+  function roleFallbackGeometry(tpl){
+    try{
+      const out = (tpl && typeof tpl === "object") ? tpl : {};
+      out.canvas = canvasWH(out.canvas || {});
+      const rects = defaultRects(out.canvas);
+      const els = Array.isArray(out.elements) ? out.elements : [];
+      for(let i=0;i<els.length;i++){
+        const el = els[i];
+        if(!el || typeof el !== "object") continue;
+        if(hasGeometry(el)) continue;
+        const rr = rects[roleOf(el)] || rects.center;
+        el.x = rr.x; el.y = rr.y; el.w = rr.w; el.h = rr.h;
+      }
+      out.elements = els;
+      return out;
+    }catch(_){
+      return tpl;
+    }
+  }
+
+  const Materializer = root.NexoraMaterializer || {};
+  const orig = Materializer.materialize || function(x){ return x; };
+
+  Materializer.materialize = function(input){
+    // prevent accidental recursion if any downstream calls Materializer again
+    if(input && typeof input === "object" && input[GUARD]) return orig(input) || input;
+
+    let out = orig(input) || input;
+
+    try{
+      // 1) Canonical zone placement (P8 Phase-3)
+      const ze = root.NexoraZoneExecutor;
+      if(ze && typeof ze.applyZonePlacement === "function"){
+        try{ out = ze.applyZonePlacement(out) || out; }catch(_){}
+      }
+
+      // 2) Ensure every element has geometry
+      if(out && Array.isArray(out.elements)){
+        const bad = out.elements.some(el => !hasGeometry(el) && roleOf(el) !== "background");
+        if(bad) out = roleFallbackGeometry(out);
+      }
+    }catch(_){}
+
+    try{
+      if(out && typeof out === "object") out[GUARD] = true;
+    }catch(_){}
+
+    return out;
+  };
+
+  root.NexoraMaterializer = Materializer;
+})();
