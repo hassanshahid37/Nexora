@@ -731,3 +731,21 @@ function normalizeCategoryKeyP9(raw){
     resolveCanvas
   };
 });
+
+
+
+/* Enforce materialization after structure + before visual engines */
+(function(){
+  try{
+    const root = (typeof globalThis!=="undefined"?globalThis:window);
+    const mat = root.NexoraMaterializer && root.NexoraMaterializer.materialize;
+    if(!mat) return;
+    const orig = root.NexoraSpineRun;
+    if(typeof orig === "function"){
+      root.NexoraSpineRun = function(input){
+        const out = orig(input);
+        try{ return mat(out) || out; }catch(_){ return out; }
+      };
+    }
+  }catch(_){}
+})();
