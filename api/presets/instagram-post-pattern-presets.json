@@ -1,0 +1,1088 @@
+[
+  {
+    "id": "insta_post_pattern_1",
+    "category": "instagram_post",
+    "pattern": "clean_card",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#FFFFFF"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "center"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_2",
+    "category": "instagram_post",
+    "pattern": "soft_gradient",
+    "background": {
+      "type": "gradient",
+      "colors": [
+        "#FDECEF",
+        "#E0F7FA"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": true,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_3",
+    "category": "instagram_post",
+    "pattern": "bold_color",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#FF6F61"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_4",
+    "category": "instagram_post",
+    "pattern": "dark_premium",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#0F172A"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "center"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_5",
+    "category": "instagram_post",
+    "pattern": "editorial",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#F7F3EE"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_6",
+    "category": "instagram_post",
+    "pattern": "center_focus",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#F1F5F9"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_7",
+    "category": "instagram_post",
+    "pattern": "split_layout",
+    "background": {
+      "type": "gradient",
+      "colors": [
+        "#FFFFFF",
+        "#EEF2FF"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "center"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": true,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_8",
+    "category": "instagram_post",
+    "pattern": "minimal_border",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#FAFAFA"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_9",
+    "category": "instagram_post",
+    "pattern": "accent_block",
+    "background": {
+      "type": "gradient",
+      "colors": [
+        "#FFF7ED",
+        "#FB923C"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": true,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_10",
+    "category": "instagram_post",
+    "pattern": "poster_style",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#020617"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "center"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_11",
+    "category": "instagram_post",
+    "pattern": "clean_card",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#FFFFFF"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_12",
+    "category": "instagram_post",
+    "pattern": "soft_gradient",
+    "background": {
+      "type": "gradient",
+      "colors": [
+        "#FDECEF",
+        "#E0F7FA"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": true,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_13",
+    "category": "instagram_post",
+    "pattern": "bold_color",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#FF6F61"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "center"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_14",
+    "category": "instagram_post",
+    "pattern": "dark_premium",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#0F172A"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_15",
+    "category": "instagram_post",
+    "pattern": "editorial",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#F7F3EE"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_16",
+    "category": "instagram_post",
+    "pattern": "center_focus",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#F1F5F9"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "center"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_17",
+    "category": "instagram_post",
+    "pattern": "split_layout",
+    "background": {
+      "type": "gradient",
+      "colors": [
+        "#FFFFFF",
+        "#EEF2FF"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": true,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_18",
+    "category": "instagram_post",
+    "pattern": "minimal_border",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#FAFAFA"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": true,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_19",
+    "category": "instagram_post",
+    "pattern": "accent_block",
+    "background": {
+      "type": "gradient",
+      "colors": [
+        "#FFF7ED",
+        "#FB923C"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "center",
+      "alignment": "center"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": true,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  },
+  {
+    "id": "insta_post_pattern_20",
+    "category": "instagram_post",
+    "pattern": "poster_style",
+    "background": {
+      "type": "solid",
+      "colors": [
+        "#020617"
+      ]
+    },
+    "layout": {
+      "headlinePosition": "top",
+      "alignment": "left"
+    },
+    "containers": [
+      {
+        "type": "card",
+        "enabled": false,
+        "radius": [
+          12,
+          32
+        ],
+        "padding": [
+          24,
+          48
+        ]
+      }
+    ],
+    "textRules": {
+      "headline": {
+        "maxLines": 2,
+        "fontSize": [
+          56,
+          88
+        ],
+        "weight": "bold"
+      },
+      "support": {
+        "enabled": false
+      }
+    },
+    "decor": {
+      "enabled": false,
+      "family": [
+        "blob",
+        "dot",
+        "line"
+      ],
+      "opacity": [
+        0.15,
+        0.35
+      ]
+    }
+  }
+]
