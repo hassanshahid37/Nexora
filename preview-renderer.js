@@ -34,7 +34,16 @@ function geomToPx(el, canvasW, canvasH){
     requestAnimationFrame(() => {
       const rect = wrapper.getBoundingClientRect();
       const TILE_W = rect.width || target.offsetWidth || 240;
-      const TILE_H = rect.height || target.offsetHeight || 240;
+      let TILE_H = rect.height || target.offsetHeight || 240;
+
+/* === FORCE_SQUARE_GUARD ===
+   If CSS hasn't applied yet and height is tiny,
+   force square so previews never collapse.
+*/
+if(TILE_H < 120){
+  TILE_H = TILE_W;
+}
+
 
       const canvasW = Number(previewContract.canvas.w) || 1080;
       const canvasH = Number(previewContract.canvas.h) || 1080;
