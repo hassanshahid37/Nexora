@@ -32,8 +32,9 @@
       const canvasW = Number(previewContract.canvas.w) || 1080;
       const canvasH = Number(previewContract.canvas.h) || 1080;
 
-      const scale = Math.min(TILE_W / canvasW, TILE_H / canvasH);
-      const scaledW = canvasW * scale;
+      // THUMBNAIL MODE: use "cover" scaling so tiles are readable (center-crop)
+      const scale = Math.max(TILE_W / canvasW, TILE_H / canvasH);
+const scaledW = canvasW * scale;
       const scaledH = canvasH * scale;
 
       const canvas = document.createElement("div");
