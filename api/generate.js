@@ -1083,6 +1083,18 @@ const brandInfo = brandFromPrompt(prompt);
 templates.push(markMaterialized(Object.assign({}, tpl, { i: i + 1, doc, contract, content })));
   }
 
+  // HARD MATERIALIZATION before returning (server-side)
+  try{
+    let mat = null;
+    try{ mat = require("./template-materializer.js"); }catch(_){ mat = null; }
+    const materialize = (mat && typeof mat.materialize === "function") ? mat.materialize
+      : (globalThis.NexoraMaterializer && typeof globalThis.NexoraMaterializer.materialize === "function") ? globalThis.NexoraMaterializer.materialize
+      : null;
+    if(materialize){
+      templates = templates.map(t => materialize(t) || t);
+    }
+  }catch(_){ }
+
   return templates;
 }
 
