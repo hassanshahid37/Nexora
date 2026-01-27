@@ -23,6 +23,29 @@
   function num(x, d){ var n = Number(x); return Number.isFinite(n) ? n : d; }
   function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
+  // -----------------------------
+  // Preset builder resolver (browser + node)
+  // -----------------------------
+  function getPresetBuilder(root){
+    // 1) Browser/global
+    if(root && root.NexoraPresetStructureBuilder && typeof root.NexoraPresetStructureBuilder.buildFromPreset === "function"){
+      return root.NexoraPresetStructureBuilder;
+    }
+    // 2) Node require (safe)
+    try{
+      if(typeof require === "function"){
+        var m = null;
+        try{ m = require("./engines/preset-structure-builder.js"); }catch(_){ m = null; }
+        if(m && typeof m.buildFromPreset === "function"){
+          // also attach to global for future calls
+          try{ if(root && !root.NexoraPresetStructureBuilder) root.NexoraPresetStructureBuilder = m; }catch(__){}
+          return m;
+        }
+      }
+    }catch(_){}
+    return null;
+  }
+
   function normalizeCanvasShape(canvas){
     var w = num(canvas && (canvas.w != null ? canvas.w : canvas.width), NaN);
     var h = num(canvas && (canvas.h != null ? canvas.h : canvas.height), NaN);
