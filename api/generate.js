@@ -1120,6 +1120,24 @@ function enforceFinalTemplate(template, ctx){
     });
   }
 
+// P8.5 Layout Composition (structure-level designer rules)
+try{
+  let comp = null;
+  // Browser global
+  if(typeof window !== "undefined"){
+    comp = window.LayoutCompositionEngine?.applyLayoutComposition
+      || window.NexoraLayoutCompositionEngine?.applyLayoutComposition
+      || null;
+  }
+  // Node require (server-side generate)
+  if(!comp && typeof require === "function"){
+    try{ comp = require("./layout-composition-engine.js")?.applyLayoutComposition || null; }catch(_){}
+  }
+  if(typeof comp === "function"){
+    template = comp(template, { category: ctx.category, layoutFamily: template.layoutFamily || template.layoutFamilyCanonical || null }) || template;
+  }
+}catch(_){}
+
   // P9 Visual Hierarchy
   if(window.NexoraVisualHierarchyEngine?.applyVisualHierarchy){
     template = window.NexoraVisualHierarchyEngine.applyVisualHierarchy(template) || template;
