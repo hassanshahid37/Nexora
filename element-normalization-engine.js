@@ -183,7 +183,6 @@ function normalizeElement(el, index, seed, opts){
 
     const fs = Number(fontSize);
     fontSize = (Number.isFinite(fs) && fs > 0) ? fs : size;
-  }
 
 // Line-height normalization for legacy canvas renderers (visual-only):
 // Some render paths treat `el.lineHeight` as pixels (not a multiplier). If we pass 1.1–1.4 here,
@@ -197,6 +196,8 @@ if (Number.isFinite(lhNum) && lhNum > 0) {
 }
 typography.lineHeightPx = lineHeightPx;
 lineHeight = lineHeightPx;
+  }
+
 
   // Role canonicalization (render-safety). Keeps old generators compatible.
   const roleRaw2 = (el && el.role != null) ? String(el.role) : null;
@@ -236,7 +237,7 @@ lineHeight = lineHeightPx;
     align: el && el.align != null ? el.align : undefined,
     textAlign: el && el.textAlign != null ? el.textAlign : undefined,
     letterSpacing: el && el.letterSpacing != null ? el.letterSpacing : undefined,
-    lineHeight: (typeof lineHeight === "number" ? lineHeight : (el && el.lineHeight != null ? el.lineHeight : undefined)),
+    lineHeight: (Number.isFinite(lineHeight) ? lineHeight : (el && el.lineHeight != null ? el.lineHeight : undefined)),
     uppercase: el && el.uppercase === true ? true : undefined,
 
     src: el && el.src != null ? el.src : undefined,
