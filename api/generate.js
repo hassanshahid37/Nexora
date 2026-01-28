@@ -54,7 +54,7 @@ function getSelectDesignPreset(){
     // /api/generate.js -> /api/presets/design-preset-selector.js
     try{
       // eslint-disable-next-line global-require
-      const mod = require("./presets/design-preset-selector.js");
+      const mod = require("./design-preset-selector.js");
       __selectDesignPreset = (mod && typeof mod.selectDesignPreset === "function") ? mod.selectDesignPreset : null;
       if(typeof __selectDesignPreset === "function") return __selectDesignPreset;
     }catch(_){}
@@ -62,7 +62,7 @@ function getSelectDesignPreset(){
     // Local/dev flat fallback
     try{
       // eslint-disable-next-line global-require
-      const mod = require("../api/presets/design-preset-selector.js");
+      const mod = require("../api/design-preset-selector.js");
       __selectDesignPreset = (mod && typeof mod.selectDesignPreset === "function") ? mod.selectDesignPreset : null;
       if(typeof __selectDesignPreset === "function") return __selectDesignPreset;
     }catch(_){}
@@ -86,6 +86,46 @@ function loadEngine(paths){
 const __ElemNorm = loadEngine(["../element-normalization-engine.js","./element-normalization-engine.js"]);
 const __VisHierarchy = loadEngine(["../visual-hierarchy-engine.js","./visual-hierarchy-engine.js"]);
 const __StyleEnforcer = loadEngine(["../style-enforcement-engine.js","./style-enforcement-engine.js"]);
+
+// ------------------------------
+// STRICT EXECUTION SPINE (Locked Order)
+// - After structure is produced, geometry is locked (post Element Normalization).
+// - Visual Hierarchy + Style Enforcement may NOT mutate x/y/w/h/r/rotate.
+// ------------------------------
+function __captureGeometry(elements){
+  if(!Array.isArray(elements)) return null;
+  return elements.map((el) => {
+    if(!el || typeof el !== "object") return null;
+    return {
+      __id: el.id != null ? String(el.id) : null,
+      x: el.x, y: el.y, w: el.w, h: el.h, r: el.r, rotate: el.rotate
+    };
+  });
+}
+function __restoreGeometry(elements, snap){
+  if(!Array.isArray(elements) || !Array.isArray(snap)) return elements;
+  const byId = new Map();
+  for(let i=0;i<snap.length;i++){
+    const s = snap[i];
+    if(s && s.__id) byId.set(s.__id, s);
+  }
+  for(let i=0;i<elements.length;i++){
+    const el = elements[i];
+    if(!el || typeof el !== "object") continue;
+    const sid = (el.id != null) ? String(el.id) : null;
+    const s = (sid && byId.has(sid)) ? byId.get(sid) : snap[i];
+    if(!s) continue;
+    // Restore geometry fields only
+    if(s.x != null) el.x = s.x;
+    if(s.y != null) el.y = s.y;
+    if(s.w != null) el.w = s.w;
+    if(s.h != null) el.h = s.h;
+    if(s.r != null) el.r = s.r;
+    if(s.rotate != null) el.rotate = s.rotate;
+  }
+  return elements;
+}
+
 
 
 
@@ -174,26 +214,26 @@ async function getNormalizeCategory() {
     // Prefer CommonJS require when available (fast, works with UMD build)
     try {
       // eslint-disable-next-line global-require
-      const mod = require("../category-spec-v1.js");
+      const mod = require("../Category-Spec-v1.js");
       __normalizeCategory = (mod && typeof mod.normalizeCategory === "function") ? mod.normalizeCategory : null;
       if (typeof __normalizeCategory === "function") return __normalizeCategory;
     } catch (_) {}
 
     try {
       // eslint-disable-next-line global-require
-      const mod = require("./category-spec-v1.js");
+      const mod = require("./Category-Spec-v1.js");
       __normalizeCategory = (mod && typeof mod.normalizeCategory === "function") ? mod.normalizeCategory : null;
       if (typeof __normalizeCategory === "function") return __normalizeCategory;
     } catch (_) {}
 
     // Fallback: dynamic import (handles ESM if repo is configured as modules)
     try {
-      const mod = await import("../category-spec-v1.js");
+      const mod = await import("../Category-Spec-v1.js");
       __normalizeCategory = (mod && typeof mod.normalizeCategory === "function") ? mod.normalizeCategory : null;
       if (typeof __normalizeCategory === "function") return __normalizeCategory;
     } catch (_) {}
     try {
-      const mod = await import("./category-spec-v1.js");
+      const mod = await import("./Category-Spec-v1.js");
       __normalizeCategory = (mod && typeof mod.normalizeCategory === "function") ? mod.normalizeCategory : null;
       if (typeof __normalizeCategory === "function") return __normalizeCategory;
     } catch (_) {}
@@ -1048,6 +1088,8 @@ const brandInfo = brandFromPrompt(prompt);
       };
 
       // Preset-first bootstrap (Instagram Post only)
+      // If seed presets exist, attach for debugging/analytics ONLY.
+      // Do NOT overwrite canvas/elements here (deterministic template must remain renderable).
       try{
         const catKey = String(category || rawCategory || "").toLowerCase().replace(/\s+/g,"_");
         const usePresets = (body && body.disablePresets) ? false : true;
@@ -1055,15 +1097,11 @@ const brandInfo = brandFromPrompt(prompt);
           const presets = __loadInstagramPostSeedPresets();
           if(Array.isArray(presets) && presets.length){
             const preset = presets[(i % presets.length)];
-            tpl.preset = preset;
-            tpl._preset = preset;
-            tpl.elements = null;
-            tpl.canvas = null;
+            det.meta = det.meta || {};
+            det.meta.seedPreset = preset;
           }
         }
-      }catch(_){
-      }
-
+      }catch(_){ }
       templates.push(markMaterialized(Object.assign({}, det, { i: i + 1, doc: null, contract: null, content })));
       continue;
     }
@@ -1071,10 +1109,11 @@ const brandInfo = brandFromPrompt(prompt);
 
     let contract = doc && doc.contract ? doc.contract : (tpl.contract || null);
     const content = doc && doc.content ? doc.content : (tpl.content || null);
-    
+
     // ---- Premium Design Preset (Visual DNA) ----
     const selectPreset = getSelectDesignPreset();
-    const archetype = (tpl && (tpl.archetype || tpl.layoutFamilyCanonical || tpl.layoutFamily || tpl.layout_family)) || (doc && doc.layout && (doc.layout.familyId || doc.layout.id)) || "";
+    const archetype = (tpl && (tpl.archetype || tpl.layoutFamilyCanonical || tpl.layoutFamily || tpl.layout_family)) ||
+      (doc && doc.layout && (doc.layout.familyId || doc.layout.id)) || "";
     const preset = (typeof selectPreset === "function") ? selectPreset({
       category,
       archetype,
@@ -1090,44 +1129,78 @@ const brandInfo = brandFromPrompt(prompt);
         tpl.meta = tpl.meta || {};
         tpl.meta.designPreset = preset;
       } catch (_) {}
-
       try { injectDesignPresetIntoContract(contract, preset); } catch (_) {}
-
-      // Re-run P9 style pipeline with preset influence (safe + deterministic)
-      try {
-        const canvas = (contract && contract.canvas) || tpl.canvas || null;
-        if (canvas && contract) contract.canvas = canvas;
-
-        if (contract && __ElemNorm && typeof __ElemNorm.normalizeElements === "function") {
-          contract.elements = __ElemNorm.normalizeElements(contract.elements, {
-            category,
-            canvas: contract.canvas,
-            seed
-          });
-        }
-        if (contract && __VisHierarchy && typeof __VisHierarchy.applyVisualHierarchy === "function") {
-          contract = __VisHierarchy.applyVisualHierarchy(contract);
-        }
-        if (contract && __StyleEnforcer && typeof __StyleEnforcer.applyStyleEnforcement === "function") {
-          contract = __StyleEnforcer.applyStyleEnforcement(contract);
-        }
-
-        // Sync back to template (preview consumes top-level {canvas,elements})
-        if (contract && Array.isArray(contract.elements) && contract.canvas) {
-          tpl.elements = contract.elements;
-          tpl.canvas = contract.canvas;
-          tpl.contract = contract;
-        }
-      } catch (_) {}
     }
 
-templates.push(markMaterialized(Object.assign({}, tpl, { i: i + 1, doc, contract, content })));
+    // ------------------------------
+    // LOCKED ENGINE ORDER (Strict Spine)
+    // 1) Element Normalization (allowed to adjust spacing/layout readiness)
+    // 2) Geometry snapshot (freeze structural geometry)
+    // 3) Visual Hierarchy (MUST NOT mutate geometry)
+    // 4) Style Enforcement (MUST NOT mutate geometry)
+    // ------------------------------
+    try {
+      // Ensure we have a unified working surface: {canvas,elements}
+      if (contract && contract.canvas && !tpl.canvas) tpl.canvas = contract.canvas;
+      if (contract && Array.isArray(contract.elements) && !Array.isArray(tpl.elements)) tpl.elements = contract.elements;
+
+      // 1) Element Normalization
+      if (Array.isArray(tpl.elements) && tpl.canvas && __ElemNorm && typeof __ElemNorm.normalizeElements === "function") {
+        tpl.elements = __ElemNorm.normalizeElements(tpl.elements, {
+          category,
+          canvas: tpl.canvas,
+          seed
+        });
+      }
+
+      // Keep contract in sync if it exists
+      if (contract) {
+        if (tpl.canvas) contract.canvas = tpl.canvas;
+        if (Array.isArray(tpl.elements)) contract.elements = tpl.elements;
+      }
+
+      // 2) Snapshot geometry AFTER normalization (structure is now frozen)
+      const __geom = __captureGeometry(tpl.elements);
+
+      // 3) Visual Hierarchy (restore geometry if engine mutates it)
+      if (__VisHierarchy && typeof __VisHierarchy.applyVisualHierarchy === "function") {
+        try {
+          const outVH = __VisHierarchy.applyVisualHierarchy(contract || tpl);
+          if (outVH && Array.isArray(outVH.elements) && outVH.canvas) {
+            tpl.elements = outVH.elements;
+            tpl.canvas = outVH.canvas;
+            if (contract) { contract = outVH; }
+          }
+        } catch (_) {}
+        __restoreGeometry(tpl.elements, __geom);
+        if (contract && Array.isArray(tpl.elements)) contract.elements = tpl.elements;
+      }
+
+      // 4) Style Enforcement (restore geometry if engine mutates it)
+      if (__StyleEnforcer && typeof __StyleEnforcer.applyStyleEnforcement === "function") {
+        try {
+          const outSE = __StyleEnforcer.applyStyleEnforcement(contract || tpl);
+          if (outSE && Array.isArray(outSE.elements) && outSE.canvas) {
+            tpl.elements = outSE.elements;
+            tpl.canvas = outSE.canvas;
+            if (contract) { contract = outSE; }
+          }
+        } catch (_) {}
+        __restoreGeometry(tpl.elements, __geom);
+        if (contract && Array.isArray(tpl.elements)) contract.elements = tpl.elements;
+      }
+
+      // Sync back to template (preview consumes top-level {canvas,elements})
+      if (contract) tpl.contract = contract;
+    } catch (_) {}
+
+    templates.push(markMaterialized(Object.assign({}, tpl, { i: i + 1, doc, contract, content })));
   }
 
   // HARD MATERIALIZATION before returning (server-side)
   try{
     let mat = null;
-    try{ mat = require("./template-materializer.js"); }catch(_){ mat = null; }
+    try{ mat = require("../template-materializer.js"); }catch(_){ try{ mat = require("./template-materializer.js"); }catch(__){ mat = null; } }
     const materialize = (mat && typeof mat.materialize === "function") ? mat.materialize
       : (globalThis.NexoraMaterializer && typeof globalThis.NexoraMaterializer.materialize === "function") ? globalThis.NexoraMaterializer.materialize
       : null;
@@ -1149,28 +1222,3 @@ if (typeof window !== 'undefined') {
     window.generateTemplates = generateTemplates;
 }
 
-// === PERMANENT PIPELINE ENFORCEMENT ===
-function enforceFinalTemplate(template, ctx){
-  if(!template || !Array.isArray(template.elements)){
-    template = materializeTemplate({
-      template,
-      category: ctx.category,
-      style: ctx.style,
-      prompt: ctx.prompt,
-      seed: ctx.seed
-    });
-  }
-
-  // P9 Visual Hierarchy
-  if(window.NexoraVisualHierarchyEngine?.applyVisualHierarchy){
-    template = window.NexoraVisualHierarchyEngine.applyVisualHierarchy(template) || template;
-  }
-
-  // P9 Style Enforcement
-  if(window.NexoraStyleEnforcementEngine?.applyStyleEnforcement){
-    template = window.NexoraStyleEnforcementEngine.applyStyleEnforcement(template) || template;
-  }
-
-  template.meta = Object.assign({}, template.meta, { materialized: true });
-  return template;
-}
