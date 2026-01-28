@@ -72,6 +72,10 @@
 
   function applyLayoutComposition(template, options = {}){
     if (!template || !Array.isArray(template.elements)) return template;
+    // Archetype-structured templates: respect existing element topology.
+    if(template && template.meta && template.meta.__fromArchetype === true){
+      return template;
+    }
     const t = clone(template);
     const category = options.category || t.category;
     t.elements = mergeTextBlocks(t.elements);
