@@ -21,7 +21,7 @@ function __pickArchetypeId(seed, idx){
     const s = (Number(seed) >>> 0);
     const i = (Number(idx) >>> 0);
     const pick = (s + i) % list.length;
-    return list[pick] || null;
+    return list[pick] || list[0] || null;
   }catch(_){ return null; }
 }
 
@@ -34,6 +34,8 @@ async function tryArchetypeStructure(ctx){
     return res;
   }catch(_){ return null; }
 }
+
+const __NEXORA_BUILD_SIG = "ARCH_DEBUG_V4_2026-01-28";
 
 
 
@@ -221,6 +223,9 @@ function markMaterialized(t){
     if(!t || typeof t !== "object") return t;
     t.meta = (t.meta && typeof t.meta === "object") ? t.meta : {};
     if(t.meta.materialized !== true) t.meta.materialized = true;
+    if(!t.meta.__structureSource){
+      t.meta.__structureSource = (t.meta.__fromArchetype ? "archetype" : (t.meta.__fromDeterministic ? "deterministic" : "spine"));
+    }
     return t;
   }catch(_){ return t; }
 }
@@ -309,7 +314,7 @@ async function handler(req, res) {
   let templates = buildDeterministicTemplates({ prompt, category, style, count: 1, notes: "" });
 templates = Array.isArray(templates) ? templates.map(markMaterialized) : templates;
 
-    return res.end(JSON.stringify({ success: true, templates }));
+    return res.end(JSON.stringify({ success: true, templates, debug: { build: __NEXORA_BUILD_SIG, fromArchetype: (Array.isArray(templates)?templates.filter(t=>t&&t.meta&&t.meta.__fromArchetype).length:0) } }));
 }
 
     // Parse body safely (Vercel/Node may not populate req.body)
@@ -407,6 +412,7 @@ try {
         JSON.stringify({
           success: true,
           templates,
+          debug: { build: __NEXORA_BUILD_SIG },
           error: String(err && err.message ? err.message : err)
         })
       );
@@ -1141,6 +1147,7 @@ async function generateTemplates(payload) {
           tpl.elements = arch.elements;
           tpl.meta = tpl.meta || {};
           tpl.meta.__fromArchetype = true;
+           tpl.meta.__structureSource = "archetype";
           tpl.meta.archetypeId = arch.archetypeId || null;
           // Keep contract aligned when present
           if(doc && doc.contract){
@@ -1158,6 +1165,7 @@ async function generateTemplates(payload) {
       // HARD SAFETY: never return empty templates to UI.
       // If Spine output is invalid for this seed, deterministically materialize a valid template.
       const det = materializeTemplate({ category, style, prompt, i: i + 1, seed, variantIndex: i + 1 });
+      try{ tpl.meta = tpl.meta || {}; tpl.meta.__fromDeterministic = true; tpl.meta.__structureSource = 'deterministic'; }catch(_){ }
 const brandInfo = brandFromPrompt(prompt);
       const content = {
         headline: det && det._headline ? det._headline : (brandInfo.brand || prompt || "Template"),
