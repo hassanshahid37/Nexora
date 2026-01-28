@@ -239,6 +239,10 @@
 
     return {
       canvas: canvas,
+      zones: [
+        { id: "zone_root", role: "root", x: 0, y: 0, w: canvas.w, h: canvas.h }
+      ],
+
       elements: elements,
       presetId: p.id || null,
       presetPattern: p.pattern || null,
