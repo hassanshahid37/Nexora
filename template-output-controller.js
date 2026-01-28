@@ -245,6 +245,17 @@ node.style.height = Math.max(1, pxH * scale) + "px";
   // NOTE: NexoraPreview.renderTo signature is renderTo(targetNode, payload).
   
   TOC.renderThumb = function(template, mount){
+    // REALISTIC_PREVIEW_MODE: prefer real template visuals
+
+    // Prefer real template geometry in grid previews (Option 1).
+    // The normalizer will pass-through when geometry is already valid.
+    try{
+      const norm = (window.NexoraPreviewNormalization && window.NexoraPreviewNormalization.normalize);
+      if(typeof norm === "function"){
+        template = norm(template, { mode: "realistic" }) || template;
+      }
+    }catch(_){ }
+
     try{
       const mat = (window.NexoraMaterializer && window.NexoraMaterializer.materialize);
       if(mat) template = mat(template) || template;
