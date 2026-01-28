@@ -1,4 +1,41 @@
 
+// PATCH: Archetype-driven structural generation (guarded, non-breaking)
+let __compileArchetypeToElements = null;
+let __listArchetypes = null;
+try{
+  // Try a few common locations (api/ -> root or engines/)
+  let a = null;
+  try{ a = require("../engines/archetype-engine.js"); }catch(_){}
+  if(!a){ try{ a = require("../archetype-engine.js"); }catch(_){ } }
+  if(!a){ try{ a = require("./archetype-engine.js"); }catch(_){ } }
+
+  __compileArchetypeToElements = a && a.compileArchetypeToElements;
+  __listArchetypes = a && a.listArchetypes;
+}catch(_){}
+
+function __pickArchetypeId(seed, idx){
+  try{
+    if(typeof __listArchetypes !== "function") return null;
+    const list = __listArchetypes();
+    if(!Array.isArray(list) || !list.length) return null;
+    const s = (Number(seed) >>> 0);
+    const i = (Number(idx) >>> 0);
+    const pick = (s + i) % list.length;
+    return list[pick] || null;
+  }catch(_){ return null; }
+}
+
+async function tryArchetypeStructure(ctx){
+  try{
+    if(typeof __compileArchetypeToElements !== "function") return null;
+    const res = __compileArchetypeToElements(ctx);
+    if(!res || !Array.isArray(res.elements)) return null;
+    res.meta = Object.assign({}, res.meta, { __fromArchetype: true });
+    return res;
+  }catch(_){ return null; }
+}
+
+
 
 // api/generate.js
 // Nexora / Templify – Serverless API: /api/generate
@@ -1074,6 +1111,48 @@ async function generateTemplates(payload) {
 
     const tpl = out && out.template ? out.template : null;
     const doc = out && out.doc ? out.doc : null;
+
+    // __ARCHETYPE_WIRING_V2__: Use archetypes as a structural driver (guarded, deterministic).
+    // This is additive: if archetype compilation fails, we fall back to Spine output unchanged.
+    try{
+      const disableArchetypes = !!(body && (body.disableArchetypes || body.disable_archetypes));
+      const isLogo = String(category||"").toLowerCase().includes("logo");
+      if(!disableArchetypes && !isLogo){
+        const baseCanvas = (tpl && tpl.canvas) ? tpl.canvas : (doc && doc.contract && doc.contract.canvas) ? doc.contract.canvas : null;
+        const contentSrc = (doc && doc.content) ? doc.content : (tpl && tpl.content) ? tpl.content : null;
+        const brandInfo = brandFromPrompt(prompt);
+        const ctx = {
+          headline: (contentSrc && (contentSrc.headline || contentSrc.title)) || brandInfo.brand || prompt || "Template",
+          subhead: (contentSrc && (contentSrc.subhead || contentSrc.subtitle)) || brandInfo.tagline || "",
+          brand: (contentSrc && contentSrc.brand) || brandInfo.brand || "",
+          // Image can be wired later; placeholder in archetype engine is fine for now.
+          image: (contentSrc && (contentSrc.image || contentSrc.imageSrc || contentSrc.photoSrc)) || null
+        };
+
+        const arch = await tryArchetypeStructure({
+          archetypeId: __pickArchetypeId(seed, i),
+          canvas: baseCanvas || (CATEGORIES[category] || CATEGORIES["Instagram Post"]),
+          ctx
+        });
+
+        if(arch && Array.isArray(arch.elements) && arch.elements.length){
+          // Override structure (canvas + elements) while preserving doc/contract and downstream engines.
+          tpl.canvas = arch.canvas || tpl.canvas;
+          tpl.elements = arch.elements;
+          tpl.meta = tpl.meta || {};
+          tpl.meta.__fromArchetype = true;
+          tpl.meta.archetypeId = arch.archetypeId || null;
+          // Keep contract aligned when present
+          if(doc && doc.contract){
+            doc.contract.canvas = tpl.canvas;
+            doc.contract.elements = tpl.elements;
+            doc.contract.meta = doc.contract.meta || {};
+            doc.contract.meta.__fromArchetype = true;
+            doc.contract.meta.archetypeId = tpl.meta.archetypeId;
+          }
+        }
+      }
+    }catch(_){ }
 
     if (!tpl || !Array.isArray(tpl.elements)) {
       // HARD SAFETY: never return empty templates to UI.
