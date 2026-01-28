@@ -152,6 +152,7 @@
     }
     .tile b{display:block;font-size:12.5px;margin-bottom:6px}
     .tile span{font-size:12px;color:var(--muted);line-height:1.35}
+    .metaLine{display:block}
     .right{padding:18px}
     .right h3{margin:2px 0 10px;font-size:14px}
     .field{margin:10px 0}
@@ -443,6 +444,26 @@
 
 // Unified preview router (no UI changes):
 // P8 Phase-3 requirement: when contract exists, previews must reflect zone-executed geometry.
+
+// Preset extraction helper (non-destructive).
+function __getPresetInfo(t){
+  try{
+    const presetId =
+      t?.presetId || t?.preset_id ||
+      t?.meta?.presetId || t?.meta?.preset_id ||
+      t?.doc?.meta?.presetId || t?.doc?.meta?.preset_id ||
+      t?.contract?.meta?.presetId || t?.contract?.meta?.preset_id ||
+      t?.preset?.id || t?.preset?.presetId || null;
+
+    const preset =
+      t?.preset ||
+      t?.meta?.preset ||
+      t?.doc?.meta?.preset ||
+      null;
+
+    return { presetId, preset };
+  }catch(_){ return { presetId:null, preset:null }; }
+}
 function __synthContentFromElements(tpl){
   try{
     const els = Array.isArray(tpl?.elements) ? tpl.elements : [];
@@ -475,6 +496,7 @@ function __synthContentFromElements(tpl){
 }
 
 // Prefer Preview Renderer v1 when contract exists; synthesize content if missing.
+
 function renderThumb(thumb, tplOrElements, bg){
   if(!thumb) return;
   try{
@@ -482,33 +504,45 @@ function renderThumb(thumb, tplOrElements, bg){
       ? { elements: tplOrElements, canvas: { w: 980, h: 620 } }
       : (tplOrElements || {});
 
-    // API output may be:
-    // - Spine-shaped: { contract, content }
-    // - Flat: { canvas, elements }
-    // Always prefer NexoraPreview when available, and let it auto-adapt.
+    // === ARCHETYPE-AWARE PREVIEW FIX ===
+    // If template is archetype-structured, render REAL canvas + elements directly.
+    if(tpl && tpl.meta && tpl.meta.__fromArchetype === true){
+      thumb.innerHTML = "";
+      if(window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
+        const __p = __getPresetInfo(tpl);
+        const __meta = Object.assign({}, tpl.meta || {});
+        if(__p.presetId) __meta.presetId = __p.presetId;
+        if(__p.preset) __meta.preset = __p.preset;
+        window.NexoraPreview.renderTo(thumb, {
+          contract: {
+            v: 1,
+            category: tpl.category || tpl.contract?.category || "instagram_post",
+            canvas: tpl.canvas,
+            elements: tpl.elements,
+            meta: (__p.presetId || __p.preset) ? { presetId: __p.presetId || undefined } : undefined
+          },
+          content: { elements: tpl.elements },
+          meta: __meta
+        });
+      }
+      return;
+    }
+
+    // === LEGACY / SAFE PATH ===
     if(window.NexoraPreview && typeof window.NexoraPreview.renderTo === "function"){
       const content = tpl.content || tpl.doc?.content || __synthContentFromElements(tpl);
-
       thumb.innerHTML = "";
-
-      // If we have a contract+content, pass in spine payload.
       if(tpl && tpl.contract && content && typeof content === "object"){
         window.NexoraPreview.renderTo(thumb, { contract: tpl.contract, content, meta: tpl.meta || tpl.doc?.meta });
         if(thumb.childNodes && thumb.childNodes.length > 0) return;
-        // fall through on empty render
         thumb.innerHTML = "";
       }
-
-      // Otherwise, pass the template as-is (flat mode). Preview renderer will normalize.
       window.NexoraPreview.renderTo(thumb, Object.assign({ content }, tpl));
       if(thumb.childNodes && thumb.childNodes.length > 0) return;
-
-      // If renderer produced nothing, fall through to legacy draw.
       thumb.innerHTML = "";
     }
   }catch(e){}
 }
-
 
 
   function seedTemplates(n){
@@ -743,7 +777,7 @@ function renderTemplatesFromList(list){
     div.innerHTML = `
       <div class="preview-canvas" aria-label="Template preview"></div>
       <b>${catLabel} #${i+1}</b>
-      <span>AI output</span>
+      <span class="metaLine">AI output</span>
     `;
 
     // Attach template for deferred render.
@@ -808,7 +842,13 @@ function renderTemplatesFromList(list){
             if(!Array.isArray(contentObj.elements)) contentObj.elements = t.contract.elements;
           }
         }
-        const payload = hasContract ? { contract: t.contract, content: contentObj } : {
+        const __pinfo = __getPresetInfo(t);
+        const __metaOut = Object.assign({}, (t && t.meta) ? t.meta : {});
+        if(__pinfo.presetId) __metaOut.presetId = __pinfo.presetId;
+        if(__pinfo.preset) __metaOut.preset = __pinfo.preset;
+        const payload = (t && t.meta && t.meta.__fromArchetype === true)
+          ? { contract: { v:1, category: t.category || document.getElementById("cat")?.value || "instagram_post", canvas: t.canvas, elements: t.elements, meta: (__pinfo.presetId ? { presetId: __pinfo.presetId } : undefined) }, content: { elements: t.elements }, meta: __metaOut }
+          : hasContract ? { contract: Object.assign({}, t.contract, { meta: Object.assign({}, t.contract?.meta || {}, (__pinfo.presetId ? { presetId: __pinfo.presetId } : {})) }), content: contentObj, meta: __metaOut } : {
           contract: t?.contract || t?.meta?.contract || {
             v: 1,
             category: t?.category || document.getElementById("cat")?.value || "instagram_post",
