@@ -388,7 +388,7 @@
         fontSize: num(headSrc?.style?.fontSize ?? headSrc?.size, headlineSize),
         fontWeight: num(headSrc?.style?.fontWeight ?? headSrc?.weight, 900),
         color: headSrc?.style?.color || palette.ink,
-        lineHeight: Math.round((num(headSrc?.style?.fontSize ?? headSrc?.size, headlineSize)) * 1.08)
+        lineHeight: 1.08
       }
     });
 
@@ -405,10 +405,10 @@
         ...rects.subhead,
         style: {
           fontFamily: subSrc?.style?.fontFamily || "Inter, sans-serif",
-        fontSize: num(subSrc?.style?.fontSize ?? subSrc?.size, subSize),
-        fontWeight: num(subSrc?.style?.fontWeight ?? subSrc?.weight, 650),
-        color: subSrc?.style?.color || "rgba(255,255,255,0.86)",
-        lineHeight: Math.round((num(subSrc?.style?.fontSize ?? subSrc?.size, subSize)) * 1.15)
+          fontSize: num(subSrc?.style?.fontSize ?? subSrc?.size, subSize),
+          fontWeight: num(subSrc?.style?.fontWeight ?? subSrc?.weight, 650),
+          color: subSrc?.style?.color || "rgba(255,255,255,0.86)",
+          lineHeight: 1.15
         }
       });
     }
@@ -480,11 +480,40 @@
     return { version:"pv1", previewId:"preview_fallback", sourceTemplateId:null, category:category||"Unknown", canvas:cv, elements:els, meta:{ source:"minimal-fallback" }, createdAt: Date.now() };
   }
 
-  // -----------------------------
+  
+  // REALISTIC_PREVIEW_PASSTHROUGH
+  // If template already has valid canvas + elements with geometry, prefer pass-through.
+  function hasValidGeometry(canvas, elements){
+    if(!canvas || !Array.isArray(elements) || !elements.length) return false;
+    const W = Number(canvas.w ?? canvas.width), H = Number(canvas.h ?? canvas.height);
+    if(!Number.isFinite(W) || !Number.isFinite(H) || W<=0 || H<=0) return false;
+    return elements.some(e =>
+      Number.isFinite(e?.x) && Number.isFinite(e?.y) &&
+      Number.isFinite(e?.w) && Number.isFinite(e?.h)
+    );
+  }
+
+// -----------------------------
   // Main normalize API
   // -----------------------------
   function normalize(templateOrPayload, options){
     try{
+      const extracted0 = extractTemplateShape(templateOrPayload);
+      if(hasValidGeometry(extracted0.canvas, extracted0.elements)){
+        // Light clamp only
+        const cv0 = normalizeCanvasShape(extracted0.canvas) || extracted0.canvas;
+        return {
+          version:"pv1",
+          previewId:"preview_passthrough",
+          sourceTemplateId: extracted0.sourceTemplateId || null,
+          category: extracted0.category || "Unknown",
+          canvas: cv0,
+          elements: extracted0.elements,
+          meta: Object.assign({}, extracted0.meta || {}, { source:"preview-passthrough" }),
+          createdAt: Date.now()
+        };
+      }
+
       const extracted = extractTemplateShape(templateOrPayload);
       const srcCanvas = normalizeCanvasShape(extracted.canvas) || { w:1080,h:1080,width:1080,height:1080 };
       const category = str(extracted.category || "Instagram Post") || "Instagram Post";
