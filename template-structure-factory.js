@@ -111,7 +111,34 @@
     c.layoutVariant = built.roles.join("+");
     c.layers = built.layers;
 
-    c.meta=c.meta||{};try{const zr=(typeof require==='function'?require('./layout-zone-registry.js'):window.NexoraZones);if(zr&&zr.getZones){c.meta.zones=zr.getZones(c.layoutFamilyCanonical);}}catch(_){};return c;
+    c.meta = c.meta || {};
+
+    // Populate structural zones (P7->P8) BEFORE validating.
+    try{
+      const zr = (typeof require === 'function'
+        ? require('./layout-zone-registry.js')
+        : (typeof window !== 'undefined' ? window.NexoraZones : null)
+      );
+      if(zr && typeof zr.getZones === 'function'){
+        const z = zr.getZones(c.layoutFamilyCanonical);
+        if(Array.isArray(z) && z.length) c.meta.zones = z;
+      }
+    }catch(_){}
+
+    // Fallback: minimal root zone if registry unavailable or returned empty.
+    if(!Array.isArray(c.meta.zones) || c.meta.zones.length === 0){
+      const cv = (c && c.canvas) ? c.canvas : (baseContract && baseContract.canvas ? baseContract.canvas : null);
+      const W = Number(cv && (cv.w ?? cv.width)) || 1080;
+      const H = Number(cv && (cv.h ?? cv.height)) || 1080;
+      c.meta.zones = [{ id: "zone_root", role: "root", x: 0, y: 0, w: W, h: H }];
+    }
+
+    // HARD ASSERTION: structure must contain zones (never allow silent empty structure).
+    if(!Array.isArray(c.meta.zones) || c.meta.zones.length === 0){
+      throw new Error("INVALID_STRUCTURE: no zones produced at Structure Build");
+    }
+
+    return c;
   }
 
   try{
