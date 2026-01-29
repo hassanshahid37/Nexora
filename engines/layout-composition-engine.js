@@ -1,100 +1,75 @@
+/**
+ * engines/layout-composition-engine.js
+ * FINAL WORKING FIX (Zones-driven, role-normalized)
+ *
+ * - Exports ONE callable function (CommonJS)
+ * - Consumes zones by role (case-insensitive)
+ * - Always assigns concrete x,y,w,h
+ * - Hard-fails on invalid input / non-finite geometry
+ */
 
-(function(root){
-  "use strict";
-  const str = (x) => String(x ?? "").trim();
-  const clone = (x) => JSON.parse(JSON.stringify(x));
-
-  const TEXT_ROLES = ["headline","subhead","supportingtext","text","body"];
-  function isText(el){ return el && el.type === "text" && TEXT_ROLES.includes(el.role); }
-
-  function selectPrimaryHeadline(elements){
-    const headlines = elements.filter(e => e.role === "headline" && str(e.text));
-    if (headlines.length <= 1) return headlines[0] || null;
-    headlines.sort((a,b) => str(b.text).length - str(a.text).length);
-    return headlines[0];
+module.exports = function layoutCompositionEngine(input) {
+  if (!input || typeof input !== "object") {
+    throw new Error("Layout composition failed: invalid input");
   }
 
-  function mergeTextBlocks(elements){
-    const out = []; let buffer = null;
-    for (const el of elements){
-      if (isText(el)){
-        if (!buffer){ buffer = clone(el); }
-        else if (buffer.role === el.role){ buffer.text = `${buffer.text} ${el.text}`.trim(); }
-        else { out.push(buffer); buffer = clone(el); }
-      } else {
-        if (buffer){ out.push(buffer); buffer = null; }
-        out.push(el);
-      }
+  const zones = input.zones || input.contract?.meta?.zones;
+  const elements = Array.isArray(input.elements) ? input.elements : [];
+
+  if (!Array.isArray(zones) || zones.length === 0) {
+    throw new Error("Layout composition failed: zones missing");
+  }
+  if (elements.length === 0) {
+    throw new Error("Layout composition failed: elements missing");
+  }
+
+  // Build a role->zone map (case-insensitive)
+  const zoneByRole = {};
+  for (const z of zones) {
+    if (!z || typeof z !== "object") continue;
+    const roleKey = String(z.role || "").toLowerCase().trim();
+    if (!roleKey) continue;
+    if (!Number.isFinite(z.w) || !Number.isFinite(z.h)) continue;
+    zoneByRole[roleKey] = z;
+  }
+
+  const root =
+    zoneByRole.root ||
+    zones.find(z => String(z?.role || "").toLowerCase() === "root") ||
+    zones[0];
+
+  if (!root || !Number.isFinite(root.w) || !Number.isFinite(root.h)) {
+    throw new Error("Layout composition failed: invalid root zone");
+  }
+
+  const rootX = Number.isFinite(root.x) ? root.x : 0;
+  const rootY = Number.isFinite(root.y) ? root.y : 0;
+
+  const positioned = elements.map((el) => {
+    const role = String(el?.role || "").toLowerCase().trim();
+    const zone = (role && zoneByRole[role]) ? zoneByRole[role] : root;
+
+    const x = Number.isFinite(zone.x) ? zone.x : rootX;
+    const y = Number.isFinite(zone.y) ? zone.y : rootY;
+    const w = Number.isFinite(zone.w) ? zone.w : root.w;
+    const h = Number.isFinite(zone.h) ? zone.h : root.h;
+
+    if (![x, y, w, h].every(Number.isFinite)) {
+      throw new Error("Layout composition failed: non-finite geometry");
     }
-    if (buffer) out.push(buffer);
-    return out;
-  }
-
-  function clampHeadline(headline, category){
-    if (!headline || !headline.text) return;
-    const words = headline.text.split(/\s+/);
-    let maxWords = 8;
-    if (String(category).toLowerCase().includes("youtube")) maxWords = 4;
-    if (words.length > maxWords){
-      headline.text = words.slice(0, maxWords).join(" ");
+    if (w <= 0 || h <= 0) {
+      throw new Error("Layout composition failed: non-positive geometry");
     }
-  }
 
-  function preventOrphans(text){
-    const words = text.split(/\s+/);
-    if (words.length < 4) return text;
-    const last = words[words.length - 1];
-    if (last.length <= 2){
-      words[words.length - 2] += ` ${last}`;
-      words.pop();
+    return { ...el, x, y, w, h };
+  });
+
+  return {
+    ...input,
+    elements: positioned,
+    meta: {
+      ...(input.meta || {}),
+      layoutComposed: true
     }
-    return words.join(" ");
-  }
-
-  function normalizeCTA(elements){
-    const ctas = elements.filter(e => e.role === "cta");
-    if (ctas.length <= 1) return elements;
-    const keep = ctas[0];
-    return elements.filter(e => e === keep || e.role !== "cta");
-  }
-
-  function enforceHierarchy(elements, primaryHeadline){
-    const ordered = [];
-    if (primaryHeadline) ordered.push(primaryHeadline);
-    for (const el of elements){
-      if (el === primaryHeadline) continue;
-      if (el.role === "subhead" || el.role === "supportingtext") ordered.push(el);
-    }
-    for (const el of elements){ if (el.role === "cta") ordered.push(el); }
-    for (const el of elements){ if (!ordered.includes(el)) ordered.push(el); }
-    return ordered;
-  }
-
-  function applyLayoutComposition(template, options = {}){
-    if (!template || !Array.isArray(template.elements)) return template;
-    // Archetype-structured templates: respect existing element topology.
-    if(template && template.meta && template.meta.__fromArchetype === true){
-      return template;
-    }
-    const t = clone(template);
-    const category = options.category || t.category;
-    t.elements = mergeTextBlocks(t.elements);
-    const primaryHeadline = selectPrimaryHeadline(t.elements);
-    for (const el of t.elements){
-      if (el.role === "headline" && el !== primaryHeadline){ el.role = "supportingtext"; }
-    }
-    clampHeadline(primaryHeadline, category);
-    if (primaryHeadline){ primaryHeadline.text = preventOrphans(primaryHeadline.text); }
-    t.elements = normalizeCTA(t.elements);
-    t.elements = enforceHierarchy(t.elements, primaryHeadline);
-    t.meta = Object.assign({}, t.meta, {
-      composition: { composed: true, primaryHeadline: primaryHeadline?.id || null }
-    });
-    return t;
-  }
-
-  const api = { applyLayoutComposition };
-  try{ if (typeof module !== "undefined") module.exports = api; }catch(_){}
-  try{ root.LayoutCompositionEngine = api; }catch(_){}
-  try{ root.NexoraLayoutCompositionEngine = root.NexoraLayoutCompositionEngine || api; }catch(_){ }
-})(typeof globalThis !== "undefined" ? globalThis : window);
+  };
+};
