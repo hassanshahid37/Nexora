@@ -17,21 +17,91 @@
 (function (root) {
   "use strict";
 
-  // P8 Structure Authority: bind to template-structure-factory explicitly (no silent fallback)
-  var createTemplateContract = null;
-  (function initStructureFactory(){
+  // ---------- P8 Structure Authority Binding ----------
+  function safeRequire(path){
+    try { return require(path); } catch(_) { return null; }
+  }
+
+  // Prefer Node/CommonJS factory; fallback to browser global
+  var _factoryMod = safeRequire("../template-structure-factory.js");
+  var _factory = (_factoryMod && typeof _factoryMod.createTemplateContract === "function")
+    ? _factoryMod
+    : (root && root.NexoraTemplateFactory && typeof root.NexoraTemplateFactory.createTemplateContract === "function"
+        ? root.NexoraTemplateFactory
+        : null);
+
+  // Optional zones registry (adds meta.zones for downstream)
+  var _zonesMod = safeRequire("../layout-zone-registry.js");
+  var _zones = (_zonesMod && typeof _zonesMod.getZones === "function")
+    ? _zonesMod
+    : (root && root.NexoraZones && typeof root.NexoraZones.getZones === "function"
+        ? root.NexoraZones
+        : null);
+
+  // Role allowlist (matches TemplateContract ROLE_SET when present)
+  var _ROLE_SET = null;
+  try{
+    if(root && root.NexoraSpine && root.NexoraSpine.ROLE_SET && typeof root.NexoraSpine.ROLE_SET.has === "function"){
+      _ROLE_SET = root.NexoraSpine.ROLE_SET;
+    }
+  }catch(_){}
+  if(!_ROLE_SET){
+    _ROLE_SET = new Set(["background","headline","subhead","image","cta","badge","logo"]);
+  }
+
+  function _buildContractFromElements(preset, canvas, elements, index, familyId){
+    if(!_factory) return null;
+
+    // Convert elements → layers (contract expects {id, role, locked:boolean})
+    var layers = [];
+    for(var i=0;i<(elements||[]).length;i++){
+      var e = elements[i];
+      if(!e) continue;
+      var role = String(e.role || "");
+      if(!_ROLE_SET.has(role)) continue;
+      layers.push({ id: String(e.id || ("layer_"+i)), role: role, locked: false });
+    }
+
+    // Hard guard: contract must have at least background + headline
+    var hasBg = false, hasHl = false;
+    for(var j=0;j<layers.length;j++){
+      if(layers[j].role === "background") hasBg = true;
+      if(layers[j].role === "headline") hasHl = true;
+    }
+    if(!hasBg){
+      layers.unshift({ id: "auto_background", role: "background", locked: true });
+    }
+    if(!hasHl){
+      layers.push({ id: "auto_headline", role: "headline", locked: false });
+    }
+
+    var baseContract = {
+      templateId: String((preset && preset.id) || ("tpl_"+index)),
+      category: String((preset && preset.category) || "Instagram Post"),
+      canvas: canvas,
+      layers: layers,
+      layoutFamily: familyId || (preset && (preset.layoutFamily || preset.familyId)) || null
+    };
+
+    var c = null;
     try{
-      if(typeof require === "function"){
-        var mod = require("../template-structure-factory.js");
-        if(mod && typeof mod.createTemplateContract === "function") createTemplateContract = mod.createTemplateContract;
-      }
-    }catch(_){ }
-    try{
-      if(!createTemplateContract && root && root.NexoraTemplateFactory && typeof root.NexoraTemplateFactory.createTemplateContract === "function"){
-        createTemplateContract = root.NexoraTemplateFactory.createTemplateContract;
-      }
-    }catch(_){ }
-  })();
+      c = _factory.createTemplateContract(baseContract, Number(index)||0, { familyId: baseContract.layoutFamily });
+    }catch(_){
+      c = null;
+    }
+    if(!c) return null;
+
+    // Attach zones (non-fatal)
+    if(_zones && typeof _zones.getZones === "function"){
+      try{
+        c.meta = c.meta || {};
+        c.meta.zones = _zones.getZones(c.layoutFamilyCanonical || c.layoutFamily);
+      }catch(_){}
+    }
+
+    return c;
+  }
+
 
   function num(v, d){ v = Number(v); return Number.isFinite(v) ? v : d; }
   function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
@@ -253,50 +323,25 @@
       });
     }
 
-    // Build P8 structure contract deterministically using the authoritative factory.
-    // IMPORTANT: this does NOT replace element geometry; it defines semantic layer roles for downstream engines.
-    if(!createTemplateContract){
-      throw new Error("P8 Structure failed: template-structure-factory is not available");
-    }
+    
+    // ---------- P8: build authoritative TemplateContract (structure) ----------
+    var familyId = null;
+    try{ familyId = (c && c.layoutFamily) || (p && p.layoutFamily) || null; }catch(_){ familyId = null; }
 
-    // Only roles supported by the contract (avoid injecting unknown roles like 'container'/'decor')
-    var ROLE_OK = { background:1, headline:1, subhead:1, image:1, cta:1, badge:1, logo:1 };
-    var contractLayers = [];
-    for(var li=0; li<elements.length; li++){
-      var el = elements[li] || {};
-      var r = String(el.role || "");
-      if(ROLE_OK[r]){
-        contractLayers.push({ id: String(el.id || (r + "_" + li)), role: r, locked: false });
-      }
-    }
-    // Ensure at least background + headline exist in the contract layer list
-    if(!contractLayers.some(function(x){ return x && x.role === "background"; })) contractLayers.unshift({ id:"bg", role:"background", locked:false });
-    if(!contractLayers.some(function(x){ return x && x.role === "headline"; })) contractLayers.push({ id:"headline", role:"headline", locked:false });
-
-    var baseContract = {
-      templateId: (p.id || "tpl"),
-      category: (c.category || p.category || "Unknown"),
-      canvas: canvas,
-      layers: contractLayers
-    };
-
-    // Prefer explicit variant index if passed; otherwise derive from seed deterministically.
-    var variantIndex = Number.isFinite(Number(c.index)) ? Number(c.index) : (seed % 25);
-    var familyId = (c.familyId || c.layoutFamily || c.layoutFamilyId || null);
-
-    var structuredContract = createTemplateContract(baseContract, variantIndex, { familyId: familyId });
-    if(!structuredContract){
-      throw new Error("P8 Structure failed: factory returned null");
+    var contract = _buildContractFromElements(p, canvas, elements, seed, familyId);
+    if(!contract){
+      // Fail fast: prevents silent loops on weak structure
+      throw new Error("P8 ERROR: Failed to build TemplateContract from preset structure");
     }
 
     return {
       canvas: canvas,
-      elements: elements,
-      contract: structuredContract,
+      elements: elements,          // concrete geometry for preview/editor
+      contract: contract,          // authoritative structure for downstream engines
       presetId: p.id || null,
       presetPattern: p.pattern || null,
       category: c.category || p.category || null,
-      meta: { source: "preset-structure-builder", layoutFamily: structuredContract.layoutFamily || null, layoutFamilyCanonical: structuredContract.layoutFamilyCanonical || null }
+      meta: { source: "preset-structure-builder", layoutFamily: contract.layoutFamily || null, layoutVariant: contract.layoutVariant || null }
     };
   }
 
