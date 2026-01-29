@@ -126,6 +126,12 @@ const __ElemNorm = loadEngine(["../element-normalization-engine.js","./element-n
 const __VisHierarchy = loadEngine(["../visual-hierarchy-engine.js","./visual-hierarchy-engine.js"]);
 const __StyleEnforcer = loadEngine(["../style-enforcement-engine.js","./style-enforcement-engine.js"]);
 
+const __LayoutCompose = loadEngine([
+  "../engines/layout-composition-engine.js",
+  "./layout-composition-engine.js"
+]);
+
+
 // ------------------------------
 // STRICT EXECUTION SPINE (Locked Order)
 // - After structure is produced, geometry is locked (post Element Normalization).
@@ -1221,7 +1227,8 @@ const brandInfo = brandFromPrompt(prompt);
 
     // ------------------------------
     // LOCKED ENGINE ORDER (Strict Spine)
-    // 1) Element Normalization (allowed to adjust spacing/layout readiness)
+
+      // 1) Element Normalization (allowed to adjust spacing/layout readiness)
     // 2) Geometry snapshot (freeze structural geometry)
     // 3) Visual Hierarchy (MUST NOT mutate geometry)
     // 4) Style Enforcement (MUST NOT mutate geometry)
@@ -1230,6 +1237,32 @@ const brandInfo = brandFromPrompt(prompt);
       // Ensure we have a unified working surface: {canvas,elements}
       if (contract && contract.canvas && !tpl.canvas) tpl.canvas = contract.canvas;
       if (contract && Array.isArray(contract.elements) && !Array.isArray(tpl.elements)) tpl.elements = contract.elements;
+
+      
+      // === LAYOUT COMPOSITION (MANDATORY, SINGLE) ===
+      if (__LayoutCompose && typeof __LayoutCompose === "function") {
+        const zones =
+          tpl.zones ||
+          (contract && contract.meta && contract.meta.zones) ||
+          contract?.zones ||
+          null;
+
+        const composed = __LayoutCompose({
+          canvas: tpl.canvas,
+          zones,
+          elements: tpl.elements,
+          contract
+        });
+
+        if (!composed || !Array.isArray(composed.elements) || composed.elements.length === 0) {
+          throw new Error("Layout composition failed: no geometry produced");
+        }
+
+        tpl.elements = composed.elements;
+        tpl.meta = tpl.meta || {};
+        tpl.meta.__layoutComposed = true;
+        if (contract) contract.elements = tpl.elements;
+      }
 
       // 1) Element Normalization
       if (Array.isArray(tpl.elements) && tpl.canvas && __ElemNorm && typeof __ElemNorm.normalizeElements === "function") {
@@ -1279,9 +1312,32 @@ const brandInfo = brandFromPrompt(prompt);
 
       // Sync back to template (preview consumes top-level {canvas,elements})
       if (contract) tpl.contract = contract;
-    } catch (_) {}
+} catch (e) {
+  // HARD FAILOVER: never silently skip composition/engines.
+  // If any mandatory stage fails (especially layout composition), fall back to deterministic
+  // materialization for this seed so UI never gets a blank or repetitive template.
+  try {
+    const det = materializeTemplate({ category, style, prompt, i: i + 1, seed, variantIndex: i + 1 });
+    tpl.canvas = det.canvas;
+    tpl.elements = det.elements;
+    tpl.meta = tpl.meta || {};
+    tpl.meta.__fromDeterministic = true;
+    tpl.meta.__structureSource = "deterministic";
+    tpl.meta.__engineFailover = String(e && e.message ? e.message : e);
+    if (contract) {
+      contract.canvas = tpl.canvas;
+      contract.elements = tpl.elements;
+      contract.meta = contract.meta || {};
+      contract.meta.__fromDeterministic = true;
+      contract.meta.__engineFailover = tpl.meta.__engineFailover;
+    }
+  } catch (_) {
+    // If even deterministic fails, rethrow the original error for outer hard-safe handler.
+    throw e;
+  }
+}
 
-    templates.push(markMaterialized(Object.assign({}, tpl, { i: i + 1, doc, contract, content })));
+templates.push(markMaterialized(Object.assign({}, tpl, { i: i + 1, doc, contract, content })));
   }
 
   // HARD MATERIALIZATION before returning (server-side)
