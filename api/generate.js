@@ -126,12 +126,66 @@ const __ElemNorm = loadEngine(["../element-normalization-engine.js","./element-n
 const __VisHierarchy = loadEngine(["../visual-hierarchy-engine.js","./visual-hierarchy-engine.js"]);
 const __StyleEnforcer = loadEngine(["../style-enforcement-engine.js","./style-enforcement-engine.js"]);
 
-const __LayoutCompose = loadEngine([
-  "../engines/layout-composition-engine.js",
-  "./layout-composition-engine.js"
-]);
+// ---- Layout Composition binding (wiring-only; supports legacy + typo filenames) ----
+let __LayoutCompose = null;
+try{
+  // Prefer explicit engine module exports when present
+  __LayoutCompose = loadEngine([
+    "../engines/layout-composition-engine.js",
+    "../engines/layout-composition-enjine.js",
+    "./layout-composition-engine.js",
+    "./layout-composition-enjine.js",
+    "../layout-composition-engine.js",
+    "../layout-composition-enjine.js",
+    "./layout-composition-engine.js",
+    "./layout-composition-enjine.js"
+  ]);
+}catch(_){ __LayoutCompose = null; }
 
+// Side-effect load Zone Executor (some builds export to globalThis only)
+try{
+  loadEngine([
+    "../layout-zone-executor.js",
+    "./layout-zone-executor.js",
+    "../engines/layout-zone-executor.js",
+    "./engines/layout-zone-executor.js"
+  ]);
+}catch(_){}
 
+// Resolve to a callable composer (keeps this wiring-only; no engine logic here)
+function __resolveLayoutComposer(mod){
+  if(typeof mod === "function") return mod;
+  if(mod && typeof mod.applyLayoutComposition === "function"){
+    // Adapter: engine expects {elements,...} template; we pass through and return {elements}
+    return function(ctx){
+      const base = { canvas: ctx.canvas, elements: ctx.elements, meta: (ctx.contract && ctx.contract.meta) ? ctx.contract.meta : {} };
+      const out = mod.applyLayoutComposition(base, { category: ctx.category || (ctx.contract && ctx.contract.category) });
+      return { elements: (out && Array.isArray(out.elements)) ? out.elements : ctx.elements };
+    };
+  }
+  if(mod && typeof mod.applyZonePlacement === "function"){
+    return function(ctx){
+      const tpl = { canvas: ctx.canvas, elements: ctx.elements, contract: ctx.contract };
+      const out = mod.applyZonePlacement(tpl);
+      return { elements: (out && Array.isArray(out.elements)) ? out.elements : tpl.elements };
+    };
+  }
+  // Global fallback if module only attaches to globalThis
+  try{
+    const g = (typeof globalThis!=="undefined") ? globalThis : (typeof window!=="undefined" ? window : {});
+    const zx = g.NexoraZoneExecutor;
+    if(zx && typeof zx.applyZonePlacement === "function"){
+      return function(ctx){
+        const tpl = { canvas: ctx.canvas, elements: ctx.elements, contract: ctx.contract };
+        const out = zx.applyZonePlacement(tpl);
+        return { elements: (out && Array.isArray(out.elements)) ? out.elements : tpl.elements };
+      };
+    }
+  }catch(_){}
+  return null;
+}
+
+const __LayoutComposeFn = __resolveLayoutComposer(__LayoutCompose);
 // ------------------------------
 // STRICT EXECUTION SPINE (Locked Order)
 // - After structure is produced, geometry is locked (post Element Normalization).
@@ -1240,14 +1294,14 @@ const brandInfo = brandFromPrompt(prompt);
 
       
       // === LAYOUT COMPOSITION (MANDATORY, SINGLE) ===
-      if (__LayoutCompose && typeof __LayoutCompose === "function") {
+      if (__LayoutComposeFn && typeof __LayoutComposeFn === "function") {
         const zones =
           tpl.zones ||
           (contract && contract.meta && contract.meta.zones) ||
           contract?.zones ||
           null;
 
-        const composed = __LayoutCompose({
+        const composed = __LayoutComposeFn({
           canvas: tpl.canvas,
           zones,
           elements: tpl.elements,
@@ -1365,3 +1419,18 @@ if (typeof window !== 'undefined') {
     window.generateTemplates = generateTemplates;
 }
 
+
+
+
+// ---- Lab compatibility: explicit ENGINE_BINDINGS (wiring-only) ----
+const ENGINE_BINDINGS = {
+  layout_composition: (ctx) => {
+    if (typeof __LayoutComposeFn !== "function") {
+      throw new Error("layout_composition engine not bound");
+    }
+    return __LayoutComposeFn(ctx);
+  }
+};
+if (typeof module === "object" && module.exports) {
+  module.exports.ENGINE_BINDINGS = ENGINE_BINDINGS;
+}
