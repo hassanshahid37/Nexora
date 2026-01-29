@@ -17,6 +17,22 @@
 (function (root) {
   "use strict";
 
+  // P8 Structure Authority: bind to template-structure-factory explicitly (no silent fallback)
+  var createTemplateContract = null;
+  (function initStructureFactory(){
+    try{
+      if(typeof require === "function"){
+        var mod = require("../template-structure-factory.js");
+        if(mod && typeof mod.createTemplateContract === "function") createTemplateContract = mod.createTemplateContract;
+      }
+    }catch(_){ }
+    try{
+      if(!createTemplateContract && root && root.NexoraTemplateFactory && typeof root.NexoraTemplateFactory.createTemplateContract === "function"){
+        createTemplateContract = root.NexoraTemplateFactory.createTemplateContract;
+      }
+    }catch(_){ }
+  })();
+
   function num(v, d){ v = Number(v); return Number.isFinite(v) ? v : d; }
   function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
   function str(x){ return String(x == null ? "" : x); }
@@ -237,17 +253,50 @@
       });
     }
 
+    // Build P8 structure contract deterministically using the authoritative factory.
+    // IMPORTANT: this does NOT replace element geometry; it defines semantic layer roles for downstream engines.
+    if(!createTemplateContract){
+      throw new Error("P8 Structure failed: template-structure-factory is not available");
+    }
+
+    // Only roles supported by the contract (avoid injecting unknown roles like 'container'/'decor')
+    var ROLE_OK = { background:1, headline:1, subhead:1, image:1, cta:1, badge:1, logo:1 };
+    var contractLayers = [];
+    for(var li=0; li<elements.length; li++){
+      var el = elements[li] || {};
+      var r = String(el.role || "");
+      if(ROLE_OK[r]){
+        contractLayers.push({ id: String(el.id || (r + "_" + li)), role: r, locked: false });
+      }
+    }
+    // Ensure at least background + headline exist in the contract layer list
+    if(!contractLayers.some(function(x){ return x && x.role === "background"; })) contractLayers.unshift({ id:"bg", role:"background", locked:false });
+    if(!contractLayers.some(function(x){ return x && x.role === "headline"; })) contractLayers.push({ id:"headline", role:"headline", locked:false });
+
+    var baseContract = {
+      templateId: (p.id || "tpl"),
+      category: (c.category || p.category || "Unknown"),
+      canvas: canvas,
+      layers: contractLayers
+    };
+
+    // Prefer explicit variant index if passed; otherwise derive from seed deterministically.
+    var variantIndex = Number.isFinite(Number(c.index)) ? Number(c.index) : (seed % 25);
+    var familyId = (c.familyId || c.layoutFamily || c.layoutFamilyId || null);
+
+    var structuredContract = createTemplateContract(baseContract, variantIndex, { familyId: familyId });
+    if(!structuredContract){
+      throw new Error("P8 Structure failed: factory returned null");
+    }
+
     return {
       canvas: canvas,
-      zones: [
-        { id: "zone_root", role: "root", x: 0, y: 0, w: canvas.w, h: canvas.h }
-      ],
-
       elements: elements,
+      contract: structuredContract,
       presetId: p.id || null,
       presetPattern: p.pattern || null,
       category: c.category || p.category || null,
-      meta: { source: "preset-structure-builder" }
+      meta: { source: "preset-structure-builder", layoutFamily: structuredContract.layoutFamily || null, layoutFamilyCanonical: structuredContract.layoutFamilyCanonical || null }
     };
   }
 
